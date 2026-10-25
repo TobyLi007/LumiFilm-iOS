@@ -1,0 +1,43 @@
+name: Build LumiFilm Native iOS IPA (Zero Mac & Free Apple ID)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: macos-14
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build Unsigned Release .app via Xcode
+        run: |
+          xcodebuild clean build \
+            -project LumiFilm.xcodeproj \
+            -scheme LumiFilm \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build_output \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package into LumiFilm_Native.ipa
+        run: |
+          mkdir -p Payload
+          cp -r build_output/Build/Products/Release-iphoneos/LumiFilm.app Payload/
+          zip -r9 LumiFilm_Native_v4.0_Unsigned.ipa Payload
+
+      - name: Upload Native iOS IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LumiFilm_Native_iOS_IPA
+          path: LumiFilm_Native_v4.0_Unsigned.ipa
