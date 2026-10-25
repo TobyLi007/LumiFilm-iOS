@@ -1,0 +1,44 @@
+name: LumiFilm
+options:
+  bundleIdPrefix: com.lumifilm.exposure
+  deploymentTarget:
+    iOS: "16.4"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+
+targets:
+  LumiFilm:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.4"
+    sources:
+      - path: LumiFilm
+    info:
+      path: LumiFilm/Info.plist
+      properties:
+        CFBundleDisplayName: LumiFilm
+        CFBundleShortVersionString: "4.0.0"
+        CFBundleVersion: "40"
+        UILaunchScreen: {}
+        NSMicrophoneUsageDescription: "LumiFilm 需要麦克风权限来识别您说出的拍摄距离、光圈与场景，立即播报推荐的闪光灯输出功率。"
+        NSSpeechRecognitionUsageDescription: "LumiFilm 需要语音识别权限以将您的抓拍语音转换为闪光灯曝光参数。"
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    dependencies:
+      - target: LumiFilmWidget
+        embed: true
+
+  LumiFilmWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "16.4"
+    sources:
+      - path: LumiFilmWidget
+    info:
+      path: LumiFilmWidget/Info.plist
+      properties:
+        CFBundleDisplayName: LumiFilm Widget
+        CFBundleShortVersionString: "4.0.0"
+        CFBundleVersion: "40"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
