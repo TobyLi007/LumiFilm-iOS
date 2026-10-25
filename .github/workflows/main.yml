@@ -1,4 +1,4 @@
-name: Build LumiFilm Native iOS IPA (Zero Mac & Free Apple ID)
+name: Build LumiFilm Native iOS IPA (Self-Contained Zero-Error)
 
 on:
   push:
@@ -7,19 +7,499 @@ on:
 
 jobs:
   build-ipa:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Checkout Repository (Node 24 Ready)
+        uses: actions/checkout@v5
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
-
-      - name: Generate Xcode Project
-        run: xcodegen generate
-
-      - name: Build Unsigned Release .app via Xcode
+      - name: Generate Project & Sources Automatically
         run: |
+          mkdir -p LumiFilmBuild/LumiFilm LumiFilmBuild/LumiFilmWidget
+          cd LumiFilmBuild
+
+          cat << 'EOF' > project.yml
+          name: LumiFilm
+          options:
+            bundleIdPrefix: com.lumifilm.exposure
+            deploymentTarget:
+              iOS: "16.4"
+            xcodeVersion: "15.0"
+            generateEmptyDirectories: true
+
+          targets:
+            LumiFilm:
+              type: application
+              platform: iOS
+              deploymentTarget: "16.4"
+              sources:
+                - path: LumiFilm
+              settings:
+                base:
+                  PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app
+                  GENERATE_INFOPLIST_FILE: YES
+                  INFOPLIST_KEY_CFBundleDisplayName: LumiFilm
+                  INFOPLIST_KEY_UILaunchScreen_Generation: YES
+                  INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+                  INFOPLIST_KEY_NSMicrophoneUsageDescription: "LumiFilm 需要麦克风权限来识别您说出的拍摄距离、光圈与场景，立即播报推荐的闪光灯输出功率。"
+                  INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "LumiFilm 需要语音识别权限以将您的抓拍语音转换为闪光灯曝光参数。"
+                  CODE_SIGN_IDENTITY: ""
+                  CODE_SIGNING_REQUIRED: NO
+                  CODE_SIGNING_ALLOWED: NO
+              dependencies:
+                - target: LumiFilmWidget
+                  embed: true
+
+            LumiFilmWidget:
+              type: app-extension
+              platform: iOS
+              deploymentTarget: "16.4"
+              sources:
+                - path: LumiFilmWidget
+              info:
+                path: LumiFilmWidget/Info.plist
+                properties:
+                  CFBundleDisplayName: LumiFilm Widget
+                  NSExtension:
+                    NSExtensionPointIdentifier: com.apple.widgetkit-extension
+              settings:
+                base:
+                  PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app.widget
+                  GENERATE_INFOPLIST_FILE: YES
+                  CODE_SIGN_IDENTITY: ""
+                  CODE_SIGNING_REQUIRED: NO
+                  CODE_SIGNING_ALLOWED: NO
+          EOF
+
+          cat << 'EOF' > LumiFilm/LumiFilmApp.swift
+          import SwiftUI
+          import AppIntents
+          import WidgetKit
+          import AVFoundation
+
+          @main
+          struct LumiFilmApp: App {
+              init() {
+                  LumiFilmShortcutsProvider.updateAppShortcutParameters()
+              }
+              var body: some Scene {
+                  WindowGroup {
+                      ContentView()
+                  }
+              }
+          }
+
+          struct FlashModelSpec: Identifiable, Hashable {
+              let id: String
+              let nameZh: String
+              let nameEn: String
+              let nameJa: String
+              let shortName: String
+              let baseGN: Double
+              let ratedZoom: Int
+              let minPowerDenom: Int
+              let recycleSec: Double
+          }
+
+          final class ExposureStore: ObservableObject {
+              static let shared = ExposureStore()
+
+              @AppStorage("lf_lang") var lang: String = "zh"
+              @AppStorage("lf_flash_id") var flashId: String = "godox-v350"
+              @AppStorage("lf_is_custom_gn") var isCustomGN: Bool = false
+              @AppStorage("lf_custom_gn_val") var customGNVal: Double = 36.0
+              @AppStorage("lf_film_name") var filmName: String = "Kodak Portra 400"
+              @AppStorage("lf_iso") var iso: Int = 400
+              @AppStorage("lf_zoom_mm") var zoomMM: Int = 50
+              @AppStorage("lf_max_sync") var maxSyncDenom: Int = 125
+              @AppStorage("lf_distance_m") var distanceM: Double = 2.0
+              @AppStorage("lf_aperture") var aperture: Double = 4.0
+              @AppStorage("lf_power_stops") var powerStopOffset: Double = -2.0
+              @AppStorage("lf_shutter_denom") var shutterDenom: Int = 125
+              @AppStorage("lf_mod_loss") var modifierLossEV: Double = 0.0
+              @AppStorage("lf_bounce_loss") var bounceLossEV: Double = 0.0
+
+              let catalog: [FlashModelSpec] = [
+                  FlashModelSpec(id: "godox-v350", nameZh: "神牛 Godox V350 (主力推荐)", nameEn: "Godox V350 (Primary)", nameJa: "Godox V350 (推奨)", shortName: "Godox V350", baseGN: 36, ratedZoom: 105, minPowerDenom: 128, recycleSec: 1.7),
+                  FlashModelSpec(id: "godox-tt350", nameZh: "神牛 Godox TT350 (AA版)", nameEn: "Godox TT350", nameJa: "Godox TT350", shortName: "Godox TT350", baseGN: 36, ratedZoom: 105, minPowerDenom: 128, recycleSec: 2.2),
+                  FlashModelSpec(id: "godox-lux-jr", nameZh: "神牛 Godox Lux Junior", nameEn: "Godox Lux Junior", nameJa: "Godox Lux Junior", shortName: "Lux Junior", baseGN: 12, ratedZoom: 28, minPowerDenom: 64, recycleSec: 3.0),
+                  FlashModelSpec(id: "godox-v1pro", nameZh: "神牛 Godox V1Pro", nameEn: "Godox V1Pro", nameJa: "Godox V1Pro", shortName: "Godox V1Pro", baseGN: 42, ratedZoom: 105, minPowerDenom: 256, recycleSec: 1.3),
+                  FlashModelSpec(id: "godox-v860iii", nameZh: "神牛 Godox V860III", nameEn: "Godox V860III", nameJa: "Godox V860III", shortName: "Godox V860III", baseGN: 60, ratedZoom: 200, minPowerDenom: 256, recycleSec: 1.5),
+                  FlashModelSpec(id: "profoto-a10", nameZh: "Profoto A10", nameEn: "Profoto A10", nameJa: "Profoto A10", shortName: "Profoto A10", baseGN: 42, ratedZoom: 105, minPowerDenom: 256, recycleSec: 1.0)
+              ]
+
+              var activeFlashSpec: FlashModelSpec {
+                  catalog.first(where: { $0.id == flashId }) ?? catalog[0]
+              }
+
+              var activeGN: Double {
+                  isCustomGN ? customGNVal : activeFlashSpec.baseGN
+              }
+
+              var displayFlashTitle: String {
+                  if isCustomGN {
+                      if lang == "en" { return "User Custom" }
+                      if lang == "ja" { return "ユーザーカスタム" }
+                      return "用户自定义"
+                  }
+                  return activeFlashSpec.shortName
+              }
+
+              func calculateRecommendedPower(distance: Double, fStop: Double) -> (powerText: String, stopOffset: Double) {
+                  let spec = activeFlashSpec
+                  let minStops = -log2(Double(spec.minPowerDenom))
+                  let zoomFactor = isCustomGN ? 1.0 : pow(Double(zoomMM) / Double(spec.ratedZoom), 0.38)
+                  let gn100 = activeGN * zoomFactor
+                  let isoFactor = sqrt(Double(iso) / 100.0)
+                  let totalLoss = modifierLossEV + bounceLossEV
+                  let lossFactor = pow(2.0, -totalLoss / 2.0)
+                  let fullEffGN = max(gn100 * isoFactor * lossFactor, 0.1)
+
+                  let reqGN = fStop * distance
+                  let reqRatio = pow(reqGN / fullEffGN, 2.0)
+                  let rawStops = log2(max(reqRatio, 1e-6))
+                  let snapped = (rawStops * 3.0).rounded() / 3.0
+                  let clamped = min(max(snapped, minStops), 0.0)
+
+                  return (formatPower(clamped, minDenom: spec.minPowerDenom), clamped)
+              }
+
+              func formatPower(_ stopOffset: Double, minDenom: Int) -> String {
+                  let minStops = -log2(Double(minDenom))
+                  let clamped = min(max(stopOffset, minStops), 0.0)
+                  let roundedThirds = (clamped * 3.0).rounded() / 3.0
+                  let whole = floor(roundedThirds + 1e-6)
+                  let rem = roundedThirds - whole
+                  let denom = Int(pow(2.0, -whole).rounded())
+                  let base = "1/\(denom)"
+                  if rem > 0.5 { return "\(base) +0.7" }
+                  if rem > 0.16 { return "\(base) +0.3" }
+                  return base
+              }
+          }
+
+          struct CalculateFlashPowerIntent: AppIntent {
+              static var title: LocalizedStringResource = "计算闪光灯输出功率 (LumiFilm)"
+              static var description = IntentDescription("输入拍摄距离与光圈，立即计算并语音播报闪光灯手动输出功率比，可直接绑定 iPhone 动作按钮或锁屏快捷键。")
+              static var openAppWhenRun: Bool = false
+
+              @Parameter(title: "拍摄距离 (米 / Meters)", default: 2.0)
+              var distanceMeters: Double
+
+              @Parameter(title: "光圈大小 (f-stop)", default: 4.0)
+              var apertureFStop: Double
+
+              func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
+                  let store = ExposureStore.shared
+                  store.distanceM = distanceMeters
+                  store.aperture = apertureFStop
+                  let result = store.calculateRecommendedPower(distance: distanceMeters, fStop: apertureFStop)
+                  store.powerStopOffset = result.stopOffset
+                  WidgetCenter.shared.reloadAllTimelines()
+
+                  let dialogText = "距离 \(String(format: "%.1f", distanceMeters)) 米，光圈 f/\(String(format: "%.1f", apertureFStop))，请将【\(store.displayFlashTitle)】调至 \(result.powerText) 功率。"
+                  return .result(dialog: IntentDialog(stringLiteral: dialogText)) {
+                      VStack(alignment: .leading, spacing: 6) {
+                          Text("⚡ LumiFilm · \(store.displayFlashTitle) (GN\(Int(store.activeGN)))")
+                              .font(.caption)
+                              .foregroundStyle(.secondary)
+                          Text("推荐闪光功率：\(result.powerText)")
+                              .font(.title3.bold())
+                          Text("距离 \(String(format: "%.1f", distanceMeters))m · f/\(String(format: "%.1f", apertureFStop)) · ISO \(store.iso) · 1/\(store.shutterDenom)s")
+                              .font(.caption2)
+                      }
+                      .padding()
+                  }
+              }
+          }
+
+          struct LumiFilmShortcutsProvider: AppShortcutsProvider {
+              static var appShortcuts: [AppShortcut] {
+                  return [
+                      AppShortcut(
+                          intent: CalculateFlashPowerIntent(),
+                          phrases: [
+                              "用 \(.applicationName) 算闪光灯功率",
+                              "Ask \(.applicationName) for flash power",
+                              "\(.applicationName) 测光速算"
+                          ],
+                          shortTitle: "闪光灯测光速算",
+                          systemImageName: "bolt.circle.fill"
+                      )
+                  ]
+              }
+          }
+          EOF
+
+          cat << 'EOF' > LumiFilm/ContentView.swift
+          import SwiftUI
+          import WidgetKit
+          import AVFoundation
+
+          struct ContentView: View {
+              @StateObject private var store = ExposureStore.shared
+              @State private var selectedTab: Int = 0
+              private let speechSynthesizer = AVSpeechSynthesizer()
+
+              var body: some View {
+                  let solved = store.calculateRecommendedPower(distance: store.distanceM, fStop: store.aperture)
+
+                  TabView(selection: $selectedTab) {
+                      ScrollView {
+                          VStack(spacing: 14) {
+                              HStack {
+                                  VStack(alignment: .leading, spacing: 2) {
+                                      Text(store.lang == "en" ? "LumiFilm Exposure Log" : (store.lang == "ja" ? "銀塩フラッシュ露出手帖" : "银盐测光手账"))
+                                          .font(.headline)
+                                      Text("\(store.displayFlashTitle) (GN\(Int(store.activeGN))) · \(store.filmName) (ISO \(store.iso))")
+                                          .font(.caption)
+                                          .foregroundStyle(.secondary)
+                                  }
+                                  Spacer()
+                                  Button(store.lang == "en" ? "🌐 EN" : (store.lang == "ja" ? "🌐 JP" : "🌐 中文")) {
+                                      if store.lang == "zh" { store.lang = "en" }
+                                      else if store.lang == "en" { store.lang = "ja" }
+                                      else { store.lang = "zh" }
+                                  }
+                                  .font(.caption.bold())
+                                  .padding(.horizontal, 10)
+                                  .padding(.vertical, 6)
+                                  .background(Color.secondary.opacity(0.15))
+                                  .clipShape(Capsule())
+                              }
+                              .padding(.horizontal)
+
+                              VStack(alignment: .leading, spacing: 8) {
+                                  HStack {
+                                      Text(store.lang == "en" ? "🎙️ Instant Snap & Voice Command" : (store.lang == "ja" ? "🎙️ スナップ音声即算" : "🎙️ 抓拍语音/口令速算"))
+                                          .font(.subheadline.bold())
+                                      Spacer()
+                                      Button(store.lang == "en" ? "🔊 Speak" : (store.lang == "ja" ? "🔊 読み上げ" : "🔊 播报")) {
+                                          speakPower(solved.powerText)
+                                      }
+                                      .font(.caption.bold())
+                                  }
+                                  Text("⚡ \(store.lang == "en" ? "Set Flash Power to:" : (store.lang == "ja" ? "推奨フラッシュ出力:" : "请将闪光灯拨至:")) \(solved.powerText)")
+                                      .font(.system(.body, design: .monospaced).bold())
+                                      .foregroundStyle(.orange)
+                              }
+                              .padding()
+                              .background(Color(.secondarySystemBackground))
+                              .clipShape(RoundedRectangle(cornerRadius: 18))
+                              .padding(.horizontal)
+
+                              LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                                  MetricCard(
+                                      title: store.lang == "en" ? "① Distance" : (store.lang == "ja" ? "① 撮影距離" : "① 拍摄距离"),
+                                      value: String(format: "%.1f m", store.distanceM),
+                                      sub: String(format: "≈ %.1f ft", store.distanceM * 3.28084)
+                                  )
+                                  MetricCard(
+                                      title: store.lang == "en" ? "② Flash Power" : (store.lang == "ja" ? "② 発光量" : "② 闪光灯功率比"),
+                                      value: solved.powerText,
+                                      sub: store.displayFlashTitle
+                                  )
+                                  MetricCard(
+                                      title: store.lang == "en" ? "③ Aperture" : (store.lang == "ja" ? "③ 絞り値" : "③ 光圈大小"),
+                                      value: String(format: "f/%.1f", store.aperture),
+                                      sub: "ISO \(store.iso)"
+                                  )
+                                  MetricCard(
+                                      title: store.lang == "en" ? "④ Shutter Speed" : (store.lang == "ja" ? "④ シャッター速度" : "④ 快门速度"),
+                                      value: "1/\(store.shutterDenom)s",
+                                      sub: "≤1/\(store.maxSyncDenom)s X-Sync"
+                                  )
+                              }
+                              .padding(.horizontal)
+
+                              VStack(spacing: 12) {
+                                  HStack {
+                                      Text(store.lang == "en" ? "Subject Distance (m)" : (store.lang == "ja" ? "撮影距離 (m)" : "拍摄距离调节 (m)"))
+                                          .font(.caption.bold())
+                                      Spacer()
+                                      Text(String(format: "%.1f m", store.distanceM))
+                                          .font(.system(.caption, design: .monospaced))
+                                  }
+                                  Slider(value: $store.distanceM, in: 0.5...10.0, step: 0.1)
+
+                                  HStack {
+                                      Text(store.lang == "en" ? "Aperture (f-stop)" : (store.lang == "ja" ? "絞り値 (f-stop)" : "光圈环调节 (f-stop)"))
+                                          .font(.caption.bold())
+                                      Spacer()
+                                      Text(String(format: "f/%.1f", store.aperture))
+                                          .font(.system(.caption, design: .monospaced))
+                                  }
+                                  Slider(value: $store.aperture, in: 1.4...16.0, step: 0.2)
+                              }
+                              .padding()
+                              .background(Color(.secondarySystemBackground))
+                              .clipShape(RoundedRectangle(cornerRadius: 18))
+                              .padding(.horizontal)
+                          }
+                          .padding(.vertical)
+                      }
+                      .tabItem {
+                          Label(store.lang == "en" ? "Meter" : (store.lang == "ja" ? "露出計" : "测光"), systemImage: "camera.aperture")
+                      }
+                      .tag(0)
+
+                      Form {
+                          Section(store.lang == "en" ? "Diffuser & Bounce Loss" : "柔光附件与跳闪补偿") {
+                              Picker(store.lang == "en" ? "Diffuser" : "柔光附件", selection: $store.modifierLossEV) {
+                                  Text(store.lang == "en" ? "Direct Bare (0 EV)" : "裸灯直闪 (0 EV)").tag(0.0)
+                                  Text(store.lang == "en" ? "Dome Diffuser (-1.0 EV)" : "肥皂盒 (-1.0 EV)").tag(1.0)
+                                  Text(store.lang == "en" ? "Softbox (-1.8 EV)" : "柔光箱 (-1.8 EV)").tag(1.8)
+                              }
+                              Picker(store.lang == "en" ? "Bounce Angle" : "跳闪角度", selection: $store.bounceLossEV) {
+                                  Text(store.lang == "en" ? "0° Direct" : "0° 正面直打").tag(0.0)
+                                  Text(store.lang == "en" ? "45° Bounce (-1.7 EV)" : "45° 眼神板 (-1.7 EV)").tag(1.7)
+                                  Text(store.lang == "en" ? "75° Ceiling (-2.3 EV)" : "75° 白天花板 (-2.3 EV)").tag(2.3)
+                              }
+                          }
+                      }
+                      .tabItem {
+                          Label(store.lang == "en" ? "Ambient" : (store.lang == "ja" ? "環境光補正" : "环境光修正"), systemImage: "sun.max")
+                      }
+                      .tag(1)
+
+                      Form {
+                          Section(store.lang == "en" ? "Flash & Manual GN (Auto User Custom)" : "闪光灯与手动 GN 值（输入后显示用户自定义）") {
+                              Picker(store.lang == "en" ? "Preset Flash" : "预设闪光灯型号", selection: $store.flashId) {
+                                  ForEach(store.catalog) { item in
+                                      Text("\(item.shortName) (GN\(Int(item.baseGN)))").tag(item.id)
+                                  }
+                              }
+                              .onChange(of: store.flashId) { _ in
+                                  store.isCustomGN = false
+                              }
+
+                              Toggle(store.lang == "en" ? "Manual GN Input (User Custom)" : "手动输入 GN 值 (显示“用户自定义”)", isOn: $store.isCustomGN)
+
+                              if store.isCustomGN {
+                                  Stepper(value: $store.customGNVal, in: 3...120, step: 1) {
+                                      HStack {
+                                          Text(store.displayFlashTitle).bold()
+                                          Spacer()
+                                          Text("GN \(Int(store.customGNVal))")
+                                              .font(.system(.body, design: .monospaced).bold())
+                                      }
+                                  }
+                              }
+                          }
+
+                          Section(store.lang == "en" ? "Film Roll ISO" : "本卷胶卷固定感光度 (ISO)") {
+                              Picker("ISO", selection: $store.iso) {
+                                  Text("ISO 100").tag(100)
+                                  Text("ISO 200").tag(200)
+                                  Text("ISO 400 (Portra 400)").tag(400)
+                                  Text("ISO 800 (CineStill 800T)").tag(800)
+                              }
+                          }
+                      }
+                      .tabItem {
+                          Label(store.lang == "en" ? "Settings" : (store.lang == "ja" ? "設定" : "用户设置"), systemImage: "gearshape")
+                      }
+                      .tag(2)
+                  }
+              }
+
+              private func speakPower(_ powerText: String) {
+                  let msg = "距离 \(String(format: "%.1f", store.distanceM)) 米，光圈 \(String(format: "%.1f", store.aperture))，请将闪光灯拨至 \(powerText) 功率。"
+                  let utterance = AVSpeechUtterance(string: msg)
+                  utterance.voice = AVSpeechSynthesisVoice(language: "zh-CN")
+                  speechSynthesizer.speak(utterance)
+              }
+          }
+
+          struct MetricCard: View {
+              let title: String
+              let value: String
+              let sub: String
+
+              var body: some View {
+                  VStack(alignment: .leading, spacing: 6) {
+                      Text(title).font(.caption).foregroundStyle(.secondary)
+                      Text(value).font(.system(.title2, design: .monospaced).bold())
+                      Text(sub).font(.caption2).foregroundStyle(.secondary)
+                  }
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .padding(12)
+                  .background(Color(.secondarySystemBackground))
+                  .clipShape(RoundedRectangle(cornerRadius: 16))
+              }
+          }
+          EOF
+
+          cat << 'EOF' > LumiFilmWidget/LumiFilmWidget.swift
+          import WidgetKit
+          import SwiftUI
+
+          struct LumiFilmWidgetEntry: TimelineEntry {
+              let date: Date
+              let flashTitle: String
+              let gn: Int
+              let iso: Int
+              let distanceM: Double
+              let aperture: Double
+              let recommendedPower: String
+              let shutterDenom: Int
+          }
+
+          struct LumiFilmWidgetProvider: TimelineProvider {
+              func placeholder(in context: Context) -> LumiFilmWidgetEntry {
+                  LumiFilmWidgetEntry(date: Date(), flashTitle: "Godox V350", gn: 36, iso: 400, distanceM: 2.0, aperture: 4.0, recommendedPower: "1/4", shutterDenom: 125)
+              }
+              func getSnapshot(in context: Context, completion: @escaping (LumiFilmWidgetEntry) -> Void) {
+                  completion(placeholder(in: context))
+              }
+              func getTimeline(in context: Context, completion: @escaping (Timeline<LumiFilmWidgetEntry>) -> Void) {
+                  let entry = placeholder(in: context)
+                  let timeline = Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(900)))
+                  completion(timeline)
+              }
+          }
+
+          struct LumiFilmWidgetEntryView: View {
+              var entry: LumiFilmWidgetProvider.Entry
+              var body: some View {
+                  VStack(alignment: .leading, spacing: 4) {
+                      HStack {
+                          Text("🎞️ \(entry.flashTitle)").font(.caption2.bold())
+                          Spacer()
+                          Text("ISO \(entry.iso)").font(.caption2).foregroundStyle(.secondary)
+                      }
+                      Spacer()
+                      Text("⚡ \(entry.recommendedPower)")
+                          .font(.system(.title2, design: .monospaced).bold())
+                          .foregroundStyle(.orange)
+                      Text(String(format: "%.1fm · f/%.1f · 1/%ds", entry.distanceM, entry.aperture, entry.shutterDenom))
+                          .font(.system(.caption2, design: .monospaced))
+                          .foregroundStyle(.secondary)
+                  }
+                  .padding(12)
+              }
+          }
+
+          @main
+          struct LumiFilmWidget: Widget {
+              let kind: String = "LumiFilmWidget"
+              var body: some WidgetConfiguration {
+                  StaticConfiguration(kind: kind, provider: LumiFilmWidgetProvider()) { entry in
+                      LumiFilmWidgetEntryView(entry: entry)
+                  }
+                  .configurationDisplayName("LumiFilm 闪光测光速查")
+                  .description("在 iOS 首屏桌面与锁屏实时显示当前胶卷 ISO、拍摄距离与推荐闪光灯功率比。")
+                  .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
+              }
+          }
+          EOF
+
+      - name: Install XcodeGen & Build Unsigned IPA
+        run: |
+          cd LumiFilmBuild
+          if ! command -v xcodegen &> /dev/null; then
+            brew install xcodegen
+          fi
+          xcodegen generate
           xcodebuild clean build \
             -project LumiFilm.xcodeproj \
             -scheme LumiFilm \
@@ -29,15 +509,12 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
-
-      - name: Package into LumiFilm_Native.ipa
-        run: |
           mkdir -p Payload
           cp -r build_output/Build/Products/Release-iphoneos/LumiFilm.app Payload/
-          zip -r9 LumiFilm_Native_v4.0_Unsigned.ipa Payload
+          zip -r9 ../LumiFilm_Native_v4.0_Unsigned.ipa Payload
 
-      - name: Upload Native iOS IPA Artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload Native iOS IPA Artifact (Node 24 Ready)
+        uses: actions/upload-artifact@v5
         with:
           name: LumiFilm_Native_iOS_IPA
           path: LumiFilm_Native_v4.0_Unsigned.ipa
