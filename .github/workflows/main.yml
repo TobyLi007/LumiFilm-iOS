@@ -1,4 +1,4 @@
-name: Build LumiFilm v5.0 Native iOS IPA (Glassmorphic + 3 Themes + Rotary Dial + WidgetFix)
+name: Build LumiFilm v5.0 Native iOS IPA (Fixed Swift Ambiguity & Zero Errors)
 
 on:
   push:
@@ -18,8 +18,10 @@ jobs:
           cd LumiFilmBuild
 
           # 1. Generate 1024x1024 Glassmorphic Film Flash App Icon via CoreGraphics Swift script
+          # Using Darwin.cos & Darwin.sin explicitly to prevent 'ambiguous use of cos' error on macOS 15
           cat << 'ICONEOF' > make_icon.swift
           import Cocoa
+          import Darwin
 
           let size = CGSize(width: 1024, height: 1024)
           let image = NSImage(size: size)
@@ -71,13 +73,15 @@ jobs:
           ctx.setFillColor(CGColor(red: 0.14, green: 0.13, blue: 0.12, alpha: 0.96))
           ctx.fillPath()
 
-          // Tick marks around mechanical dial
+          // Tick marks around mechanical dial with explicit Darwin.cos and Darwin.sin
           for i in 0..<36 {
-              let angle = CGFloat(i) * (.pi * 2 / 36.0)
-              let r1: CGFloat = (i % 3 == 0) ? 250 : 268
-              let r2: CGFloat = 288
-              let p1 = CGPoint(x: center.x + cos(angle) * r1, y: center.y + sin(angle) * r1)
-              let p2 = CGPoint(x: center.x + cos(angle) * r2, y: center.y + sin(angle) * r2)
+              let angleVal = Double(i) * (Double.pi * 2.0 / 36.0)
+              let r1: Double = (i % 3 == 0) ? 250.0 : 268.0
+              let r2: Double = 288.0
+              let cosA = Darwin.cos(angleVal)
+              let sinA = Darwin.sin(angleVal)
+              let p1 = CGPoint(x: Double(center.x) + cosA * r1, y: Double(center.y) + sinA * r1)
+              let p2 = CGPoint(x: Double(center.x) + cosA * r2, y: Double(center.y) + sinA * r2)
               ctx.setStrokeColor(i == 9 ? CGColor(red: 0.95, green: 0.45, blue: 0.25, alpha: 1.0) : CGColor(red: 0.94, green: 0.88, blue: 0.76, alpha: 0.8))
               ctx.setLineWidth(i % 3 == 0 ? 7 : 3.5)
               ctx.move(to: p1)
@@ -355,7 +359,7 @@ jobs:
               static let shared = ExposureStore()
 
               @AppStorage("lf_has_onboarded_v5") var hasCompletedOnboarding: Bool = false
-              @AppStorage("lf_theme_id") var themeRaw: Int = 2 // Default to Brass Patina or user choice
+              @AppStorage("lf_theme_id") var themeRaw: Int = 2 // Default to Brass Patina
               @AppStorage("lf_lang") var lang: String = "zh"
               @AppStorage("lf_sound_on") var soundOn: Bool = true
               @AppStorage("lf_haptics_on") var hapticsOn: Bool = true
@@ -542,7 +546,7 @@ jobs:
                           HStack(spacing: 10) {
                               VStack(alignment: .leading, spacing: 3) {
                                   HStack(spacing: 6) {
-                                      Image(systemName: "bolt.Ring.closed")
+                                      Image(systemName: "bolt.ring.closed")
                                           .foregroundStyle(theme.accentColor)
                                       Text(store.lang == "en" ? "LumiFilm Flash" : (store.lang == "ja" ? "LumiFilm 露出手帖" : "LumiFilm 胶片闪光"))
                                           .font(.system(size: 18, weight: .bold, design: .serif))
@@ -936,7 +940,7 @@ jobs:
                               }
 
                               Toggle(isOn: $store.isCustomGN) {
-                                  Text(store.lang == "en" ? "Manual GN Input (Shows 'User Custom')" : "手动输入 GN 值 (自动显示为“用户自定义”)")
+                                  Text(store.lang == "en" ? "Manual GN Input (Shows 'User Custom')" : "手动输入 GN 值 (自动显示为“用户自定义”) ")
                                       .font(.system(size: 12, weight: .medium))
                                       .foregroundStyle(.white)
                               }
@@ -1162,7 +1166,7 @@ jobs:
                       .rotationEffect(.degrees(currentRotationDegrees))
                       .animation(.interactiveSpring(response: 0.18, dampingFraction: 0.75), value: currentRotationDegrees)
 
-                      // Top 12 O'Clock Engraved Orange/Red Index Pointer
+                      // Top 12 O'Clock Engraved Index Pointer
                       VStack {
                           Image(systemName: "arrowtriangle.down.fill")
                               .font(.system(size: 12, weight: .black))
@@ -1580,7 +1584,6 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
           mkdir -p Payload
           cp -r build_output/Build/Products/Release-iphoneos/LumiFilm.app Payload/
-          # Stamp CFBundleVersion and CFBundleShortVersionString into both Main App and Widget Extension Info.plist so Sideloadly installs both cleanly
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 5.0.0" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 5.0.0" Payload/LumiFilm.app/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 50" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 50" Payload/LumiFilm.app/Info.plist
           if [ -f "Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist" ]; then
