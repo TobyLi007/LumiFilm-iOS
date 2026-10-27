@@ -1,4 +1,4 @@
-name: Build LumiFilm Native iOS IPA (Sideloadly Ready - Fixed Version & PlugIns)
+name: Build LumiFilm v5.0 Native iOS IPA (Glassmorphic + 3 Themes + Rotary Dial + WidgetFix)
 
 on:
   push:
@@ -12,11 +12,142 @@ jobs:
       - name: Checkout Repository (Node 24 Ready)
         uses: actions/checkout@v5
 
-      - name: Generate Project & Sources Automatically
+      - name: Generate Project, Glassmorphic App Icon & SwiftUI Sources
         run: |
-          mkdir -p LumiFilmBuild/LumiFilm LumiFilmBuild/LumiFilmWidget
+          mkdir -p LumiFilmBuild/LumiFilm/Assets.xcassets/AppIcon.appiconset LumiFilmBuild/LumiFilmWidget
           cd LumiFilmBuild
 
+          # 1. Generate 1024x1024 Glassmorphic Film Flash App Icon via CoreGraphics Swift script
+          cat << 'ICONEOF' > make_icon.swift
+          import Cocoa
+
+          let size = CGSize(width: 1024, height: 1024)
+          let image = NSImage(size: size)
+          image.lockFocus()
+          guard let ctx = NSGraphicsContext.current?.cgContext else { exit(1) }
+
+          let colorSpace = CGColorSpaceCreateDeviceRGB()
+
+          // Dark smoked brass-glass background gradient
+          let bgColors = [
+              CGColor(red: 0.16, green: 0.11, blue: 0.08, alpha: 1.0),
+              CGColor(red: 0.36, green: 0.21, blue: 0.12, alpha: 1.0),
+              CGColor(red: 0.09, green: 0.07, blue: 0.06, alpha: 1.0)
+          ] as CFArray
+          let bgGrad = CGGradient(colorsSpace: colorSpace, colors: bgColors, locations: [0.0, 0.55, 1.0])!
+          ctx.drawLinearGradient(bgGrad, start: CGPoint(x: 0, y: 1024), end: CGPoint(x: 1024, y: 0), options: [])
+
+          // Warm Sunset / Amber Radial Glow
+          let glowColors = [
+              CGColor(red: 0.96, green: 0.55, blue: 0.24, alpha: 0.65),
+              CGColor(red: 0.85, green: 0.22, blue: 0.38, alpha: 0.25),
+              CGColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
+          ] as CFArray
+          let glowGrad = CGGradient(colorsSpace: colorSpace, colors: glowColors, locations: [0.0, 0.5, 1.0])!
+          ctx.drawRadialGradient(glowGrad, startCenter: CGPoint(x: 460, y: 520), startRadius: 20, endCenter: CGPoint(x: 512, y: 512), endRadius: 460, options: [])
+
+          // 35mm Film Strip Diagonal Ribbon
+          ctx.saveGState()
+          ctx.translateBy(x: 512, y: 512)
+          ctx.rotate(by: -.pi / 4.2)
+          let filmRect = CGRect(x: -600, y: -110, width: 1200, height: 220)
+          ctx.setFillColor(CGColor(red: 0.08, green: 0.07, blue: 0.06, alpha: 0.78))
+          ctx.fill(filmRect)
+          ctx.setFillColor(CGColor(red: 0.92, green: 0.78, blue: 0.58, alpha: 0.55))
+          for x in stride(from: -540, to: 540, by: 64) {
+              ctx.fill(CGRect(x: CGFloat(x), y: 74, width: 34, height: 22))
+              ctx.fill(CGRect(x: CGFloat(x), y: -96, width: 34, height: 22))
+          }
+          ctx.restoreGState()
+
+          // Brass Mechanical Shutter Dial Ring
+          let center = CGPoint(x: 512, y: 512)
+          ctx.saveGState()
+          ctx.addArc(center: center, radius: 330, startAngle: 0, endAngle: .pi * 2, clockwise: false)
+          ctx.setFillColor(CGColor(red: 0.78, green: 0.58, blue: 0.32, alpha: 0.95))
+          ctx.fillPath()
+
+          ctx.addArc(center: center, radius: 296, startAngle: 0, endAngle: .pi * 2, clockwise: false)
+          ctx.setFillColor(CGColor(red: 0.14, green: 0.13, blue: 0.12, alpha: 0.96))
+          ctx.fillPath()
+
+          // Tick marks around mechanical dial
+          for i in 0..<36 {
+              let angle = CGFloat(i) * (.pi * 2 / 36.0)
+              let r1: CGFloat = (i % 3 == 0) ? 250 : 268
+              let r2: CGFloat = 288
+              let p1 = CGPoint(x: center.x + cos(angle) * r1, y: center.y + sin(angle) * r1)
+              let p2 = CGPoint(x: center.x + cos(angle) * r2, y: center.y + sin(angle) * r2)
+              ctx.setStrokeColor(i == 9 ? CGColor(red: 0.95, green: 0.45, blue: 0.25, alpha: 1.0) : CGColor(red: 0.94, green: 0.88, blue: 0.76, alpha: 0.8))
+              ctx.setLineWidth(i % 3 == 0 ? 7 : 3.5)
+              ctx.move(to: p1)
+              ctx.addLine(to: p2)
+              ctx.strokePath()
+          }
+          ctx.restoreGState()
+
+          // Frosted Glassmorphic Flash Reflector Dome & Lightning Core
+          let glassRect = CGRect(x: 262, y: 262, width: 500, height: 500)
+          let glassPath = CGPath(roundedRect: glassRect, cornerWidth: 160, cornerHeight: 160, transform: nil)
+          ctx.saveGState()
+          ctx.addPath(glassPath)
+          ctx.setFillColor(CGColor(red: 1.0, green: 0.96, blue: 0.90, alpha: 0.22))
+          ctx.fillPath()
+          ctx.addPath(glassPath)
+          ctx.setStrokeColor(CGColor(red: 1.0, green: 0.92, blue: 0.78, alpha: 0.65))
+          ctx.setLineWidth(8)
+          ctx.strokePath()
+          ctx.restoreGState()
+
+          // Xenon Flash Lightning Bolt Symbol in Center
+          let bolt = CGMutablePath()
+          bolt.move(to: CGPoint(x: 548, y: 700))
+          bolt.addLine(to: CGPoint(x: 382, y: 500))
+          bolt.addLine(to: CGPoint(x: 498, y: 500))
+          bolt.addLine(to: CGPoint(x: 462, y: 324))
+          bolt.addLine(to: CGPoint(x: 642, y: 532))
+          bolt.addLine(to: CGPoint(x: 522, y: 532))
+          bolt.closeSubpath()
+
+          ctx.saveGState()
+          ctx.setShadow(offset: CGSize(width: 0, height: 8), blur: 28, color: CGColor(red: 1.0, green: 0.65, blue: 0.25, alpha: 0.95))
+          ctx.addPath(bolt)
+          ctx.setFillColor(CGColor(red: 1.0, green: 0.97, blue: 0.88, alpha: 1.0))
+          ctx.fillPath()
+          ctx.restoreGState()
+
+          image.unlockFocus()
+
+          if let tiff = image.tiffRepresentation,
+             let rep = NSBitmapImageRep(data: tiff),
+             let png = rep.representation(using: .png, properties: [:]) {
+              try! png.write(to: URL(fileURLWithPath: "LumiFilm/Assets.xcassets/AppIcon.appiconset/AppIcon.png"))
+          }
+          ICONEOF
+
+          swift make_icon.swift
+
+          cat << 'JSONEOF' > LumiFilm/Assets.xcassets/Contents.json
+          {
+            "info" : { "author" : "xcode", "version" : 1 }
+          }
+          JSONEOF
+
+          cat << 'JSONEOF' > LumiFilm/Assets.xcassets/AppIcon.appiconset/Contents.json
+          {
+            "images" : [
+              {
+                "filename" : "AppIcon.png",
+                "idiom" : "universal",
+                "platform" : "ios",
+                "size" : "1024x1024"
+              }
+            ],
+            "info" : { "author" : "xcode", "version" : 1 }
+          }
+          JSONEOF
+
+          # 2. Generate XcodeGen project.yml
           cat << 'EOF' > project.yml
           name: LumiFilm
           options:
@@ -37,8 +168,8 @@ jobs:
                 path: LumiFilm/Info.plist
                 properties:
                   CFBundleDisplayName: LumiFilm
-                  CFBundleShortVersionString: "4.0.0"
-                  CFBundleVersion: "40"
+                  CFBundleShortVersionString: "5.0.0"
+                  CFBundleVersion: "50"
                   UILaunchScreen: {}
                   UISupportedInterfaceOrientations:
                     - UIInterfaceOrientationPortrait
@@ -47,8 +178,9 @@ jobs:
               settings:
                 base:
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app
-                  MARKETING_VERSION: "4.0.0"
-                  CURRENT_PROJECT_VERSION: "40"
+                  ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+                  MARKETING_VERSION: "5.0.0"
+                  CURRENT_PROJECT_VERSION: "50"
                   CODE_SIGN_IDENTITY: ""
                   CODE_SIGNING_REQUIRED: NO
                   CODE_SIGNING_ALLOWED: NO
@@ -66,25 +198,27 @@ jobs:
                 path: LumiFilmWidget/Info.plist
                 properties:
                   CFBundleDisplayName: LumiFilm Widget
-                  CFBundleShortVersionString: "4.0.0"
-                  CFBundleVersion: "40"
+                  CFBundleShortVersionString: "5.0.0"
+                  CFBundleVersion: "50"
                   NSExtension:
                     NSExtensionPointIdentifier: com.apple.widgetkit-extension
               settings:
                 base:
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app.widget
-                  MARKETING_VERSION: "4.0.0"
-                  CURRENT_PROJECT_VERSION: "40"
+                  MARKETING_VERSION: "5.0.0"
+                  CURRENT_PROJECT_VERSION: "50"
                   CODE_SIGN_IDENTITY: ""
                   CODE_SIGNING_REQUIRED: NO
                   CODE_SIGNING_ALLOWED: NO
           EOF
 
+          # 3. Generate LumiFilmApp.swift (Store + Audio/Haptics + AppIntents)
           cat << 'EOF' > LumiFilm/LumiFilmApp.swift
           import SwiftUI
           import AppIntents
           import WidgetKit
           import AVFoundation
+          import AudioToolbox
 
           @main
           struct LumiFilmApp: App {
@@ -110,10 +244,122 @@ jobs:
               let recycleSec: Double
           }
 
+          enum LumiTheme: Int, CaseIterable, Identifiable {
+              case instagram = 0   // Instagram Sunset Glass
+              case threads = 1     // Threads Monochrome Frosted Glass
+              case brass = 2       // Vintage Brass Patina (纯色胶片露铜质感)
+
+              var id: Int { rawValue }
+
+              func title(lang: String) -> String {
+                  switch self {
+                  case .instagram:
+                      return lang == "en" ? "Instagram Sunset" : (lang == "ja" ? "IG サンセット" : "Ins 落日流光")
+                  case .threads:
+                      return lang == "en" ? "Threads Mono" : (lang == "ja" ? "Threads モノクロ" : "Threads 极简毛玻璃")
+                  case .brass:
+                      return lang == "en" ? "Leica Brass Patina" : (lang == "ja" ? "真鍮フィルム露銅" : "胶片黑漆露铜")
+                  }
+              }
+
+              var backgroundGradient: LinearGradient {
+                  switch self {
+                  case .instagram:
+                      return LinearGradient(
+                          colors: [
+                              Color(red: 0.16, green: 0.08, blue: 0.24),
+                              Color(red: 0.38, green: 0.12, blue: 0.26),
+                              Color(red: 0.48, green: 0.24, blue: 0.14)
+                          ],
+                          startPoint: .topLeading,
+                          endPoint: .bottomTrailing
+                      )
+                  case .threads:
+                      return LinearGradient(
+                          colors: [
+                              Color(red: 0.06, green: 0.06, blue: 0.07),
+                              Color(red: 0.13, green: 0.13, blue: 0.15),
+                              Color(red: 0.08, green: 0.08, blue: 0.09)
+                          ],
+                          startPoint: .top,
+                          endPoint: .bottom
+                      )
+                  case .brass:
+                      return LinearGradient(
+                          colors: [
+                              Color(red: 0.11, green: 0.10, blue: 0.08),
+                              Color(red: 0.20, green: 0.16, blue: 0.11),
+                              Color(red: 0.13, green: 0.11, blue: 0.09)
+                          ],
+                          startPoint: .topLeading,
+                          endPoint: .bottomTrailing
+                      )
+                  }
+              }
+
+              var accentColor: Color {
+                  switch self {
+                  case .instagram:
+                      return Color(red: 1.0, green: 0.48, blue: 0.35)
+                  case .threads:
+                      return Color(red: 0.94, green: 0.94, blue: 0.96)
+                  case .brass:
+                      return Color(red: 0.85, green: 0.65, blue: 0.34)
+                  }
+              }
+
+              var secondaryAccent: Color {
+                  switch self {
+                  case .instagram:
+                      return Color(red: 0.92, green: 0.30, blue: 0.58)
+                  case .threads:
+                      return Color(red: 0.65, green: 0.68, blue: 0.74)
+                  case .brass:
+                      return Color(red: 0.72, green: 0.48, blue: 0.24)
+                  }
+              }
+          }
+
+          final class FeedbackEngine {
+              static let shared = FeedbackEngine()
+              private let selectionGen = UISelectionFeedbackGenerator()
+              private let impactLight = UIImpactFeedbackGenerator(style: .light)
+              private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
+
+              func prepare() {
+                  selectionGen.prepare()
+                  impactLight.prepare()
+              }
+
+              func dialTick(soundOn: Bool, hapticsOn: Bool) {
+                  if hapticsOn {
+                      impactLight.impactOccurred(intensity: 0.85)
+                  }
+                  if soundOn {
+                      // 1157 = Crisp iOS mechanical wheel tick sound
+                      AudioServicesPlaySystemSound(1157)
+                  }
+              }
+
+              func buttonTap(soundOn: Bool, hapticsOn: Bool) {
+                  if hapticsOn {
+                      impactMedium.impactOccurred()
+                  }
+                  if soundOn {
+                      AudioServicesPlaySystemSound(1104)
+                  }
+              }
+          }
+
           final class ExposureStore: ObservableObject {
               static let shared = ExposureStore()
 
+              @AppStorage("lf_has_onboarded_v5") var hasCompletedOnboarding: Bool = false
+              @AppStorage("lf_theme_id") var themeRaw: Int = 2 // Default to Brass Patina or user choice
               @AppStorage("lf_lang") var lang: String = "zh"
+              @AppStorage("lf_sound_on") var soundOn: Bool = true
+              @AppStorage("lf_haptics_on") var hapticsOn: Bool = true
+
               @AppStorage("lf_flash_id") var flashId: String = "godox-v350"
               @AppStorage("lf_is_custom_gn") var isCustomGN: Bool = false
               @AppStorage("lf_custom_gn_val") var customGNVal: Double = 36.0
@@ -121,12 +367,17 @@ jobs:
               @AppStorage("lf_iso") var iso: Int = 400
               @AppStorage("lf_zoom_mm") var zoomMM: Int = 50
               @AppStorage("lf_max_sync") var maxSyncDenom: Int = 125
+
               @AppStorage("lf_distance_m") var distanceM: Double = 2.0
               @AppStorage("lf_aperture") var aperture: Double = 4.0
               @AppStorage("lf_power_stops") var powerStopOffset: Double = -2.0
               @AppStorage("lf_shutter_denom") var shutterDenom: Int = 125
               @AppStorage("lf_mod_loss") var modifierLossEV: Double = 0.0
               @AppStorage("lf_bounce_loss") var bounceLossEV: Double = 0.0
+
+              let apertureSteps: [Double] = [1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6, 8.0, 11.0, 16.0, 22.0]
+              let shutterSteps: [Int] = [15, 30, 60, 125, 250, 500, 1000, 2000, 4000]
+              let distanceSteps: [Double] = [0.5, 0.7, 1.0, 1.2, 1.5, 1.8, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0]
 
               let catalog: [FlashModelSpec] = [
                   FlashModelSpec(id: "godox-v350", nameZh: "神牛 Godox V350 (主力推荐)", nameEn: "Godox V350 (Primary)", nameJa: "Godox V350 (推奨)", shortName: "Godox V350", baseGN: 36, ratedZoom: 105, minPowerDenom: 128, recycleSec: 1.7),
@@ -136,6 +387,10 @@ jobs:
                   FlashModelSpec(id: "godox-v860iii", nameZh: "神牛 Godox V860III", nameEn: "Godox V860III", nameJa: "Godox V860III", shortName: "Godox V860III", baseGN: 60, ratedZoom: 200, minPowerDenom: 256, recycleSec: 1.5),
                   FlashModelSpec(id: "profoto-a10", nameZh: "Profoto A10", nameEn: "Profoto A10", nameJa: "Profoto A10", shortName: "Profoto A10", baseGN: 42, ratedZoom: 105, minPowerDenom: 256, recycleSec: 1.0)
               ]
+
+              var currentTheme: LumiTheme {
+                  LumiTheme(rawValue: themeRaw) ?? .brass
+              }
 
               var activeFlashSpec: FlashModelSpec {
                   catalog.first(where: { $0.id == flashId }) ?? catalog[0]
@@ -154,7 +409,7 @@ jobs:
                   return activeFlashSpec.shortName
               }
 
-              func calculateRecommendedPower(distance: Double, fStop: Double) -> (powerText: String, stopOffset: Double) {
+              func calculateRecommendedPower(distance: Double, fStop: Double) -> (powerText: String, stopOffset: Double, isOutOfRange: Bool) {
                   let spec = activeFlashSpec
                   let minStops = -log2(Double(spec.minPowerDenom))
                   let zoomFactor = isCustomGN ? 1.0 : pow(Double(zoomMM) / Double(spec.ratedZoom), 0.38)
@@ -168,9 +423,10 @@ jobs:
                   let reqRatio = pow(reqGN / fullEffGN, 2.0)
                   let rawStops = log2(max(reqRatio, 1e-6))
                   let snapped = (rawStops * 3.0).rounded() / 3.0
+                  let outOfRange = rawStops > 0.25 || rawStops < (minStops - 0.25)
                   let clamped = min(max(snapped, minStops), 0.0)
 
-                  return (formatPower(clamped, minDenom: spec.minPowerDenom), clamped)
+                  return (formatPower(clamped, minDenom: spec.minPowerDenom), clamped, outOfRange)
               }
 
               func formatPower(_ stopOffset: Double, minDenom: Int) -> String {
@@ -189,7 +445,7 @@ jobs:
 
           struct CalculateFlashPowerIntent: AppIntent {
               static var title: LocalizedStringResource = "计算闪光灯输出功率 (LumiFilm)"
-              static var description = IntentDescription("输入拍摄距离与光圈，立即计算并语音播报闪光灯手动输出功率比，可直接绑定 iPhone 动作按钮或锁屏快捷键。")
+              static var description = IntentDescription("输入拍摄距离与光圈，立即计算并语音播报闪光灯手动输出功率比。")
               static var openAppWhenRun: Bool = false
 
               @Parameter(title: "拍摄距离 (米 / Meters)", default: 2.0)
@@ -240,208 +496,876 @@ jobs:
           }
           EOF
 
+          # 4. Generate ContentView.swift (Glassmorphism + Mechanical Rotary Dial + First-Launch Onboarding + 3 Themes)
           cat << 'EOF' > LumiFilm/ContentView.swift
           import SwiftUI
           import WidgetKit
           import AVFoundation
 
+          enum DialChannel: String, CaseIterable {
+              case distance = "DIST"
+              case aperture = "F-STOP"
+              case shutter = "SHUTTER"
+          }
+
           struct ContentView: View {
               @StateObject private var store = ExposureStore.shared
               @State private var selectedTab: Int = 0
+              @State private var activeChannel: DialChannel = .distance
+              @State private var showOnboardingSheet: Bool = false
               private let speechSynthesizer = AVSpeechSynthesizer()
 
               var body: some View {
+                  let theme = store.currentTheme
                   let solved = store.calculateRecommendedPower(distance: store.distanceM, fStop: store.aperture)
 
-                  TabView(selection: $selectedTab) {
-                      ScrollView {
-                          VStack(spacing: 14) {
-                              HStack {
-                                  VStack(alignment: .leading, spacing: 2) {
-                                      Text(store.lang == "en" ? "LumiFilm Exposure Log" : (store.lang == "ja" ? "銀塩フラッシュ露出手帖" : "银盐测光手账"))
-                                          .font(.headline)
-                                      Text("\(store.displayFlashTitle) (GN\(Int(store.activeGN))) · \(store.filmName) (ISO \(store.iso))")
-                                          .font(.caption)
-                                          .foregroundStyle(.secondary)
-                                  }
-                                  Spacer()
-                                  Button(store.lang == "en" ? "🌐 EN" : (store.lang == "ja" ? "🌐 JP" : "🌐 中文")) {
-                                      if store.lang == "zh" { store.lang = "en" }
-                                      else if store.lang == "en" { store.lang = "ja" }
-                                      else { store.lang = "zh" }
-                                  }
-                                  .font(.caption.bold())
-                                  .padding(.horizontal, 10)
-                                  .padding(.vertical, 6)
-                                  .background(Color.secondary.opacity(0.15))
-                                  .clipShape(Capsule())
-                              }
-                              .padding(.horizontal)
+                  ZStack {
+                      // Full-screen Rich Theme Background
+                      theme.backgroundGradient
+                          .ignoresSafeArea()
 
-                              VStack(alignment: .leading, spacing: 8) {
-                                  HStack {
-                                      Text(store.lang == "en" ? "🎙️ Instant Snap & Voice Command" : (store.lang == "ja" ? "🎙️ スナップ音声即算" : "🎙️ 抓拍语音/口令速算"))
-                                          .font(.subheadline.bold())
-                                      Spacer()
-                                      Button(store.lang == "en" ? "🔊 Speak" : (store.lang == "ja" ? "🔊 読み上げ" : "🔊 播报")) {
-                                          speakPower(solved.powerText)
+                      // Ambient glowing orbs for Frosted Glassmorphism depth
+                      Circle()
+                          .fill(theme.accentColor.opacity(0.28))
+                          .frame(width: 260, height: 260)
+                          .blur(radius: 65)
+                          .offset(x: -110, y: -230)
+
+                      Circle()
+                          .fill(theme.secondaryAccent.opacity(0.22))
+                          .frame(width: 280, height: 280)
+                          .blur(radius: 75)
+                          .offset(x: 120, y: 180)
+
+                      VStack(spacing: 0) {
+                          // Top Frosted Glass Header Bar
+                          HStack(spacing: 10) {
+                              VStack(alignment: .leading, spacing: 3) {
+                                  HStack(spacing: 6) {
+                                      Image(systemName: "bolt.Ring.closed")
+                                          .foregroundStyle(theme.accentColor)
+                                      Text(store.lang == "en" ? "LumiFilm Flash" : (store.lang == "ja" ? "LumiFilm 露出手帖" : "LumiFilm 胶片闪光"))
+                                          .font(.system(size: 18, weight: .bold, design: .serif))
+                                          .foregroundStyle(.white)
+                                  }
+                                  Text("\(store.displayFlashTitle) (GN\(Int(store.activeGN))) · \(store.filmName) (ISO \(store.iso))")
+                                      .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                      .foregroundStyle(.white.opacity(0.75))
+                              }
+                              Spacer()
+
+                              Button {
+                                  FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                  showOnboardingSheet = true
+                              } label: {
+                                  HStack(spacing: 4) {
+                                      Image(systemName: "film")
+                                      Text(store.lang == "en" ? "Roll Setup" : (store.lang == "ja" ? "ロール設定" : "换卷/设灯"))
+                                  }
+                                  .font(.system(size: 11, weight: .bold))
+                                  .foregroundStyle(.white)
+                                  .padding(.horizontal, 11)
+                                  .padding(.vertical, 7)
+                                  .background(.ultraThinMaterial, in: Capsule())
+                                  .overlay(Capsule().stroke(.white.opacity(0.28), lineWidth: 0.8))
+                              }
+                          }
+                          .padding(.horizontal, 16)
+                          .padding(.top, 8)
+                          .padding(.bottom, 10)
+
+                          // Main Content Area
+                          if selectedTab == 0 {
+                              meterTabView(theme: theme, solved: solved)
+                          } else if selectedTab == 1 {
+                              ambientTabView(theme: theme, solved: solved)
+                          } else {
+                              settingsTabView(theme: theme)
+                          }
+
+                          Spacer(minLength: 0)
+
+                          // Custom Glassmorphic Bottom Navigation Bar
+                          HStack(spacing: 0) {
+                              navButton(index: 0, icon: "dial.medium.fill", title: store.lang == "en" ? "Meter" : (store.lang == "ja" ? "露出計" : "测光转盘"), theme: theme)
+                              navButton(index: 1, icon: "sun.max.trianglebadge.exclamationmark.fill", title: store.lang == "en" ? "Modifiers" : (store.lang == "ja" ? "光量補正" : "环境柔光"), theme: theme)
+                              navButton(index: 2, icon: "paintbrush.pointed.fill", title: store.lang == "en" ? "Themes & Set" : (store.lang == "ja" ? "テーマ・設定" : "主题与设置"), theme: theme)
+                          }
+                          .padding(.vertical, 10)
+                          .padding(.horizontal, 14)
+                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                          .overlay(
+                              RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                  .stroke(.white.opacity(0.24), lineWidth: 0.9)
+                          )
+                          .padding(.horizontal, 16)
+                          .padding(.bottom, 6)
+                      }
+                  }
+                  .preferredColorScheme(.dark)
+                  .onAppear {
+                      FeedbackEngine.shared.prepare()
+                      if !store.hasCompletedOnboarding {
+                          showOnboardingSheet = true
+                      }
+                  }
+                  .sheet(isPresented: $showOnboardingSheet) {
+                      FirstLaunchOnboardingSheet(store: store, isPresented: $showOnboardingSheet)
+                          .presentationDetents([.medium, .large])
+                  }
+              }
+
+              // MARK: - TAB 1: Meter + 4 Glass Cards + Vintage Camera Mechanical Rotary Dial
+              @ViewBuilder
+              private func meterTabView(theme: LumiTheme, solved: (powerText: String, stopOffset: Double, isOutOfRange: Bool)) -> some View {
+                  ScrollView(showsIndicators: false) {
+                      VStack(spacing: 12) {
+                          // Hero Recommended Flash Power Glass Banner + Voice Broadcast
+                          HStack {
+                              VStack(alignment: .leading, spacing: 4) {
+                                  Text(store.lang == "en" ? "⚡ RECOMMENDED MANUAL FLASH POWER" : (store.lang == "ja" ? "⚡ 推奨マニュアル発光量" : "⚡ 推荐闪光灯手动输出功率比"))
+                                      .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                      .foregroundStyle(.white.opacity(0.7))
+                                  HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                      Text(solved.powerText)
+                                          .font(.system(size: 30, weight: .heavy, design: .monospaced))
+                                          .foregroundStyle(theme.accentColor)
+                                      Text("(\(store.displayFlashTitle) · ISO \(store.iso))")
+                                          .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                          .foregroundStyle(.white.opacity(0.8))
+                                  }
+                              }
+                              Spacer()
+                              Button {
+                                  FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                  speakPower(solved.powerText)
+                              } label: {
+                                  VStack(spacing: 2) {
+                                      Image(systemName: "speaker.wave.3.fill")
+                                          .font(.system(size: 16, weight: .bold))
+                                      Text(store.lang == "en" ? "Speak" : (store.lang == "ja" ? "音声" : "播报"))
+                                          .font(.system(size: 10, weight: .bold))
+                                  }
+                                  .foregroundStyle(.white)
+                                  .frame(width: 54, height: 50)
+                                  .background(theme.accentColor.opacity(0.85), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                              }
+                          }
+                          .padding(14)
+                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                          .overlay(
+                              RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                  .stroke(theme.accentColor.opacity(0.45), lineWidth: 1.1)
+                          )
+
+                          // 4 Glassmorphic Viewfinder Readout Tiles (Tap to bind to Mechanical Dial)
+                          LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                              GlassMetricTile(
+                                  title: store.lang == "en" ? "① DISTANCE" : (store.lang == "ja" ? "① 撮影距離" : "① 拍摄距离"),
+                                  value: String(format: "%.1f m", store.distanceM),
+                                  subtitle: String(format: "≈ %.1f ft · 点按上盘", store.distanceM * 3.28084),
+                                  isSelected: activeChannel == .distance,
+                                  accent: theme.accentColor
+                              ) {
+                                  FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                  activeChannel = .distance
+                              }
+
+                              GlassMetricTile(
+                                  title: store.lang == "en" ? "② FLASH POWER" : (store.lang == "ja" ? "② フラッシュ出力" : "② 闪光灯功率比"),
+                                  value: solved.powerText,
+                                  subtitle: store.lang == "en" ? "Auto Solved M" : "自动解算 M档",
+                                  isSelected: false,
+                                  accent: theme.secondaryAccent
+                              ) {
+                                  FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                  speakPower(solved.powerText)
+                              }
+
+                              GlassMetricTile(
+                                  title: store.lang == "en" ? "③ APERTURE" : (store.lang == "ja" ? "③ 絞り (f値)" : "③ 光圈大小"),
+                                  value: String(format: "f/%.1f", store.aperture).replacingOccurrences(of: ".0", with: ""),
+                                  subtitle: store.lang == "en" ? "Tap to dial f-stop" : "点按用转盘调光圈",
+                                  isSelected: activeChannel == .aperture,
+                                  accent: theme.accentColor
+                              ) {
+                                  FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                  activeChannel = .aperture
+                              }
+
+                              GlassMetricTile(
+                                  title: store.lang == "en" ? "④ SHUTTER" : (store.lang == "ja" ? "④ シャッター速度" : "④ 快门速度"),
+                                  value: "1/\(store.shutterDenom)s",
+                                  subtitle: store.shutterDenom <= store.maxSyncDenom ? "X-Sync Safe" : "HSS 高速同步",
+                                  isSelected: activeChannel == .shutter,
+                                  accent: theme.accentColor
+                              ) {
+                                  FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                  activeChannel = .shutter
+                              }
+                          }
+
+                          // Authentic Film Camera Mechanical Rotary Dial Card
+                          VStack(spacing: 10) {
+                              // Channel Selector Pills
+                              HStack(spacing: 8) {
+                                  channelPill(.distance, label: store.lang == "en" ? "Dist Ring" : (store.lang == "ja" ? "距離リング" : "距离转盘"), theme: theme)
+                                  channelPill(.aperture, label: store.lang == "en" ? "Aperture Ring" : (store.lang == "ja" ? "絞りリング" : "光圈转盘"), theme: theme)
+                                  channelPill(.shutter, label: store.lang == "en" ? "Shutter Dial" : (store.lang == "ja" ? "シャッター盤" : "快门转盘"), theme: theme)
+                              }
+
+                              // Interactive Mechanical Camera Top-Plate Rotary Dial
+                              HStack(spacing: 16) {
+                                  Button {
+                                      stepActiveChannel(by: -1)
+                                  } label: {
+                                      VStack(spacing: 2) {
+                                          Image(systemName: "minus")
+                                              .font(.system(size: 16, weight: .bold))
+                                          Text(store.lang == "en" ? "CCW" : "逆拨")
+                                              .font(.system(size: 9, weight: .medium))
                                       }
-                                      .font(.caption.bold())
+                                      .foregroundStyle(.white)
+                                      .frame(width: 46, height: 46)
+                                      .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                      .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.25), lineWidth: 0.8))
                                   }
-                                  Text("⚡ \(store.lang == "en" ? "Set Flash Power to:" : (store.lang == "ja" ? "推奨フラッシュ出力:" : "请将闪光灯拨至:")) \(solved.powerText)")
-                                      .font(.system(.body, design: .monospaced).bold())
-                                      .foregroundStyle(.orange)
-                              }
-                              .padding()
-                              .background(Color(.secondarySystemBackground))
-                              .clipShape(RoundedRectangle(cornerRadius: 18))
-                              .padding(.horizontal)
 
-                              LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                                  MetricCard(
-                                      title: store.lang == "en" ? "① Distance" : (store.lang == "ja" ? "① 撮影距離" : "① 拍摄距离"),
-                                      value: String(format: "%.1f m", store.distanceM),
-                                      sub: String(format: "≈ %.1f ft", store.distanceM * 3.28084)
+                                  MechanicalRotaryDialView(
+                                      store: store,
+                                      channel: activeChannel,
+                                      accentColor: theme.accentColor,
+                                      onStep: { delta in
+                                          stepActiveChannel(by: delta)
+                                      }
                                   )
-                                  MetricCard(
-                                      title: store.lang == "en" ? "② Flash Power" : (store.lang == "ja" ? "② 発光量" : "② 闪光灯功率比"),
-                                      value: solved.powerText,
-                                      sub: store.displayFlashTitle
-                                  )
-                                  MetricCard(
-                                      title: store.lang == "en" ? "③ Aperture" : (store.lang == "ja" ? "③ 絞り値" : "③ 光圈大小"),
-                                      value: String(format: "f/%.1f", store.aperture),
-                                      sub: "ISO \(store.iso)"
-                                  )
-                                  MetricCard(
-                                      title: store.lang == "en" ? "④ Shutter Speed" : (store.lang == "ja" ? "④ シャッター速度" : "④ 快门速度"),
-                                      value: "1/\(store.shutterDenom)s",
-                                      sub: "≤1/\(store.maxSyncDenom)s X-Sync"
-                                  )
-                              }
-                              .padding(.horizontal)
 
-                              VStack(spacing: 12) {
-                                  HStack {
-                                      Text(store.lang == "en" ? "Subject Distance (m)" : (store.lang == "ja" ? "撮影距離 (m)" : "拍摄距离调节 (m)"))
-                                          .font(.caption.bold())
+                                  Button {
+                                      stepActiveChannel(by: 1)
+                                  } label: {
+                                      VStack(spacing: 2) {
+                                          Image(systemName: "plus")
+                                              .font(.system(size: 16, weight: .bold))
+                                          Text(store.lang == "en" ? "CW" : "顺拨")
+                                              .font(.system(size: 9, weight: .medium))
+                                      }
+                                      .foregroundStyle(.white)
+                                      .frame(width: 46, height: 46)
+                                      .background(theme.accentColor.opacity(0.85), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                  }
+                              }
+                              .padding(.vertical, 4)
+
+                              // Fixed-Height Bottom Status / Auto-Balance Bar (Never shifts the dial!)
+                              HStack {
+                                  if solved.isOutOfRange {
+                                      Image(systemName: "exclamationmark.triangle.fill")
+                                          .foregroundStyle(.orange)
+                                      Text(store.lang == "en" ? "Out of flash range. Tap to auto-balance." : "超出当前闪光灯输出范围，点右侧一键配平")
+                                          .font(.system(size: 11, weight: .medium))
+                                          .foregroundStyle(.white)
                                       Spacer()
-                                      Text(String(format: "%.1f m", store.distanceM))
-                                          .font(.system(.caption, design: .monospaced))
-                                  }
-                                  Slider(value: $store.distanceM, in: 0.5...10.0, step: 0.1)
-
-                                  HStack {
-                                      Text(store.lang == "en" ? "Aperture (f-stop)" : (store.lang == "ja" ? "絞り値 (f-stop)" : "光圈环调节 (f-stop)"))
-                                          .font(.caption.bold())
+                                      Button(store.lang == "en" ? "Balance" : "自动配平") {
+                                          FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                          store.aperture = 2.8
+                                          store.distanceM = 2.0
+                                          WidgetCenter.shared.reloadAllTimelines()
+                                      }
+                                      .font(.system(size: 11, weight: .bold))
+                                      .padding(.horizontal, 10)
+                                      .padding(.vertical, 5)
+                                      .background(.orange, in: Capsule())
+                                      .foregroundStyle(.black)
+                                  } else {
+                                      Image(systemName: "checkmark.seal.fill")
+                                          .foregroundStyle(.green)
+                                      Text(store.lang == "en" ? "Exposure spot-on. Turn brass dial to adjust." : "曝光在有效范围内 · 拨动金属转盘听棘轮声与震动")
+                                          .font(.system(size: 11, weight: .medium))
+                                          .foregroundStyle(.white.opacity(0.85))
                                       Spacer()
-                                      Text(String(format: "f/%.1f", store.aperture))
-                                          .font(.system(.caption, design: .monospaced))
-                                  }
-                                  Slider(value: $store.aperture, in: 1.4...16.0, step: 0.2)
-                              }
-                              .padding()
-                              .background(Color(.secondarySystemBackground))
-                              .clipShape(RoundedRectangle(cornerRadius: 18))
-                              .padding(.horizontal)
-                          }
-                          .padding(.vertical)
-                      }
-                      .tabItem {
-                          Label(store.lang == "en" ? "Meter" : (store.lang == "ja" ? "露出計" : "测光"), systemImage: "camera.aperture")
-                      }
-                      .tag(0)
-
-                      Form {
-                          Section(store.lang == "en" ? "Diffuser & Bounce Loss" : "柔光附件与跳闪补偿") {
-                              Picker(store.lang == "en" ? "Diffuser" : "柔光附件", selection: $store.modifierLossEV) {
-                                  Text(store.lang == "en" ? "Direct Bare (0 EV)" : "裸灯直闪 (0 EV)").tag(0.0)
-                                  Text(store.lang == "en" ? "Dome Diffuser (-1.0 EV)" : "肥皂盒 (-1.0 EV)").tag(1.0)
-                                  Text(store.lang == "en" ? "Softbox (-1.8 EV)" : "柔光箱 (-1.8 EV)").tag(1.8)
-                              }
-                              Picker(store.lang == "en" ? "Bounce Angle" : "跳闪角度", selection: $store.bounceLossEV) {
-                                  Text(store.lang == "en" ? "0° Direct" : "0° 正面直打").tag(0.0)
-                                  Text(store.lang == "en" ? "45° Bounce (-1.7 EV)" : "45° 眼神板 (-1.7 EV)").tag(1.7)
-                                  Text(store.lang == "en" ? "75° Ceiling (-2.3 EV)" : "75° 白天花板 (-2.3 EV)").tag(2.3)
-                              }
-                          }
-                      }
-                      .tabItem {
-                          Label(store.lang == "en" ? "Ambient" : (store.lang == "ja" ? "環境光補正" : "环境光修正"), systemImage: "sun.max")
-                      }
-                      .tag(1)
-
-                      Form {
-                          Section(store.lang == "en" ? "Flash & Manual GN (Auto User Custom)" : "闪光灯与手动 GN 值（输入后显示用户自定义）") {
-                              Picker(store.lang == "en" ? "Preset Flash" : "预设闪光灯型号", selection: $store.flashId) {
-                                  ForEach(store.catalog) { item in
-                                      Text("\(item.shortName) (GN\(Int(item.baseGN)))").tag(item.id)
                                   }
                               }
-                              .onChange(of: store.flashId) { _ in
-                                  store.isCustomGN = false
+                              .frame(height: 36)
+                              .padding(.horizontal, 12)
+                              .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                          }
+                          .padding(14)
+                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                          .overlay(
+                              RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                  .stroke(.white.opacity(0.24), lineWidth: 0.9)
+                          )
+                      }
+                      .padding(.horizontal, 16)
+                      .padding(.bottom, 12)
+                  }
+              }
+
+              // MARK: - TAB 2: Ambient & Light Modifiers
+              @ViewBuilder
+              private func ambientTabView(theme: LumiTheme, solved: (powerText: String, stopOffset: Double, isOutOfRange: Bool)) -> some View {
+                  ScrollView(showsIndicators: false) {
+                      VStack(spacing: 14) {
+                          VStack(alignment: .leading, spacing: 10) {
+                              Text(store.lang == "en" ? "① Flash Diffuser / Softbox Compensation" : "① 柔光附件光损补偿 (自动提高闪光功率)")
+                                  .font(.system(size: 14, weight: .bold))
+                                  .foregroundStyle(.white)
+
+                              HStack(spacing: 8) {
+                                  modifierPill(loss: 0.0, title: store.lang == "en" ? "Bare (0)" : "裸灯直闪 (0)", theme: theme)
+                                  modifierPill(loss: 1.0, title: store.lang == "en" ? "Dome (-1.0)" : "肥皂盒 (-1.0)", theme: theme)
+                                  modifierPill(loss: 1.8, title: store.lang == "en" ? "Softbox (-1.8)" : "柔光箱 (-1.8)", theme: theme)
+                              }
+                          }
+                          .padding(16)
+                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                          .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.22), lineWidth: 0.8))
+
+                          VStack(alignment: .leading, spacing: 10) {
+                              Text(store.lang == "en" ? "② Bounce Flash Angle" : "② 灯头跳闪反射角度补偿")
+                                  .font(.system(size: 14, weight: .bold))
+                                  .foregroundStyle(.white)
+
+                              HStack(spacing: 8) {
+                                  bouncePill(loss: 0.0, title: store.lang == "en" ? "0° Direct" : "0° 正面直打", theme: theme)
+                                  bouncePill(loss: 1.7, title: store.lang == "en" ? "45° (-1.7)" : "45° 眼神板", theme: theme)
+                                  bouncePill(loss: 2.3, title: store.lang == "en" ? "75° Ceiling" : "75° 白天花板", theme: theme)
+                              }
+                          }
+                          .padding(16)
+                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                          .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.22), lineWidth: 0.8))
+                      }
+                      .padding(.horizontal, 16)
+                  }
+              }
+
+              // MARK: - TAB 3: 3 UI Themes (Instagram / Threads / Brass) + Sound & Haptics + Custom GN
+              @ViewBuilder
+              private func settingsTabView(theme: LumiTheme) -> some View {
+                  ScrollView(showsIndicators: false) {
+                      VStack(spacing: 14) {
+                          // 1. 3 Glassmorphic UI Themes
+                          VStack(alignment: .leading, spacing: 10) {
+                              Text(store.lang == "en" ? "🎨 UI Aesthetic Theme (Glassmorphism)" : "🎨 界面视觉主题 (三大玻璃质感配色)")
+                                  .font(.system(size: 14, weight: .bold))
+                                  .foregroundStyle(.white)
+
+                              ForEach(LumiTheme.allCases) { item in
+                                  Button {
+                                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                      withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                          store.themeRaw = item.rawValue
+                                      }
+                                  } label: {
+                                      HStack {
+                                          Circle()
+                                              .fill(item.accentColor)
+                                              .frame(width: 18, height: 18)
+                                          Text(item.title(lang: store.lang))
+                                              .font(.system(size: 13, weight: .bold))
+                                              .foregroundStyle(.white)
+                                          Spacer()
+                                          if store.themeRaw == item.rawValue {
+                                              Image(systemName: "checkmark.circle.fill")
+                                                  .foregroundStyle(item.accentColor)
+                                          }
+                                      }
+                                      .padding(12)
+                                      .background(
+                                          store.themeRaw == item.rawValue ? item.accentColor.opacity(0.22) : Color.white.opacity(0.06),
+                                          in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                      )
+                                      .overlay(
+                                          RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                              .stroke(store.themeRaw == item.rawValue ? item.accentColor : .white.opacity(0.15), lineWidth: 1)
+                                      )
+                                  }
+                              }
+                          }
+                          .padding(16)
+                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                          .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.22), lineWidth: 0.8))
+
+                          // 2. Mechanical Sound, Haptic Vibration & Language
+                          VStack(alignment: .leading, spacing: 12) {
+                              Toggle(isOn: $store.soundOn) {
+                                  Label(store.lang == "en" ? "Mechanical Dial Click Sound" : "转盘机械棘轮音效 (Sound)", systemImage: "speaker.wave.2.fill")
+                                      .font(.system(size: 13, weight: .semibold))
+                                      .foregroundStyle(.white)
+                              }
+                              .tint(theme.accentColor)
+
+                              Toggle(isOn: $store.hapticsOn) {
+                                  Label(store.lang == "en" ? "Tactile Haptic Vibration" : "转盘段落震动反馈 (Haptics)", systemImage: "iphone.radiowaves.left.and.right")
+                                      .font(.system(size: 13, weight: .semibold))
+                                      .foregroundStyle(.white)
+                              }
+                              .tint(theme.accentColor)
+
+                              HStack {
+                                  Text("🌐 Language / 语言")
+                                      .font(.system(size: 13, weight: .semibold))
+                                      .foregroundStyle(.white)
+                                  Spacer()
+                                  Picker("Language", selection: $store.lang) {
+                                      Text("中文").tag("zh")
+                                      Text("EN").tag("en")
+                                      Text("日本語").tag("ja")
+                                  }
+                                  .pickerStyle(.segmented)
+                                  .frame(width: 170)
+                              }
+                          }
+                          .padding(16)
+                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                          .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.22), lineWidth: 0.8))
+
+                          // 3. Flash Model & Manual GN Override ("User Custom / 用户自定义")
+                          VStack(alignment: .leading, spacing: 12) {
+                              HStack {
+                                  Text(store.lang == "en" ? "⚡ Flash & Film Roll Profile" : "⚡ 闪光灯与胶卷固定档案")
+                                      .font(.system(size: 14, weight: .bold))
+                                      .foregroundStyle(.white)
+                                  Spacer()
+                                  Button(store.lang == "en" ? "Open Setup Wizard" : "打开首次提问向导") {
+                                      showOnboardingSheet = true
+                                  }
+                                  .font(.system(size: 11, weight: .bold))
+                                  .foregroundStyle(theme.accentColor)
                               }
 
-                              Toggle(store.lang == "en" ? "Manual GN Input (User Custom)" : "手动输入 GN 值 (显示“用户自定义”)", isOn: $store.isCustomGN)
+                              Toggle(isOn: $store.isCustomGN) {
+                                  Text(store.lang == "en" ? "Manual GN Input (Shows 'User Custom')" : "手动输入 GN 值 (自动显示为“用户自定义”)")
+                                      .font(.system(size: 12, weight: .medium))
+                                      .foregroundStyle(.white)
+                              }
+                              .tint(theme.accentColor)
 
                               if store.isCustomGN {
-                                  Stepper(value: $store.customGNVal, in: 3...120, step: 1) {
-                                      HStack {
-                                          Text(store.displayFlashTitle).bold()
-                                          Spacer()
-                                          Text("GN \(Int(store.customGNVal))")
-                                              .font(.system(.body, design: .monospaced).bold())
-                                      }
+                                  HStack {
+                                      Text("\(store.displayFlashTitle): GN \(Int(store.customGNVal))")
+                                          .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                          .foregroundStyle(theme.accentColor)
+                                      Spacer()
+                                      Stepper("", value: $store.customGNVal, in: 3...120, step: 1)
+                                          .labelsHidden()
+                                          .onChange(of: store.customGNVal) { _ in
+                                              FeedbackEngine.shared.dialTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                              WidgetCenter.shared.reloadAllTimelines()
+                                          }
                                   }
                               }
                           }
+                          .padding(16)
+                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                          .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.22), lineWidth: 0.8))
+                      }
+                      .padding(.horizontal, 16)
+                      .padding(.bottom, 16)
+                  }
+              }
 
-                          Section(store.lang == "en" ? "Film Roll ISO" : "本卷胶卷固定感光度 (ISO)") {
-                              Picker("ISO", selection: $store.iso) {
-                                  Text("ISO 100").tag(100)
-                                  Text("ISO 200").tag(200)
-                                  Text("ISO 400 (Portra 400)").tag(400)
-                                  Text("ISO 800 (CineStill 800T)").tag(800)
-                              }
-                          }
+              private func stepActiveChannel(by delta: Int) {
+                  FeedbackEngine.shared.dialTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                  switch activeChannel {
+                  case .distance:
+                      let next = min(max(store.distanceM + Double(delta) * 0.1, 0.4), 12.0)
+                      store.distanceM = (next * 10).rounded() / 10
+                  case .aperture:
+                      let list = store.apertureSteps
+                      let curIdx = list.enumerated().min(by: { abs($0.element - store.aperture) < abs($1.element - store.aperture) })?.offset ?? 5
+                      let nextIdx = min(max(curIdx + delta, 0), list.count - 1)
+                      store.aperture = list[nextIdx]
+                  case .shutter:
+                      let list = store.shutterSteps
+                      let curIdx = list.firstIndex(of: store.shutterDenom) ?? 3
+                      let nextIdx = min(max(curIdx + delta, 0), list.count - 1)
+                      store.shutterDenom = list[nextIdx]
+                  }
+                  WidgetCenter.shared.reloadAllTimelines()
+              }
+
+              private func channelPill(_ chan: DialChannel, label: String, theme: LumiTheme) -> some View {
+                  Button {
+                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                      activeChannel = chan
+                  } label: {
+                      Text(label)
+                          .font(.system(size: 11, weight: .bold))
+                          .foregroundStyle(activeChannel == chan ? .black : .white.opacity(0.8))
+                          .frame(maxWidth: .infinity)
+                          .padding(.vertical, 7)
+                          .background(
+                              activeChannel == chan ? theme.accentColor : Color.white.opacity(0.08),
+                              in: Capsule()
+                          )
+                  }
+              }
+
+              private func modifierPill(loss: Double, title: String, theme: LumiTheme) -> some View {
+                  Button {
+                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                      store.modifierLossEV = loss
+                      WidgetCenter.shared.reloadAllTimelines()
+                  } label: {
+                      Text(title)
+                          .font(.system(size: 11, weight: .bold))
+                          .foregroundStyle(abs(store.modifierLossEV - loss) < 0.05 ? .black : .white)
+                          .frame(maxWidth: .infinity)
+                          .padding(.vertical, 10)
+                          .background(
+                              abs(store.modifierLossEV - loss) < 0.05 ? theme.accentColor : Color.white.opacity(0.08),
+                              in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                          )
+                  }
+              }
+
+              private func bouncePill(loss: Double, title: String, theme: LumiTheme) -> some View {
+                  Button {
+                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                      store.bounceLossEV = loss
+                      WidgetCenter.shared.reloadAllTimelines()
+                  } label: {
+                      Text(title)
+                          .font(.system(size: 11, weight: .bold))
+                          .foregroundStyle(abs(store.bounceLossEV - loss) < 0.05 ? .black : .white)
+                          .frame(maxWidth: .infinity)
+                          .padding(.vertical, 10)
+                          .background(
+                              abs(store.bounceLossEV - loss) < 0.05 ? theme.accentColor : Color.white.opacity(0.08),
+                              in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                          )
+                  }
+              }
+
+              private func navButton(index: Int, icon: String, title: String, theme: LumiTheme) -> some View {
+                  Button {
+                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                      selectedTab = index
+                  } label: {
+                      VStack(spacing: 4) {
+                          Image(systemName: icon)
+                              .font(.system(size: 17, weight: .bold))
+                          Text(title)
+                              .font(.system(size: 10, weight: .bold))
                       }
-                      .tabItem {
-                          Label(store.lang == "en" ? "Settings" : (store.lang == "ja" ? "設定" : "用户设置"), systemImage: "gearshape")
-                      }
-                      .tag(2)
+                      .foregroundStyle(selectedTab == index ? theme.accentColor : .white.opacity(0.55))
+                      .frame(maxWidth: .infinity)
                   }
               }
 
               private func speakPower(_ powerText: String) {
-                  let msg = "距离 \(String(format: "%.1f", store.distanceM)) 米，光圈 \(String(format: "%.1f", store.aperture))，请将闪光灯拨至 \(powerText) 功率。"
+                  let msg: String
+                  if store.lang == "en" {
+                      msg = "Distance \(String(format: "%.1f", store.distanceM)) meters, f \(String(format: "%.1f", store.aperture)). Set flash power to \(powerText)."
+                  } else if store.lang == "ja" {
+                      msg = "距離 \(String(format: "%.1f", store.distanceM)) メートル、推奨フラッシュ出力は \(powerText) です。"
+                  } else {
+                      msg = "距离 \(String(format: "%.1f", store.distanceM)) 米，光圈 \(String(format: "%.1f", store.aperture))，请将闪光灯拨至 \(powerText) 功率。"
+                  }
                   let utterance = AVSpeechUtterance(string: msg)
-                  utterance.voice = AVSpeechSynthesisVoice(language: "zh-CN")
+                  utterance.voice = AVSpeechSynthesisVoice(language: store.lang == "en" ? "en-US" : (store.lang == "ja" ? "ja-JP" : "zh-CN"))
                   speechSynthesizer.speak(utterance)
               }
           }
 
-          struct MetricCard: View {
-              let title: String
-              let value: String
-              let sub: String
+          // MARK: - Authentic Vintage Film Camera Mechanical Rotary Dial Component
+          struct MechanicalRotaryDialView: View {
+              @ObservedObject var store: ExposureStore
+              let channel: DialChannel
+              let accentColor: Color
+              let onStep: (Int) -> Void
+
+              @State private var lastDragAngle: Double? = nil
+              @State private var accumulatedAngle: Double = 0
+
+              private var currentRotationDegrees: Double {
+                  switch channel {
+                  case .distance:
+                      let ratio = (store.distanceM - 0.4) / 11.6
+                      return 135.0 - ratio * 270.0
+                  case .aperture:
+                      let list = store.apertureSteps
+                      let idx = list.enumerated().min(by: { abs($0.element - store.aperture) < abs($1.element - store.aperture) })?.offset ?? 5
+                      let ratio = Double(idx) / Double(max(list.count - 1, 1))
+                      return 135.0 - ratio * 270.0
+                  case .shutter:
+                      let list = store.shutterSteps
+                      let idx = list.firstIndex(of: store.shutterDenom) ?? 3
+                      let ratio = Double(idx) / Double(max(list.count - 1, 1))
+                      return 135.0 - ratio * 270.0
+                  }
+              }
+
+              private var centerReadoutText: String {
+                  switch channel {
+                  case .distance:
+                      return String(format: "%.1fm", store.distanceM)
+                  case .aperture:
+                      return String(format: "f/%.1f", store.aperture).replacingOccurrences(of: ".0", with: "")
+                  case .shutter:
+                      return "1/\(store.shutterDenom)"
+                  }
+              }
 
               var body: some View {
-                  VStack(alignment: .leading, spacing: 6) {
-                      Text(title).font(.caption).foregroundStyle(.secondary)
-                      Text(value).font(.system(.title2, design: .monospaced).bold())
-                      Text(sub).font(.caption2).foregroundStyle(.secondary)
+                  ZStack {
+                      // Outer Knurled Brass / Metallic Bezel Ring
+                      Circle()
+                          .fill(
+                              AngularGradient(
+                                  colors: [
+                                      Color(red: 0.76, green: 0.60, blue: 0.36),
+                                      Color(red: 0.94, green: 0.84, blue: 0.66),
+                                      Color(red: 0.56, green: 0.42, blue: 0.24),
+                                      Color(red: 0.88, green: 0.74, blue: 0.50),
+                                      Color(red: 0.76, green: 0.60, blue: 0.36)
+                                  ],
+                                  center: .center
+                              )
+                          )
+                          .frame(width: 196, height: 196)
+                          .shadow(color: .black.opacity(0.45), radius: 14, x: 0, y: 8)
+
+                      // Knurled Edge serrations
+                      Circle()
+                          .stroke(Color.black.opacity(0.45), style: StrokeStyle(lineWidth: 5, dash: [2.5, 2.5]))
+                          .frame(width: 192, height: 192)
+
+                      // Rotating Black Anodized Engraved Shutter Plate
+                      ZStack {
+                          Circle()
+                              .fill(
+                                  RadialGradient(
+                                      colors: [Color(red: 0.22, green: 0.20, blue: 0.18), Color(red: 0.09, green: 0.08, blue: 0.07)],
+                                      center: .center,
+                                      startRadius: 10,
+                                      endRadius: 90
+                                  )
+                              )
+                              .frame(width: 174, height: 174)
+
+                          // Engraved Ticks around the plate
+                          ForEach(0..<36, id: \.self) { i in
+                              let angle = -135.0 + (Double(i) / 35.0) * 270.0
+                              VStack {
+                                  Rectangle()
+                                      .fill(i % 4 == 0 ? Color(red: 0.95, green: 0.90, blue: 0.78) : Color.white.opacity(0.35))
+                                      .frame(width: i % 4 == 0 ? 2.0 : 1.0, height: i % 4 == 0 ? 9 : 5)
+                                  Spacer()
+                              }
+                              .frame(height: 166)
+                              .rotationEffect(.degrees(angle))
+                          }
+                      }
+                      .rotationEffect(.degrees(currentRotationDegrees))
+                      .animation(.interactiveSpring(response: 0.18, dampingFraction: 0.75), value: currentRotationDegrees)
+
+                      // Top 12 O'Clock Engraved Orange/Red Index Pointer
+                      VStack {
+                          Image(systemName: "arrowtriangle.down.fill")
+                              .font(.system(size: 12, weight: .black))
+                              .foregroundStyle(accentColor)
+                              .offset(y: -4)
+                          Spacer()
+                      }
+                      .frame(height: 204)
+
+                      // Stationary Brass Center Core & Glass Window
+                      ZStack {
+                          Circle()
+                              .fill(
+                                  LinearGradient(
+                                      colors: [Color(red: 0.82, green: 0.66, blue: 0.42), Color(red: 0.52, green: 0.38, blue: 0.20)],
+                                      startPoint: .topLeading,
+                                      endPoint: .bottomTrailing
+                                  )
+                              )
+                              .frame(width: 92, height: 92)
+
+                          Circle()
+                              .fill(Color(red: 0.12, green: 0.11, blue: 0.10))
+                              .frame(width: 82, height: 82)
+
+                          VStack(spacing: 2) {
+                              Text(channel.rawValue)
+                                  .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                  .foregroundStyle(accentColor)
+                              Text(centerReadoutText)
+                                  .font(.system(size: 18, weight: .heavy, design: .monospaced))
+                                  .foregroundStyle(.white)
+                              Text("ROTATE DIAL")
+                                  .font(.system(size: 7, weight: .semibold, design: .monospaced))
+                                  .foregroundStyle(.white.opacity(0.5))
+                          }
+                      }
                   }
-                  .frame(maxWidth: .infinity, alignment: .leading)
-                  .padding(12)
-                  .background(Color(.secondarySystemBackground))
-                  .clipShape(RoundedRectangle(cornerRadius: 16))
+                  .frame(width: 204, height: 204)
+                  .contentShape(Circle())
+                  .gesture(
+                      DragGesture(minimumDistance: 2)
+                          .onChanged { value in
+                              let center = CGPoint(x: 102, y: 102)
+                              let dx = Double(value.location.x - center.x)
+                              let dy = Double(value.location.y - center.y)
+                              let angle = atan2(dy, dx) * 180.0 / .pi
+
+                              if let last = lastDragAngle {
+                                  var delta = angle - last
+                                  if delta > 180 { delta -= 360 }
+                                  if delta < -180 { delta += 360 }
+                                  accumulatedAngle += delta
+                                  if abs(accumulatedAngle) >= 11.0 {
+                                      let steps = Int(accumulatedAngle / 11.0)
+                                      accumulatedAngle -= Double(steps) * 11.0
+                                      onStep(steps > 0 ? 1 : -1)
+                                  }
+                              }
+                              lastDragAngle = angle
+                          }
+                          .onEnded { _ in
+                              lastDragAngle = nil
+                              accumulatedAngle = 0
+                          }
+                  )
+              }
+          }
+
+          struct GlassMetricTile: View {
+              let title: String
+              let value: String
+              let subtitle: String
+              let isSelected: Bool
+              let accent: Color
+              let action: () -> Void
+
+              var body: some View {
+                  Button(action: action) {
+                      VStack(alignment: .leading, spacing: 5) {
+                          HStack {
+                              Text(title)
+                                  .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                  .foregroundStyle(.white.opacity(0.75))
+                              Spacer()
+                              if isSelected {
+                                  Circle()
+                                      .fill(accent)
+                                      .frame(width: 7, height: 7)
+                              }
+                          }
+                          Text(value)
+                              .font(.system(size: 24, weight: .heavy, design: .monospaced))
+                              .foregroundStyle(isSelected ? accent : .white)
+                              .lineLimit(1)
+                              .minimumScaleFactor(0.7)
+                          Text(subtitle)
+                              .font(.system(size: 10, weight: .medium))
+                              .foregroundStyle(.white.opacity(0.6))
+                              .lineLimit(1)
+                      }
+                      .frame(maxWidth: .infinity, alignment: .leading)
+                      .padding(12)
+                      .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                      .overlay(
+                          RoundedRectangle(cornerRadius: 20, style: .continuous)
+                              .stroke(isSelected ? accent : .white.opacity(0.20), lineWidth: isSelected ? 1.6 : 0.8)
+                      )
+                  }
+                  .buttonStyle(.plain)
+              }
+          }
+
+          // MARK: - First Launch Inquiry Sheet (Persisted in @AppStorage until user wants to change)
+          struct FirstLaunchOnboardingSheet: View {
+              @ObservedObject var store: ExposureStore
+              @Binding var isPresented: Bool
+
+              let filmStocks: [(iso: Int, name: String)] = [
+                  (100, "Kodak Ektar 100"),
+                  (200, "Kodak Gold 200"),
+                  (400, "Kodak Portra 400"),
+                  (400, "Ilford HP5 Plus 400"),
+                  (800, "CineStill 800T")
+              ]
+
+              var body: some View {
+                  NavigationStack {
+                      ZStack {
+                          store.currentTheme.backgroundGradient.ignoresSafeArea()
+                          Form {
+                              Section(store.lang == "en" ? "1. Select Film Stock & Fixed ISO" : "① 选择本卷胶卷与固定感光度 (ISO)") {
+                                  ForEach(filmStocks, id: \.name) { item in
+                                      Button {
+                                          FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                          store.iso = item.iso
+                                          store.filmName = item.name
+                                      } label: {
+                                          HStack {
+                                              Text("\(item.name) (ISO \(item.iso))")
+                                                  .foregroundStyle(.primary)
+                                              Spacer()
+                                              if store.filmName == item.name {
+                                                  Image(systemName: "checkmark.circle.fill")
+                                                      .foregroundStyle(.orange)
+                                              }
+                                          }
+                                      }
+                                  }
+                                  Stepper("ISO: \(store.iso)", value: $store.iso, in: 50...3200, step: 50)
+                              }
+
+                              Section(store.lang == "en" ? "2. Select Flash Unit or Custom GN" : "② 选择闪光灯型号或手动输入 GN 值") {
+                                  Picker(store.lang == "en" ? "Flash Model" : "主力闪光灯", selection: $store.flashId) {
+                                      ForEach(store.catalog) { spec in
+                                          Text("\(spec.shortName) (GN\(Int(spec.baseGN)))").tag(spec.id)
+                                      }
+                                  }
+                                  .onChange(of: store.flashId) { _ in
+                                      store.isCustomGN = false
+                                  }
+
+                                  Toggle(store.lang == "en" ? "Manual GN (User Custom)" : "手动输入 GN 值 (显示“用户自定义”)", isOn: $store.isCustomGN)
+
+                                  if store.isCustomGN {
+                                      Stepper("GN: \(Int(store.customGNVal))", value: $store.customGNVal, in: 3...120, step: 1)
+                                  }
+                              }
+
+                              Section(store.lang == "en" ? "3. Choose UI Theme" : "③ 选择界面质感主题") {
+                                  Picker("Theme", selection: $store.themeRaw) {
+                                      ForEach(LumiTheme.allCases) { t in
+                                          Text(t.title(lang: store.lang)).tag(t.rawValue)
+                                      }
+                                  }
+                              }
+                          }
+                          .scrollContentBackground(.hidden)
+                      }
+                      .navigationTitle(store.lang == "en" ? "🎞️ Film Roll & Flash Setup" : "🎞️ 首次装卷与闪光灯设定")
+                      .navigationBarTitleDisplayMode(.inline)
+                      .toolbar {
+                          ToolbarItem(placement: .confirmationAction) {
+                              Button(store.lang == "en" ? "Save & Lock" : "锁定并进入") {
+                                  FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                  store.hasCompletedOnboarding = true
+                                  WidgetCenter.shared.reloadAllTimelines()
+                                  isPresented = false
+                              }
+                              .bold()
+                          }
+                      }
+                  }
+                  .preferredColorScheme(.dark)
               }
           }
           EOF
 
+          # 5. Generate LumiFilmWidget.swift (Fixes "please adopt containerBackground API" on iOS 17/18/19+ and adds Interactive Distance/Aperture Buttons!)
           cat << 'EOF' > LumiFilmWidget/LumiFilmWidget.swift
           import WidgetKit
           import SwiftUI
+          import AppIntents
 
           struct LumiFilmWidgetEntry: TimelineEntry {
               let date: Date
@@ -454,15 +1378,81 @@ jobs:
               let shutterDenom: Int
           }
 
+          struct StepWidgetDistanceIntent: AppIntent {
+              static var title: LocalizedStringResource = "调节拍摄距离"
+              @Parameter(title: "Delta")
+              var delta: Double
+
+              init() { self.delta = 0.5 }
+              init(delta: Double) { self.delta = delta }
+
+              func perform() async throws -> some IntentResult {
+                  let defaults = UserDefaults.standard
+                  let cur = defaults.double(forKey: "lf_distance_m")
+                  let base = cur > 0.1 ? cur : 2.0
+                  let next = min(max(((base + delta) * 10).rounded() / 10, 0.5), 10.0)
+                  defaults.set(next, forKey: "lf_distance_m")
+                  WidgetCenter.shared.reloadAllTimelines()
+                  return .result()
+              }
+          }
+
+          struct StepWidgetApertureIntent: AppIntent {
+              static var title: LocalizedStringResource = "切换光圈档位"
+
+              init() {}
+
+              func perform() async throws -> some IntentResult {
+                  let defaults = UserDefaults.standard
+                  let steps: [Double] = [2.0, 2.8, 4.0, 5.6, 8.0, 11.0]
+                  let cur = defaults.double(forKey: "lf_aperture")
+                  let currentF = cur > 0.5 ? cur : 4.0
+                  let idx = steps.firstIndex(where: { abs($0 - currentF) < 0.2 }) ?? 2
+                  let nextF = steps[(idx + 1) % steps.count]
+                  defaults.set(nextF, forKey: "lf_aperture")
+                  WidgetCenter.shared.reloadAllTimelines()
+                  return .result()
+              }
+          }
+
           struct LumiFilmWidgetProvider: TimelineProvider {
+              func loadEntry() -> LumiFilmWidgetEntry {
+                  let d = UserDefaults.standard
+                  let isCustom = d.bool(forKey: "lf_is_custom_gn")
+                  let customGN = d.double(forKey: "lf_custom_gn_val")
+                  let gnVal = isCustom ? (customGN > 0 ? Int(customGN) : 36) : 36
+                  let title = isCustom ? "用户自定义" : "Godox V350"
+                  let isoVal = d.integer(forKey: "lf_iso") > 0 ? d.integer(forKey: "lf_iso") : 400
+                  let dist = d.double(forKey: "lf_distance_m") > 0.1 ? d.double(forKey: "lf_distance_m") : 2.0
+                  let ap = d.double(forKey: "lf_aperture") > 0.5 ? d.double(forKey: "lf_aperture") : 4.0
+
+                  let fullEffGN = Double(gnVal) * 0.78 * sqrt(Double(isoVal) / 100.0)
+                  let reqRatio = pow((ap * dist) / max(fullEffGN, 0.1), 2.0)
+                  let rawStops = min(max(log2(max(reqRatio, 1e-6)), -7.0), 0.0)
+                  let whole = floor((rawStops * 3.0).rounded() / 3.0 + 1e-6)
+                  let denom = Int(pow(2.0, -whole).rounded())
+                  let pText = "1/\(denom)"
+
+                  return LumiFilmWidgetEntry(
+                      date: Date(),
+                      flashTitle: title,
+                      gn: gnVal,
+                      iso: isoVal,
+                      distanceM: dist,
+                      aperture: ap,
+                      recommendedPower: pText,
+                      shutterDenom: 125
+                  )
+              }
+
               func placeholder(in context: Context) -> LumiFilmWidgetEntry {
-                  LumiFilmWidgetEntry(date: Date(), flashTitle: "Godox V350", gn: 36, iso: 400, distanceM: 2.0, aperture: 4.0, recommendedPower: "1/4", shutterDenom: 125)
+                  loadEntry()
               }
               func getSnapshot(in context: Context, completion: @escaping (LumiFilmWidgetEntry) -> Void) {
-                  completion(placeholder(in: context))
+                  completion(loadEntry())
               }
               func getTimeline(in context: Context, completion: @escaping (Timeline<LumiFilmWidgetEntry>) -> Void) {
-                  let entry = placeholder(in: context)
+                  let entry = loadEntry()
                   let timeline = Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(900)))
                   completion(timeline)
               }
@@ -470,22 +1460,91 @@ jobs:
 
           struct LumiFilmWidgetEntryView: View {
               var entry: LumiFilmWidgetProvider.Entry
+
               var body: some View {
-                  VStack(alignment: .leading, spacing: 4) {
+                  VStack(alignment: .leading, spacing: 6) {
                       HStack {
-                          Text("🎞️ \(entry.flashTitle)").font(.caption2.bold())
+                          Text("🎞️ \(entry.flashTitle) · GN\(entry.gn)")
+                              .font(.system(size: 10, weight: .bold, design: .monospaced))
+                              .foregroundStyle(Color(red: 0.90, green: 0.72, blue: 0.42))
                           Spacer()
-                          Text("ISO \(entry.iso)").font(.caption2).foregroundStyle(.secondary)
+                          Text("ISO \(entry.iso)")
+                              .font(.system(size: 10, weight: .bold, design: .monospaced))
+                              .foregroundStyle(.white.opacity(0.75))
                       }
-                      Spacer()
-                      Text("⚡ \(entry.recommendedPower)")
-                          .font(.system(.title2, design: .monospaced).bold())
-                          .foregroundStyle(.orange)
-                      Text(String(format: "%.1fm · f/%.1f · 1/%ds", entry.distanceM, entry.aperture, entry.shutterDenom))
-                          .font(.system(.caption2, design: .monospaced))
-                          .foregroundStyle(.secondary)
+
+                      HStack(alignment: .firstTextBaseline, spacing: 6) {
+                          Text("⚡ \(entry.recommendedPower)")
+                              .font(.system(size: 26, weight: .heavy, design: .monospaced))
+                              .foregroundStyle(Color(red: 1.0, green: 0.58, blue: 0.28))
+                          Spacer()
+                          Text("1/\(entry.shutterDenom)s")
+                              .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                              .foregroundStyle(.white.opacity(0.75))
+                      }
+
+                      Spacer(minLength: 0)
+
+                      // Interactive Quick Parameter Adjustment Buttons right on the Home Screen Widget!
+                      HStack(spacing: 6) {
+                          Button(intent: StepWidgetDistanceIntent(delta: -0.5)) {
+                              Text("−0.5m")
+                                  .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                  .padding(.horizontal, 6)
+                                  .padding(.vertical, 4)
+                                  .background(Color.white.opacity(0.15), in: Capsule())
+                          }
+                          .buttonStyle(.plain)
+
+                          Text(String(format: "%.1fm", entry.distanceM))
+                              .font(.system(size: 11, weight: .bold, design: .monospaced))
+                              .foregroundStyle(.white)
+
+                          Button(intent: StepWidgetDistanceIntent(delta: 0.5)) {
+                              Text("+0.5m")
+                                  .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                  .padding(.horizontal, 6)
+                                  .padding(.vertical, 4)
+                                  .background(Color.white.opacity(0.15), in: Capsule())
+                          }
+                          .buttonStyle(.plain)
+
+                          Spacer()
+
+                          Button(intent: StepWidgetApertureIntent()) {
+                              Text(String(format: "f/%.1f ↻", entry.aperture).replacingOccurrences(of: ".0", with: ""))
+                                  .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                  .foregroundStyle(.black)
+                                  .padding(.horizontal, 8)
+                                  .padding(.vertical, 4)
+                                  .background(Color(red: 0.90, green: 0.72, blue: 0.42), in: Capsule())
+                          }
+                          .buttonStyle(.plain)
+                      }
+                      .foregroundStyle(.white)
                   }
-                  .padding(12)
+                  .widgetBackground()
+              }
+          }
+
+          extension View {
+              @ViewBuilder
+              func widgetBackground() -> some View {
+                  let bg = LinearGradient(
+                      colors: [
+                          Color(red: 0.14, green: 0.11, blue: 0.09),
+                          Color(red: 0.24, green: 0.18, blue: 0.13)
+                      ],
+                      startPoint: .topLeading,
+                      endPoint: .bottomTrailing
+                  )
+                  if #available(iOSApplicationExtension 17.0, *) {
+                      self.containerBackground(for: .widget) {
+                          bg
+                      }
+                  } else {
+                      self.padding(12).background(bg)
+                  }
               }
           }
 
@@ -496,9 +1555,9 @@ jobs:
                   StaticConfiguration(kind: kind, provider: LumiFilmWidgetProvider()) { entry in
                       LumiFilmWidgetEntryView(entry: entry)
                   }
-                  .configurationDisplayName("LumiFilm 闪光测光速查")
-                  .description("在 iOS 首屏桌面与锁屏实时显示当前胶卷 ISO、拍摄距离与推荐闪光灯功率比。")
-                  .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
+                  .configurationDisplayName("LumiFilm 胶片闪光速算")
+                  .description("桌面直接点按调节拍摄距离与光圈，实时显示推荐闪光灯功率比。")
+                  .supportedFamilies([.systemSmall, .systemMedium])
               }
           }
           EOF
@@ -521,17 +1580,17 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
           mkdir -p Payload
           cp -r build_output/Build/Products/Release-iphoneos/LumiFilm.app Payload/
-          # Stamp CFBundleVersion and CFBundleShortVersionString into both Main App and Widget Extension Info.plist so IXPlaceholder never fails with Code=17
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 4.0.0" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 4.0.0" Payload/LumiFilm.app/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 40" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 40" Payload/LumiFilm.app/Info.plist
+          # Stamp CFBundleVersion and CFBundleShortVersionString into both Main App and Widget Extension Info.plist so Sideloadly installs both cleanly
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 5.0.0" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 5.0.0" Payload/LumiFilm.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 50" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 50" Payload/LumiFilm.app/Info.plist
           if [ -f "Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist" ]; then
-            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 4.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 4.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
-            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 40" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 40" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 5.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 5.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 50" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 50" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
           fi
-          zip -r9 ../LumiFilm_Native_v4.0_Unsigned.ipa Payload
+          zip -r9 ../LumiFilm_Native_v5.0_Unsigned.ipa Payload
 
-      - name: Upload Native iOS IPA Artifact (Node 24 Ready)
+      - name: Upload Native iOS IPA Artifact
         uses: actions/upload-artifact@v5
         with:
           name: LumiFilm_Native_iOS_IPA
-          path: LumiFilm_Native_v4.0_Unsigned.ipa
+          path: LumiFilm_Native_v5.0_Unsigned.ipa
