@@ -1,4 +1,4 @@
-name: Build LumiFilm Native iOS IPA (Self-Contained Zero-Error)
+name: Build LumiFilm Native iOS IPA (Sideloadly Ready - Fixed Version & PlugIns)
 
 on:
   push:
@@ -33,15 +33,22 @@ jobs:
               deploymentTarget: "16.4"
               sources:
                 - path: LumiFilm
+              info:
+                path: LumiFilm/Info.plist
+                properties:
+                  CFBundleDisplayName: LumiFilm
+                  CFBundleShortVersionString: "4.0.0"
+                  CFBundleVersion: "40"
+                  UILaunchScreen: {}
+                  UISupportedInterfaceOrientations:
+                    - UIInterfaceOrientationPortrait
+                  NSMicrophoneUsageDescription: "LumiFilm 需要麦克风权限来识别您说出的拍摄距离、光圈与场景，立即播报推荐的闪光灯输出功率。"
+                  NSSpeechRecognitionUsageDescription: "LumiFilm 需要语音识别权限以将您的抓拍语音转换为闪光灯曝光参数。"
               settings:
                 base:
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app
-                  GENERATE_INFOPLIST_FILE: YES
-                  INFOPLIST_KEY_CFBundleDisplayName: LumiFilm
-                  INFOPLIST_KEY_UILaunchScreen_Generation: YES
-                  INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
-                  INFOPLIST_KEY_NSMicrophoneUsageDescription: "LumiFilm 需要麦克风权限来识别您说出的拍摄距离、光圈与场景，立即播报推荐的闪光灯输出功率。"
-                  INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "LumiFilm 需要语音识别权限以将您的抓拍语音转换为闪光灯曝光参数。"
+                  MARKETING_VERSION: "4.0.0"
+                  CURRENT_PROJECT_VERSION: "40"
                   CODE_SIGN_IDENTITY: ""
                   CODE_SIGNING_REQUIRED: NO
                   CODE_SIGNING_ALLOWED: NO
@@ -59,12 +66,15 @@ jobs:
                 path: LumiFilmWidget/Info.plist
                 properties:
                   CFBundleDisplayName: LumiFilm Widget
+                  CFBundleShortVersionString: "4.0.0"
+                  CFBundleVersion: "40"
                   NSExtension:
                     NSExtensionPointIdentifier: com.apple.widgetkit-extension
               settings:
                 base:
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app.widget
-                  GENERATE_INFOPLIST_FILE: YES
+                  MARKETING_VERSION: "4.0.0"
+                  CURRENT_PROJECT_VERSION: "40"
                   CODE_SIGN_IDENTITY: ""
                   CODE_SIGNING_REQUIRED: NO
                   CODE_SIGNING_ALLOWED: NO
@@ -511,6 +521,13 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
           mkdir -p Payload
           cp -r build_output/Build/Products/Release-iphoneos/LumiFilm.app Payload/
+          # Stamp CFBundleVersion and CFBundleShortVersionString into both Main App and Widget Extension Info.plist so IXPlaceholder never fails with Code=17
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 4.0.0" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 4.0.0" Payload/LumiFilm.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 40" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 40" Payload/LumiFilm.app/Info.plist
+          if [ -f "Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist" ]; then
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 4.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 4.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 40" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 40" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
+          fi
           zip -r9 ../LumiFilm_Native_v4.0_Unsigned.ipa Payload
 
       - name: Upload Native iOS IPA Artifact (Node 24 Ready)
