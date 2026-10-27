@@ -1,4 +1,4 @@
-name: Build LumiFilm v5.0 Native iOS IPA (Fixed Swift Ambiguity & Zero Errors)
+name: Build LumiFilm v5.0 Native iOS IPA (iOS 17+ Widget Interactive Buttons Fixed)
 
 on:
   push:
@@ -18,7 +18,6 @@ jobs:
           cd LumiFilmBuild
 
           # 1. Generate 1024x1024 Glassmorphic Film Flash App Icon via CoreGraphics Swift script
-          # Using Darwin.cos & Darwin.sin explicitly to prevent 'ambiguous use of cos' error on macOS 15
           cat << 'ICONEOF' > make_icon.swift
           import Cocoa
           import Darwin
@@ -30,7 +29,6 @@ jobs:
 
           let colorSpace = CGColorSpaceCreateDeviceRGB()
 
-          // Dark smoked brass-glass background gradient
           let bgColors = [
               CGColor(red: 0.16, green: 0.11, blue: 0.08, alpha: 1.0),
               CGColor(red: 0.36, green: 0.21, blue: 0.12, alpha: 1.0),
@@ -39,7 +37,6 @@ jobs:
           let bgGrad = CGGradient(colorsSpace: colorSpace, colors: bgColors, locations: [0.0, 0.55, 1.0])!
           ctx.drawLinearGradient(bgGrad, start: CGPoint(x: 0, y: 1024), end: CGPoint(x: 1024, y: 0), options: [])
 
-          // Warm Sunset / Amber Radial Glow
           let glowColors = [
               CGColor(red: 0.96, green: 0.55, blue: 0.24, alpha: 0.65),
               CGColor(red: 0.85, green: 0.22, blue: 0.38, alpha: 0.25),
@@ -48,7 +45,6 @@ jobs:
           let glowGrad = CGGradient(colorsSpace: colorSpace, colors: glowColors, locations: [0.0, 0.5, 1.0])!
           ctx.drawRadialGradient(glowGrad, startCenter: CGPoint(x: 460, y: 520), startRadius: 20, endCenter: CGPoint(x: 512, y: 512), endRadius: 460, options: [])
 
-          // 35mm Film Strip Diagonal Ribbon
           ctx.saveGState()
           ctx.translateBy(x: 512, y: 512)
           ctx.rotate(by: -.pi / 4.2)
@@ -62,7 +58,6 @@ jobs:
           }
           ctx.restoreGState()
 
-          // Brass Mechanical Shutter Dial Ring
           let center = CGPoint(x: 512, y: 512)
           ctx.saveGState()
           ctx.addArc(center: center, radius: 330, startAngle: 0, endAngle: .pi * 2, clockwise: false)
@@ -73,7 +68,6 @@ jobs:
           ctx.setFillColor(CGColor(red: 0.14, green: 0.13, blue: 0.12, alpha: 0.96))
           ctx.fillPath()
 
-          // Tick marks around mechanical dial with explicit Darwin.cos and Darwin.sin
           for i in 0..<36 {
               let angleVal = Double(i) * (Double.pi * 2.0 / 36.0)
               let r1: Double = (i % 3 == 0) ? 250.0 : 268.0
@@ -90,7 +84,6 @@ jobs:
           }
           ctx.restoreGState()
 
-          // Frosted Glassmorphic Flash Reflector Dome & Lightning Core
           let glassRect = CGRect(x: 262, y: 262, width: 500, height: 500)
           let glassPath = CGPath(roundedRect: glassRect, cornerWidth: 160, cornerHeight: 160, transform: nil)
           ctx.saveGState()
@@ -103,7 +96,6 @@ jobs:
           ctx.strokePath()
           ctx.restoreGState()
 
-          // Xenon Flash Lightning Bolt Symbol in Center
           let bolt = CGMutablePath()
           bolt.move(to: CGPoint(x: 548, y: 700))
           bolt.addLine(to: CGPoint(x: 382, y: 500))
@@ -151,21 +143,21 @@ jobs:
           }
           JSONEOF
 
-          # 2. Generate XcodeGen project.yml
+          # 2. Generate XcodeGen project.yml (Set deploymentTarget to iOS 17.0 so interactive Widget Button(intent:) & containerBackground compile natively)
           cat << 'EOF' > project.yml
           name: LumiFilm
           options:
             bundleIdPrefix: com.lumifilm.exposure
             deploymentTarget:
-              iOS: "16.4"
-            xcodeVersion: "15.0"
+              iOS: "17.0"
+            xcodeVersion: "16.0"
             generateEmptyDirectories: true
 
           targets:
             LumiFilm:
               type: application
               platform: iOS
-              deploymentTarget: "16.4"
+              deploymentTarget: "17.0"
               sources:
                 - path: LumiFilm
               info:
@@ -195,7 +187,7 @@ jobs:
             LumiFilmWidget:
               type: app-extension
               platform: iOS
-              deploymentTarget: "16.4"
+              deploymentTarget: "17.0"
               sources:
                 - path: LumiFilmWidget
               info:
@@ -216,7 +208,7 @@ jobs:
                   CODE_SIGNING_ALLOWED: NO
           EOF
 
-          # 3. Generate LumiFilmApp.swift (Store + Audio/Haptics + AppIntents)
+          # 3. Generate LumiFilmApp.swift
           cat << 'EOF' > LumiFilm/LumiFilmApp.swift
           import SwiftUI
           import AppIntents
@@ -340,7 +332,6 @@ jobs:
                       impactLight.impactOccurred(intensity: 0.85)
                   }
                   if soundOn {
-                      // 1157 = Crisp iOS mechanical wheel tick sound
                       AudioServicesPlaySystemSound(1157)
                   }
               }
@@ -359,7 +350,7 @@ jobs:
               static let shared = ExposureStore()
 
               @AppStorage("lf_has_onboarded_v5") var hasCompletedOnboarding: Bool = false
-              @AppStorage("lf_theme_id") var themeRaw: Int = 2 // Default to Brass Patina
+              @AppStorage("lf_theme_id") var themeRaw: Int = 2
               @AppStorage("lf_lang") var lang: String = "zh"
               @AppStorage("lf_sound_on") var soundOn: Bool = true
               @AppStorage("lf_haptics_on") var hapticsOn: Bool = true
@@ -500,7 +491,7 @@ jobs:
           }
           EOF
 
-          # 4. Generate ContentView.swift (Glassmorphism + Mechanical Rotary Dial + First-Launch Onboarding + 3 Themes)
+          # 4. Generate ContentView.swift
           cat << 'EOF' > LumiFilm/ContentView.swift
           import SwiftUI
           import WidgetKit
@@ -524,11 +515,9 @@ jobs:
                   let solved = store.calculateRecommendedPower(distance: store.distanceM, fStop: store.aperture)
 
                   ZStack {
-                      // Full-screen Rich Theme Background
                       theme.backgroundGradient
                           .ignoresSafeArea()
 
-                      // Ambient glowing orbs for Frosted Glassmorphism depth
                       Circle()
                           .fill(theme.accentColor.opacity(0.28))
                           .frame(width: 260, height: 260)
@@ -542,7 +531,6 @@ jobs:
                           .offset(x: 120, y: 180)
 
                       VStack(spacing: 0) {
-                          // Top Frosted Glass Header Bar
                           HStack(spacing: 10) {
                               VStack(alignment: .leading, spacing: 3) {
                                   HStack(spacing: 6) {
@@ -578,7 +566,6 @@ jobs:
                           .padding(.top, 8)
                           .padding(.bottom, 10)
 
-                          // Main Content Area
                           if selectedTab == 0 {
                               meterTabView(theme: theme, solved: solved)
                           } else if selectedTab == 1 {
@@ -589,7 +576,6 @@ jobs:
 
                           Spacer(minLength: 0)
 
-                          // Custom Glassmorphic Bottom Navigation Bar
                           HStack(spacing: 0) {
                               navButton(index: 0, icon: "dial.medium.fill", title: store.lang == "en" ? "Meter" : (store.lang == "ja" ? "露出計" : "测光转盘"), theme: theme)
                               navButton(index: 1, icon: "sun.max.trianglebadge.exclamationmark.fill", title: store.lang == "en" ? "Modifiers" : (store.lang == "ja" ? "光量補正" : "环境柔光"), theme: theme)
@@ -619,12 +605,10 @@ jobs:
                   }
               }
 
-              // MARK: - TAB 1: Meter + 4 Glass Cards + Vintage Camera Mechanical Rotary Dial
               @ViewBuilder
               private func meterTabView(theme: LumiTheme, solved: (powerText: String, stopOffset: Double, isOutOfRange: Bool)) -> some View {
                   ScrollView(showsIndicators: false) {
                       VStack(spacing: 12) {
-                          // Hero Recommended Flash Power Glass Banner + Voice Broadcast
                           HStack {
                               VStack(alignment: .leading, spacing: 4) {
                                   Text(store.lang == "en" ? "⚡ RECOMMENDED MANUAL FLASH POWER" : (store.lang == "ja" ? "⚡ 推奨マニュアル発光量" : "⚡ 推荐闪光灯手动输出功率比"))
@@ -662,7 +646,6 @@ jobs:
                                   .stroke(theme.accentColor.opacity(0.45), lineWidth: 1.1)
                           )
 
-                          // 4 Glassmorphic Viewfinder Readout Tiles (Tap to bind to Mechanical Dial)
                           LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                               GlassMetricTile(
                                   title: store.lang == "en" ? "① DISTANCE" : (store.lang == "ja" ? "① 撮影距離" : "① 拍摄距离"),
@@ -709,16 +692,13 @@ jobs:
                               }
                           }
 
-                          // Authentic Film Camera Mechanical Rotary Dial Card
                           VStack(spacing: 10) {
-                              // Channel Selector Pills
                               HStack(spacing: 8) {
                                   channelPill(.distance, label: store.lang == "en" ? "Dist Ring" : (store.lang == "ja" ? "距離リング" : "距离转盘"), theme: theme)
                                   channelPill(.aperture, label: store.lang == "en" ? "Aperture Ring" : (store.lang == "ja" ? "絞りリング" : "光圈转盘"), theme: theme)
                                   channelPill(.shutter, label: store.lang == "en" ? "Shutter Dial" : (store.lang == "ja" ? "シャッター盤" : "快门转盘"), theme: theme)
                               }
 
-                              // Interactive Mechanical Camera Top-Plate Rotary Dial
                               HStack(spacing: 16) {
                                   Button {
                                       stepActiveChannel(by: -1)
@@ -760,7 +740,6 @@ jobs:
                               }
                               .padding(.vertical, 4)
 
-                              // Fixed-Height Bottom Status / Auto-Balance Bar (Never shifts the dial!)
                               HStack {
                                   if solved.isOutOfRange {
                                       Image(systemName: "exclamationmark.triangle.fill")
@@ -805,7 +784,6 @@ jobs:
                   }
               }
 
-              // MARK: - TAB 2: Ambient & Light Modifiers
               @ViewBuilder
               private func ambientTabView(theme: LumiTheme, solved: (powerText: String, stopOffset: Double, isOutOfRange: Bool)) -> some View {
                   ScrollView(showsIndicators: false) {
@@ -844,12 +822,10 @@ jobs:
                   }
               }
 
-              // MARK: - TAB 3: 3 UI Themes (Instagram / Threads / Brass) + Sound & Haptics + Custom GN
               @ViewBuilder
               private func settingsTabView(theme: LumiTheme) -> some View {
                   ScrollView(showsIndicators: false) {
                       VStack(spacing: 14) {
-                          // 1. 3 Glassmorphic UI Themes
                           VStack(alignment: .leading, spacing: 10) {
                               Text(store.lang == "en" ? "🎨 UI Aesthetic Theme (Glassmorphism)" : "🎨 界面视觉主题 (三大玻璃质感配色)")
                                   .font(.system(size: 14, weight: .bold))
@@ -891,7 +867,6 @@ jobs:
                           .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                           .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.22), lineWidth: 0.8))
 
-                          // 2. Mechanical Sound, Haptic Vibration & Language
                           VStack(alignment: .leading, spacing: 12) {
                               Toggle(isOn: $store.soundOn) {
                                   Label(store.lang == "en" ? "Mechanical Dial Click Sound" : "转盘机械棘轮音效 (Sound)", systemImage: "speaker.wave.2.fill")
@@ -925,7 +900,6 @@ jobs:
                           .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                           .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.22), lineWidth: 0.8))
 
-                          // 3. Flash Model & Manual GN Override ("User Custom / 用户自定义")
                           VStack(alignment: .leading, spacing: 12) {
                               HStack {
                                   Text(store.lang == "en" ? "⚡ Flash & Film Roll Profile" : "⚡ 闪光灯与胶卷固定档案")
@@ -940,7 +914,7 @@ jobs:
                               }
 
                               Toggle(isOn: $store.isCustomGN) {
-                                  Text(store.lang == "en" ? "Manual GN Input (Shows 'User Custom')" : "手动输入 GN 值 (自动显示为“用户自定义”) ")
+                                  Text(store.lang == "en" ? "Manual GN Input (Shows 'User Custom')" : "手动输入 GN 值 (自动显示为“用户自定义”)")
                                       .font(.system(size: 12, weight: .medium))
                                       .foregroundStyle(.white)
                               }
@@ -1074,7 +1048,6 @@ jobs:
               }
           }
 
-          // MARK: - Authentic Vintage Film Camera Mechanical Rotary Dial Component
           struct MechanicalRotaryDialView: View {
               @ObservedObject var store: ExposureStore
               let channel: DialChannel
@@ -1115,7 +1088,6 @@ jobs:
 
               var body: some View {
                   ZStack {
-                      // Outer Knurled Brass / Metallic Bezel Ring
                       Circle()
                           .fill(
                               AngularGradient(
@@ -1132,12 +1104,10 @@ jobs:
                           .frame(width: 196, height: 196)
                           .shadow(color: .black.opacity(0.45), radius: 14, x: 0, y: 8)
 
-                      // Knurled Edge serrations
                       Circle()
                           .stroke(Color.black.opacity(0.45), style: StrokeStyle(lineWidth: 5, dash: [2.5, 2.5]))
                           .frame(width: 192, height: 192)
 
-                      // Rotating Black Anodized Engraved Shutter Plate
                       ZStack {
                           Circle()
                               .fill(
@@ -1150,7 +1120,6 @@ jobs:
                               )
                               .frame(width: 174, height: 174)
 
-                          // Engraved Ticks around the plate
                           ForEach(0..<36, id: \.self) { i in
                               let angle = -135.0 + (Double(i) / 35.0) * 270.0
                               VStack {
@@ -1166,7 +1135,6 @@ jobs:
                       .rotationEffect(.degrees(currentRotationDegrees))
                       .animation(.interactiveSpring(response: 0.18, dampingFraction: 0.75), value: currentRotationDegrees)
 
-                      // Top 12 O'Clock Engraved Index Pointer
                       VStack {
                           Image(systemName: "arrowtriangle.down.fill")
                               .font(.system(size: 12, weight: .black))
@@ -1176,7 +1144,6 @@ jobs:
                       }
                       .frame(height: 204)
 
-                      // Stationary Brass Center Core & Glass Window
                       ZStack {
                           Circle()
                               .fill(
@@ -1280,7 +1247,6 @@ jobs:
               }
           }
 
-          // MARK: - First Launch Inquiry Sheet (Persisted in @AppStorage until user wants to change)
           struct FirstLaunchOnboardingSheet: View {
               @ObservedObject var store: ExposureStore
               @Binding var isPresented: Bool
@@ -1365,7 +1331,7 @@ jobs:
           }
           EOF
 
-          # 5. Generate LumiFilmWidget.swift (Fixes "please adopt containerBackground API" on iOS 17/18/19+ and adds Interactive Distance/Aperture Buttons!)
+          # 5. Generate LumiFilmWidget.swift (With both iOS 17.0 deploymentTarget AND #available guard so it never fails)
           cat << 'EOF' > LumiFilmWidget/LumiFilmWidget.swift
           import WidgetKit
           import SwiftUI
@@ -1382,6 +1348,7 @@ jobs:
               let shutterDenom: Int
           }
 
+          @available(iOS 17.0, *)
           struct StepWidgetDistanceIntent: AppIntent {
               static var title: LocalizedStringResource = "调节拍摄距离"
               @Parameter(title: "Delta")
@@ -1401,6 +1368,7 @@ jobs:
               }
           }
 
+          @available(iOS 17.0, *)
           struct StepWidgetApertureIntent: AppIntent {
               static var title: LocalizedStringResource = "切换光圈档位"
 
@@ -1489,43 +1457,48 @@ jobs:
 
                       Spacer(minLength: 0)
 
-                      // Interactive Quick Parameter Adjustment Buttons right on the Home Screen Widget!
-                      HStack(spacing: 6) {
-                          Button(intent: StepWidgetDistanceIntent(delta: -0.5)) {
-                              Text("−0.5m")
-                                  .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                  .padding(.horizontal, 6)
-                                  .padding(.vertical, 4)
-                                  .background(Color.white.opacity(0.15), in: Capsule())
-                          }
-                          .buttonStyle(.plain)
+                      if #available(iOSApplicationExtension 17.0, *) {
+                          HStack(spacing: 6) {
+                              Button(intent: StepWidgetDistanceIntent(delta: -0.5)) {
+                                  Text("−0.5m")
+                                      .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                      .padding(.horizontal, 6)
+                                      .padding(.vertical, 4)
+                                      .background(Color.white.opacity(0.15), in: Capsule())
+                              }
+                              .buttonStyle(.plain)
 
-                          Text(String(format: "%.1fm", entry.distanceM))
+                              Text(String(format: "%.1fm", entry.distanceM))
+                                  .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                  .foregroundStyle(.white)
+
+                              Button(intent: StepWidgetDistanceIntent(delta: 0.5)) {
+                                  Text("+0.5m")
+                                      .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                      .padding(.horizontal, 6)
+                                      .padding(.vertical, 4)
+                                      .background(Color.white.opacity(0.15), in: Capsule())
+                              }
+                              .buttonStyle(.plain)
+
+                              Spacer()
+
+                              Button(intent: StepWidgetApertureIntent()) {
+                                  Text(String(format: "f/%.1f ↻", entry.aperture).replacingOccurrences(of: ".0", with: ""))
+                                      .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                      .foregroundStyle(.black)
+                                      .padding(.horizontal, 8)
+                                      .padding(.vertical, 4)
+                                      .background(Color(red: 0.90, green: 0.72, blue: 0.42), in: Capsule())
+                              }
+                              .buttonStyle(.plain)
+                          }
+                          .foregroundStyle(.white)
+                      } else {
+                          Text(String(format: "%.1fm · f/%.1f · 1/%ds", entry.distanceM, entry.aperture, entry.shutterDenom))
                               .font(.system(size: 11, weight: .bold, design: .monospaced))
                               .foregroundStyle(.white)
-
-                          Button(intent: StepWidgetDistanceIntent(delta: 0.5)) {
-                              Text("+0.5m")
-                                  .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                  .padding(.horizontal, 6)
-                                  .padding(.vertical, 4)
-                                  .background(Color.white.opacity(0.15), in: Capsule())
-                          }
-                          .buttonStyle(.plain)
-
-                          Spacer()
-
-                          Button(intent: StepWidgetApertureIntent()) {
-                              Text(String(format: "f/%.1f ↻", entry.aperture).replacingOccurrences(of: ".0", with: ""))
-                                  .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                  .foregroundStyle(.black)
-                                  .padding(.horizontal, 8)
-                                  .padding(.vertical, 4)
-                                  .background(Color(red: 0.90, green: 0.72, blue: 0.42), in: Capsule())
-                          }
-                          .buttonStyle(.plain)
                       }
-                      .foregroundStyle(.white)
                   }
                   .widgetBackground()
               }
