@@ -1,4 +1,4 @@
-name: Build LumiFilm v5.0 Native iOS IPA (iOS 17+ Widget Interactive Buttons Fixed)
+name: Build LumiFilm v6.0 Native iOS IPA (Single Speak + Lens Limit + 0.5m Magnet + Multi-Lock + Apple Music Glass Tabs)
 
 on:
   push:
@@ -143,7 +143,7 @@ jobs:
           }
           JSONEOF
 
-          # 2. Generate XcodeGen project.yml (Set deploymentTarget to iOS 17.0 so interactive Widget Button(intent:) & containerBackground compile natively)
+          # 2. Generate XcodeGen project.yml (iOS 17.0 deploymentTarget)
           cat << 'EOF' > project.yml
           name: LumiFilm
           options:
@@ -164,8 +164,8 @@ jobs:
                 path: LumiFilm/Info.plist
                 properties:
                   CFBundleDisplayName: LumiFilm
-                  CFBundleShortVersionString: "5.0.0"
-                  CFBundleVersion: "50"
+                  CFBundleShortVersionString: "6.0.0"
+                  CFBundleVersion: "60"
                   UILaunchScreen: {}
                   UISupportedInterfaceOrientations:
                     - UIInterfaceOrientationPortrait
@@ -175,8 +175,8 @@ jobs:
                 base:
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app
                   ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-                  MARKETING_VERSION: "5.0.0"
-                  CURRENT_PROJECT_VERSION: "50"
+                  MARKETING_VERSION: "6.0.0"
+                  CURRENT_PROJECT_VERSION: "60"
                   CODE_SIGN_IDENTITY: ""
                   CODE_SIGNING_REQUIRED: NO
                   CODE_SIGNING_ALLOWED: NO
@@ -194,15 +194,15 @@ jobs:
                 path: LumiFilmWidget/Info.plist
                 properties:
                   CFBundleDisplayName: LumiFilm Widget
-                  CFBundleShortVersionString: "5.0.0"
-                  CFBundleVersion: "50"
+                  CFBundleShortVersionString: "6.0.0"
+                  CFBundleVersion: "60"
                   NSExtension:
                     NSExtensionPointIdentifier: com.apple.widgetkit-extension
               settings:
                 base:
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app.widget
-                  MARKETING_VERSION: "5.0.0"
-                  CURRENT_PROJECT_VERSION: "50"
+                  MARKETING_VERSION: "6.0.0"
+                  CURRENT_PROJECT_VERSION: "60"
                   CODE_SIGN_IDENTITY: ""
                   CODE_SIGNING_REQUIRED: NO
                   CODE_SIGNING_ALLOWED: NO
@@ -316,20 +316,94 @@ jobs:
               }
           }
 
+          // Feature 1: Single-utterance Speech Synthesizer with Tap-Again-to-Cancel
+          final class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
+              static let shared = SpeechManager()
+              private let synthesizer = AVSpeechSynthesizer()
+              @Published var isSpeaking: Bool = false
+
+              override init() {
+                  super.init()
+                  synthesizer.delegate = self
+              }
+
+              func toggleSpeak(text: String, lang: String) {
+                  if synthesizer.isSpeaking || isSpeaking {
+                      synthesizer.stopSpeaking(at: .immediate)
+                      DispatchQueue.main.async {
+                          self.isSpeaking = false
+                      }
+                      return
+                  }
+
+                  do {
+                      let session = AVAudioSession.sharedInstance()
+                      try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+                      try session.setActive(true, options: .notifyOthersOnDeactivation)
+                  } catch {
+                      // Continue even if audio session category fails
+                  }
+
+                  let utterance = AVSpeechUtterance(string: text)
+                  let voiceCode = lang == "en" ? "en-US" : (lang == "ja" ? "ja-JP" : "zh-CN")
+                  utterance.voice = AVSpeechSynthesisVoice(language: voiceCode)
+                  utterance.rate = 0.51
+                  utterance.pitchMultiplier = 1.0
+
+                  DispatchQueue.main.async {
+                      self.isSpeaking = true
+                  }
+                  synthesizer.speak(utterance)
+              }
+
+              func stopImmediately() {
+                  if synthesizer.isSpeaking || isSpeaking {
+                      synthesizer.stopSpeaking(at: .immediate)
+                      DispatchQueue.main.async {
+                          self.isSpeaking = false
+                      }
+                  }
+              }
+
+              func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+                  DispatchQueue.main.async {
+                      self.isSpeaking = false
+                  }
+              }
+
+              func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+                  DispatchQueue.main.async {
+                      self.isSpeaking = false
+                  }
+              }
+          }
+
           final class FeedbackEngine {
               static let shared = FeedbackEngine()
               private let selectionGen = UISelectionFeedbackGenerator()
               private let impactLight = UIImpactFeedbackGenerator(style: .light)
               private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
+              private let impactRigid = UIImpactFeedbackGenerator(style: .rigid)
 
               func prepare() {
                   selectionGen.prepare()
                   impactLight.prepare()
+                  impactRigid.prepare()
               }
 
               func dialTick(soundOn: Bool, hapticsOn: Bool) {
                   if hapticsOn {
                       impactLight.impactOccurred(intensity: 0.85)
+                  }
+                  if soundOn {
+                      AudioServicesPlaySystemSound(1157)
+                  }
+              }
+
+              // Feature 3: Distinct magnetic detent click at 0.5m snap intervals
+              func magnetSnapTick(soundOn: Bool, hapticsOn: Bool) {
+                  if hapticsOn {
+                      impactRigid.impactOccurred(intensity: 1.0)
                   }
                   if soundOn {
                       AudioServicesPlaySystemSound(1157)
@@ -346,10 +420,30 @@ jobs:
               }
           }
 
+          enum DialChannel: String, CaseIterable {
+              case distance = "DIST"
+              case power = "POWER"
+              case aperture = "F-STOP"
+              case shutter = "SHUTTER"
+          }
+
+          struct ExposureDiagnostic {
+              let powerText: String
+              let evDelta: Double
+              let isUnderexposed: Bool
+              let isOverexposed: Bool
+              let warningTitle: String
+              let warningAdvice: String
+              let quickFixLabel: String
+              let suggestedPowerStops: Double
+              let suggestedDistanceM: Double
+              let suggestedAperture: Double
+          }
+
           final class ExposureStore: ObservableObject {
               static let shared = ExposureStore()
 
-              @AppStorage("lf_has_onboarded_v5") var hasCompletedOnboarding: Bool = false
+              @AppStorage("lf_has_onboarded_v6") var hasCompletedOnboarding: Bool = false
               @AppStorage("lf_theme_id") var themeRaw: Int = 2
               @AppStorage("lf_lang") var lang: String = "zh"
               @AppStorage("lf_sound_on") var soundOn: Bool = true
@@ -363,16 +457,29 @@ jobs:
               @AppStorage("lf_zoom_mm") var zoomMM: Int = 50
               @AppStorage("lf_max_sync") var maxSyncDenom: Int = 125
 
+              // Feature 2: Lens Maximum Aperture Limit set during initial onboarding
+              @AppStorage("lf_lens_max_aperture") var lensMaxAperture: Double = 2.0
+
+              // Feature 3: Magnetic 0.5m Snap on Distance Dial
+              @AppStorage("lf_magnet_05m") var isDistanceMagnetOn: Bool = true
+
+              // Feature 4 & 5: Individual Parameter Lock States
+              @AppStorage("lf_lock_power") var isPowerLocked: Bool = false
+              @AppStorage("lf_lock_aperture") var isApertureLocked: Bool = false
+              @AppStorage("lf_lock_distance") var isDistanceLocked: Bool = false
+              @AppStorage("lf_lock_shutter") var isShutterLocked: Bool = false
+
               @AppStorage("lf_distance_m") var distanceM: Double = 2.0
               @AppStorage("lf_aperture") var aperture: Double = 4.0
               @AppStorage("lf_power_stops") var powerStopOffset: Double = -2.0
               @AppStorage("lf_shutter_denom") var shutterDenom: Int = 125
+              @AppStorage("lf_ambient_ev") var ambientSceneEV: Double = 7.0
               @AppStorage("lf_mod_loss") var modifierLossEV: Double = 0.0
               @AppStorage("lf_bounce_loss") var bounceLossEV: Double = 0.0
 
-              let apertureSteps: [Double] = [1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6, 8.0, 11.0, 16.0, 22.0]
+              let allApertureSteps: [Double] = [1.2, 1.4, 1.8, 2.0, 2.4, 2.8, 3.5, 4.0, 4.8, 5.6, 6.7, 8.0, 9.5, 11.0, 13.0, 16.0, 22.0]
+              let lensMaxApertureChoices: [Double] = [1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6]
               let shutterSteps: [Int] = [15, 30, 60, 125, 250, 500, 1000, 2000, 4000]
-              let distanceSteps: [Double] = [0.5, 0.7, 1.0, 1.2, 1.5, 1.8, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0]
 
               let catalog: [FlashModelSpec] = [
                   FlashModelSpec(id: "godox-v350", nameZh: "神牛 Godox V350 (主力推荐)", nameEn: "Godox V350 (Primary)", nameJa: "Godox V350 (推奨)", shortName: "Godox V350", baseGN: 36, ratedZoom: 105, minPowerDenom: 128, recycleSec: 1.7),
@@ -382,6 +489,11 @@ jobs:
                   FlashModelSpec(id: "godox-v860iii", nameZh: "神牛 Godox V860III", nameEn: "Godox V860III", nameJa: "Godox V860III", shortName: "Godox V860III", baseGN: 60, ratedZoom: 200, minPowerDenom: 256, recycleSec: 1.5),
                   FlashModelSpec(id: "profoto-a10", nameZh: "Profoto A10", nameEn: "Profoto A10", nameJa: "Profoto A10", shortName: "Profoto A10", baseGN: 42, ratedZoom: 105, minPowerDenom: 256, recycleSec: 1.0)
               ]
+
+              var availableApertureSteps: [Double] {
+                  let filtered = allApertureSteps.filter { $0 >= lensMaxAperture - 0.05 }
+                  return filtered.isEmpty ? [lensMaxAperture, 5.6, 8.0, 11.0, 16.0, 22.0] : filtered
+              }
 
               var currentTheme: LumiTheme {
                   LumiTheme(rawValue: themeRaw) ?? .brass
@@ -404,24 +516,200 @@ jobs:
                   return activeFlashSpec.shortName
               }
 
-              func calculateRecommendedPower(distance: Double, fStop: Double) -> (powerText: String, stopOffset: Double, isOutOfRange: Bool) {
+              func enforceApertureLimit() {
+                  if aperture < lensMaxAperture {
+                      aperture = lensMaxAperture
+                  }
+              }
+
+              func computeFullEffectiveGN(forShutter sDenom: Int) -> Double {
                   let spec = activeFlashSpec
-                  let minStops = -log2(Double(spec.minPowerDenom))
                   let zoomFactor = isCustomGN ? 1.0 : pow(Double(zoomMM) / Double(spec.ratedZoom), 0.38)
                   let gn100 = activeGN * zoomFactor
                   let isoFactor = sqrt(Double(iso) / 100.0)
-                  let totalLoss = modifierLossEV + bounceLossEV
+                  let hssLoss = sDenom > maxSyncDenom ? (2.0 + log2(Double(sDenom) / Double(maxSyncDenom))) : 0.0
+                  let totalLoss = modifierLossEV + bounceLossEV + hssLoss
                   let lossFactor = pow(2.0, -totalLoss / 2.0)
-                  let fullEffGN = max(gn100 * isoFactor * lossFactor, 0.1)
+                  return max(gn100 * isoFactor * lossFactor, 0.1)
+              }
 
-                  let reqGN = fStop * distance
-                  let reqRatio = pow(reqGN / fullEffGN, 2.0)
-                  let rawStops = log2(max(reqRatio, 1e-6))
-                  let snapped = (rawStops * 3.0).rounded() / 3.0
-                  let outOfRange = rawStops > 0.25 || rawStops < (minStops - 0.25)
-                  let clamped = min(max(snapped, minStops), 0.0)
+              // Feature 4 & 5: Priority Solver respecting locked parameters (Power, Shutter, Aperture, Distance)
+              func solveExposure(changed: DialChannel? = nil) {
+                  enforceApertureLimit()
+                  let spec = activeFlashSpec
+                  let minStops = -log2(Double(spec.minPowerDenom))
 
-                  return (formatPower(clamped, minDenom: spec.minPowerDenom), clamped, outOfRange)
+                  if isPowerLocked {
+                      // 1. Priority 1: Adjust Shutter Speed (if unlocked) to avoid HSS power loss and match ambient scene
+                      if !isShutterLocked && changed != .shutter {
+                          let targetEV = ambientSceneEV + 1.0 // -1.0 EV background bias
+                          let isoStops = log2(Double(iso) / 100.0)
+                          let idealDenom = pow(2.0, targetEV + isoStops) / pow(aperture, 2.0)
+                          let safeCandidates = shutterSteps.filter { $0 <= maxSyncDenom }
+                          let pool = safeCandidates.isEmpty ? shutterSteps : safeCandidates
+                          if let bestS = pool.min(by: { abs(log2(Double($0)) - log2(max(idealDenom, 1.0))) < abs(log2(Double($1)) - log2(max(idealDenom, 1.0))) }) {
+                              shutterDenom = bestS
+                          }
+                      }
+
+                      let fullEffGN = computeFullEffectiveGN(forShutter: shutterDenom)
+                      let lockedEffGN = fullEffGN * sqrt(pow(2.0, powerStopOffset))
+
+                      // 2. Priority 2: Adjust Aperture (if unlocked and user didn't just manually turn Aperture)
+                      if !isApertureLocked && changed != .aperture {
+                          let idealF = lockedEffGN / max(distanceM, 0.4)
+                          let steps = availableApertureSteps
+                          if let bestF = steps.min(by: { abs(log2($0) - log2(max(idealF, 0.7))) < abs(log2($1) - log2(max(idealF, 0.7))) }) {
+                              aperture = bestF
+                          }
+                      }
+
+                      // 3. Priority 3: Adjust Distance (if unlocked and Aperture is locked OR lens max aperture limit was hit when changing power)
+                      let remainingNeededF = lockedEffGN / max(distanceM, 0.4)
+                      let hitMaxApertureCeiling = remainingNeededF < (lensMaxAperture - 0.15)
+                      if !isDistanceLocked && changed != .distance && (isApertureLocked || (hitMaxApertureCeiling && changed == .power)) {
+                          let idealDist = lockedEffGN / max(aperture, 1.0)
+                          let clampedDist = min(max(idealDist, 0.5), 12.0)
+                          if isDistanceMagnetOn {
+                              distanceM = (clampedDist * 2.0).rounded() / 2.0
+                          } else {
+                              distanceM = (clampedDist * 10.0).rounded() / 10.0
+                          }
+                      }
+                  } else {
+                      // Flash Power is UNLOCKED -> solve for Flash Power
+                      if !isShutterLocked && changed != .shutter {
+                          let targetEV = ambientSceneEV + 1.0
+                          let isoStops = log2(Double(iso) / 100.0)
+                          let idealDenom = pow(2.0, targetEV + isoStops) / pow(aperture, 2.0)
+                          let safeCandidates = shutterSteps.filter { $0 <= maxSyncDenom }
+                          let pool = safeCandidates.isEmpty ? shutterSteps : safeCandidates
+                          if let bestS = pool.min(by: { abs(log2(Double($0)) - log2(max(idealDenom, 1.0))) < abs(log2(Double($1)) - log2(max(idealDenom, 1.0))) }) {
+                              shutterDenom = bestS
+                          }
+                      }
+
+                      let fullEffGN = computeFullEffectiveGN(forShutter: shutterDenom)
+                      let reqGN = aperture * distanceM
+                      let reqRatio = pow(reqGN / fullEffGN, 2.0)
+                      let rawStops = log2(max(reqRatio, 1e-6))
+                      let snapped = (rawStops * 3.0).rounded() / 3.0
+                      powerStopOffset = min(max(snapped, minStops), 0.0)
+                  }
+              }
+
+              func evaluateDiagnostic() -> ExposureDiagnostic {
+                  let spec = activeFlashSpec
+                  let minStops = -log2(Double(spec.minPowerDenom))
+                  let fullEffGN = computeFullEffectiveGN(forShutter: shutterDenom)
+                  let currentEffGN = fullEffGN * sqrt(pow(2.0, powerStopOffset))
+                  let reqGN = aperture * distanceM
+
+                  let evDelta = 2.0 * log2(currentEffGN / max(reqGN, 0.01))
+                  let isUnder = evDelta < -0.25
+                  let isOver = evDelta > 0.35
+
+                  let neededRatio = pow(reqGN / fullEffGN, 2.0)
+                  let neededStopsRaw = log2(max(neededRatio, 1e-6))
+                  let suggestedPowerStops = min(max((neededStopsRaw * 3.0).rounded() / 3.0, minStops), 0.0)
+                  let suggestedPowerStr = formatPower(suggestedPowerStops, minDenom: spec.minPowerDenom)
+
+                  let suggestedDist = min(max(currentEffGN / max(aperture, 1.0), 0.5), 12.0)
+                  let snappedSugDist = isDistanceMagnetOn ? ((suggestedDist * 2.0).rounded() / 2.0) : ((suggestedDist * 10.0).rounded() / 10.0)
+
+                  let idealF = currentEffGN / max(distanceM, 0.4)
+                  let suggestedF = availableApertureSteps.min(by: { abs(log2($0) - log2(max(idealF, 0.7))) < abs(log2($1) - log2(max(idealF, 0.7))) }) ?? lensMaxAperture
+
+                  let currentPowerText = formatPower(powerStopOffset, minDenom: spec.minPowerDenom)
+                  let maxApStr = String(format: "f/%.1f", lensMaxAperture).replacingOccurrences(of: ".0", with: "")
+
+                  var warnTitle = ""
+                  var warnAdvice = ""
+                  var fixLabel = ""
+
+                  if isUnder {
+                      let deficitStr = String(format: "%.1f", abs(evDelta))
+                      if neededStopsRaw <= 0.15 {
+                          if lang == "en" {
+                              warnTitle = "⚠️ Insufficient Flash Power (-\(deficitStr) EV)"
+                              warnAdvice = "Suggestion: Unlock & increase flash power to \(suggestedPowerStr), or move closer to \(String(format: "%.1f", snappedSugDist))m (Lens limit: \(maxApStr))."
+                              fixLabel = "⚡ Boost to \(suggestedPowerStr)"
+                          } else if lang == "ja" {
+                              warnTitle = "⚠️ フラッシュ光量不足 (-\(deficitStr) EV)"
+                              warnAdvice = "提案：フラッシュ出力を \(suggestedPowerStr) に上げるか、\(String(format: "%.1f", snappedSugDist))m に近づいてください（開放制限 \(maxApStr)）。"
+                              fixLabel = "⚡ 出力を \(suggestedPowerStr) へ"
+                          } else {
+                              warnTitle = "⚠️ 当前闪光灯功率不足 (欠曝 -\(deficitStr) EV)"
+                              warnAdvice = "修改建议：① 增加闪光灯功率至 \(suggestedPowerStr)，或 ② 走近至 \(String(format: "%.1f", snappedSugDist))m / 解锁参数（受镜头最大光圈 \(maxApStr) 限制）。"
+                              fixLabel = "⚡ 增至 \(suggestedPowerStr)"
+                          }
+                      } else {
+                          if lang == "en" {
+                              warnTitle = "⚠️ Max 1/1 Power Still Underexposed (-\(deficitStr) EV)"
+                              warnAdvice = "Suggestion: Increase flash power/GN, raise ISO, or move closer to \(String(format: "%.1f", snappedSugDist))m (Lens max \(maxApStr))."
+                              fixLabel = "⚡ Auto Balance"
+                          } else if lang == "ja" {
+                              warnTitle = "⚠️ 1/1 フル発光でも光量不足 (-\(deficitStr) EV)"
+                              warnAdvice = "提案：フラッシュ出力/GNを上げるか、距離を \(String(format: "%.1f", snappedSugDist))m に近づけてください。"
+                              fixLabel = "⚡ 自動補正"
+                          } else {
+                              warnTitle = "⚠️ 闪光灯功率不足 (欠曝 -\(deficitStr) EV)"
+                              warnAdvice = "修改建议：请增加闪光灯功率至 1/1 全光（或提高 ISO / 换更高 GN 闪光灯），或将距离拉近至 \(String(format: "%.1f", snappedSugDist))m。"
+                              fixLabel = "⚡ 提至1/1并配平"
+                          }
+                      }
+                  } else if isOver {
+                      let overStr = String(format: "%.1f", evDelta)
+                      if lang == "en" {
+                          warnTitle = "⚠️ Flash Output Too Strong (+\(overStr) EV)"
+                          warnAdvice = "Suggestion: Lower flash power to \(suggestedPowerStr) or stop down aperture to f/\(String(format: "%.1f", suggestedF))."
+                          fixLabel = "⚡ Set \(suggestedPowerStr)"
+                      } else if lang == "ja" {
+                          warnTitle = "⚠️ フラッシュ光量過多 (+\(overStr) EV)"
+                          warnAdvice = "提案：フラッシュ出力を \(suggestedPowerStr) に下げるか、絞りを f/\(String(format: "%.1f", suggestedF)) に絞ってください。"
+                          fixLabel = "⚡ \(suggestedPowerStr) に下げる"
+                      } else {
+                          warnTitle = "⚠️ 当前闪光输出过强 (过曝 +\(overStr) EV)"
+                          warnAdvice = "修改建议：调低闪光灯功率至 \(suggestedPowerStr)，或收小光圈至 f/\(String(format: "%.1f", suggestedF))。"
+                          fixLabel = "⚡ 降至 \(suggestedPowerStr)"
+                      }
+                  }
+
+                  return ExposureDiagnostic(
+                      powerText: currentPowerText,
+                      evDelta: evDelta,
+                      isUnderexposed: isUnder,
+                      isOverexposed: isOver,
+                      warningTitle: warnTitle,
+                      warningAdvice: warnAdvice,
+                      quickFixLabel: fixLabel,
+                      suggestedPowerStops: suggestedPowerStops,
+                      suggestedDistanceM: snappedSugDist,
+                      suggestedAperture: suggestedF
+                  )
+              }
+
+              func applyQuickFix(_ diag: ExposureDiagnostic) {
+                  let spec = activeFlashSpec
+                  let fullEffGN = computeFullEffectiveGN(forShutter: shutterDenom)
+                  let reqGN = aperture * distanceM
+                  let neededStopsRaw = log2(max(pow(reqGN / fullEffGN, 2.0), 1e-6))
+
+                  if neededStopsRaw <= 0.15 {
+                      // Increase or decrease flash power directly to match
+                      powerStopOffset = diag.suggestedPowerStops
+                  } else {
+                      // Boost power to 1/1 full and bring aperture/distance into range
+                      powerStopOffset = 0.0
+                      if !isApertureLocked {
+                          aperture = lensMaxAperture
+                      }
+                      let newReqF = fullEffGN / max(distanceM, 0.4)
+                      if newReqF < aperture {
+                          distanceM = diag.suggestedDistanceM
+                      }
+                  }
+                  WidgetCenter.shared.reloadAllTimelines()
               }
 
               func formatPower(_ stopOffset: Double, minDenom: Int) -> String {
@@ -452,20 +740,20 @@ jobs:
               func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
                   let store = ExposureStore.shared
                   store.distanceM = distanceMeters
-                  store.aperture = apertureFStop
-                  let result = store.calculateRecommendedPower(distance: distanceMeters, fStop: apertureFStop)
-                  store.powerStopOffset = result.stopOffset
+                  store.aperture = max(apertureFStop, store.lensMaxAperture)
+                  store.solveExposure(changed: .distance)
+                  let diag = store.evaluateDiagnostic()
                   WidgetCenter.shared.reloadAllTimelines()
 
-                  let dialogText = "距离 \(String(format: "%.1f", distanceMeters)) 米，光圈 f/\(String(format: "%.1f", apertureFStop))，请将【\(store.displayFlashTitle)】调至 \(result.powerText) 功率。"
+                  let dialogText = "距离 \(String(format: "%.1f", store.distanceM)) 米，光圈 f/\(String(format: "%.1f", store.aperture))，请将【\(store.displayFlashTitle)】调至 \(diag.powerText) 功率。"
                   return .result(dialog: IntentDialog(stringLiteral: dialogText)) {
                       VStack(alignment: .leading, spacing: 6) {
                           Text("⚡ LumiFilm · \(store.displayFlashTitle) (GN\(Int(store.activeGN)))")
                               .font(.caption)
                               .foregroundStyle(.secondary)
-                          Text("推荐闪光功率：\(result.powerText)")
+                          Text("推荐闪光功率：\(diag.powerText)")
                               .font(.title3.bold())
-                          Text("距离 \(String(format: "%.1f", distanceMeters))m · f/\(String(format: "%.1f", apertureFStop)) · ISO \(store.iso) · 1/\(store.shutterDenom)s")
+                          Text("距离 \(String(format: "%.1f", store.distanceM))m · f/\(String(format: "%.1f", store.aperture)) · ISO \(store.iso) · 1/\(store.shutterDenom)s")
                               .font(.caption2)
                       }
                       .padding()
@@ -497,22 +785,19 @@ jobs:
           import WidgetKit
           import AVFoundation
 
-          enum DialChannel: String, CaseIterable {
-              case distance = "DIST"
-              case aperture = "F-STOP"
-              case shutter = "SHUTTER"
-          }
-
           struct ContentView: View {
               @StateObject private var store = ExposureStore.shared
+              @StateObject private var speechManager = SpeechManager.shared
               @State private var selectedTab: Int = 0
               @State private var activeChannel: DialChannel = .distance
               @State private var showOnboardingSheet: Bool = false
-              private let speechSynthesizer = AVSpeechSynthesizer()
+              @State private var tabGlassFlashOpacity: Double = 0.0
+              @Namespace private var glassTabNamespace
 
               var body: some View {
                   let theme = store.currentTheme
-                  let solved = store.calculateRecommendedPower(distance: store.distanceM, fStop: store.aperture)
+                  let diag = store.evaluateDiagnostic()
+                  let maxApStr = String(format: "f/%.1f", store.lensMaxAperture).replacingOccurrences(of: ".0", with: "")
 
                   ZStack {
                       theme.backgroundGradient
@@ -531,6 +816,7 @@ jobs:
                           .offset(x: 120, y: 180)
 
                       VStack(spacing: 0) {
+                          // Top Header Bar
                           HStack(spacing: 10) {
                               VStack(alignment: .leading, spacing: 3) {
                                   HStack(spacing: 6) {
@@ -540,9 +826,9 @@ jobs:
                                           .font(.system(size: 18, weight: .bold, design: .serif))
                                           .foregroundStyle(.white)
                                   }
-                                  Text("\(store.displayFlashTitle) (GN\(Int(store.activeGN))) · \(store.filmName) (ISO \(store.iso))")
+                                  Text("\(store.displayFlashTitle) (GN\(Int(store.activeGN))) · ISO \(store.iso) · Max \(maxApStr)")
                                       .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                      .foregroundStyle(.white.opacity(0.75))
+                                      .foregroundStyle(.white.opacity(0.78))
                               }
                               Spacer()
 
@@ -564,139 +850,335 @@ jobs:
                           }
                           .padding(.horizontal, 16)
                           .padding(.top, 8)
-                          .padding(.bottom, 10)
+                          .padding(.bottom, 8)
 
-                          if selectedTab == 0 {
-                              meterTabView(theme: theme, solved: solved)
-                          } else if selectedTab == 1 {
-                              ambientTabView(theme: theme, solved: solved)
-                          } else {
-                              settingsTabView(theme: theme)
+                          // Main Tab Content with Glass Refraction Shimmer on Tab Switch
+                          ZStack {
+                              if selectedTab == 0 {
+                                  meterTabView(theme: theme, diag: diag)
+                                      .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                              } else if selectedTab == 1 {
+                                  ambientTabView(theme: theme, diag: diag)
+                                      .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                              } else {
+                                  settingsTabView(theme: theme)
+                                      .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                              }
                           }
+                          .overlay(
+                              RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                  .fill(
+                                      LinearGradient(
+                                          colors: [.white.opacity(tabGlassFlashOpacity), .clear],
+                                          startPoint: .topLeading,
+                                          endPoint: .bottomTrailing
+                                      )
+                                  )
+                                  .allowsHitTesting(false)
+                          )
 
                           Spacer(minLength: 0)
 
-                          HStack(spacing: 0) {
-                              navButton(index: 0, icon: "dial.medium.fill", title: store.lang == "en" ? "Meter" : (store.lang == "ja" ? "露出計" : "测光转盘"), theme: theme)
-                              navButton(index: 1, icon: "sun.max.trianglebadge.exclamationmark.fill", title: store.lang == "en" ? "Modifiers" : (store.lang == "ja" ? "光量補正" : "环境柔光"), theme: theme)
-                              navButton(index: 2, icon: "paintbrush.pointed.fill", title: store.lang == "en" ? "Themes & Set" : (store.lang == "ja" ? "テーマ・設定" : "主题与设置"), theme: theme)
+                          // Feature 6: Apple Music Style Detached Rounded Translucent Glass Buttons
+                          HStack(spacing: 10) {
+                              appleMusicGlassTabButton(
+                                  index: 0,
+                                  icon: "dial.medium.fill",
+                                  title: store.lang == "en" ? "Meter" : (store.lang == "ja" ? "露出計" : "Meter 测光"),
+                                  theme: theme
+                              )
+                              appleMusicGlassTabButton(
+                                  index: 1,
+                                  icon: "sun.max.trianglebadge.exclamationmark.fill",
+                                  title: store.lang == "en" ? "Modifiers" : (store.lang == "ja" ? "光量補正" : "Modifiers 柔光"),
+                                  theme: theme
+                              )
+                              appleMusicGlassTabButton(
+                                  index: 2,
+                                  icon: "paintbrush.pointed.fill",
+                                  title: store.lang == "en" ? "Themes & Set" : (store.lang == "ja" ? "テーマ・設定" : "Themes & Set"),
+                                  theme: theme
+                              )
                           }
-                          .padding(.vertical, 10)
-                          .padding(.horizontal, 14)
-                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-                          .overlay(
-                              RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                  .stroke(.white.opacity(0.24), lineWidth: 0.9)
-                          )
                           .padding(.horizontal, 16)
-                          .padding(.bottom, 6)
+                          .padding(.top, 6)
+                          .padding(.bottom, 8)
                       }
                   }
                   .preferredColorScheme(.dark)
                   .onAppear {
                       FeedbackEngine.shared.prepare()
+                      store.enforceApertureLimit()
+                      store.solveExposure()
                       if !store.hasCompletedOnboarding {
                           showOnboardingSheet = true
                       }
                   }
                   .sheet(isPresented: $showOnboardingSheet) {
                       FirstLaunchOnboardingSheet(store: store, isPresented: $showOnboardingSheet)
-                          .presentationDetents([.medium, .large])
+                          .presentationDetents([.large])
                   }
               }
 
+              // Feature 6: Detached Individual Capsule Glass Button with Liquid Glass Morphing
+              private func appleMusicGlassTabButton(index: Int, icon: String, title: String, theme: LumiTheme) -> some View {
+                  let isSelected = (selectedTab == index)
+                  return Button {
+                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                      withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
+                          selectedTab = index
+                          tabGlassFlashOpacity = 0.16
+                      }
+                      withAnimation(.easeOut(duration: 0.35).delay(0.08)) {
+                          tabGlassFlashOpacity = 0.0
+                      }
+                  } label: {
+                      HStack(spacing: 6) {
+                          Image(systemName: icon)
+                              .font(.system(size: 14, weight: .bold))
+                          Text(title)
+                              .font(.system(size: 11, weight: .bold))
+                              .lineLimit(1)
+                              .minimumScaleFactor(0.75)
+                      }
+                      .foregroundStyle(isSelected ? .white : .white.opacity(0.68))
+                      .frame(maxWidth: .infinity)
+                      .padding(.vertical, 12)
+                      .padding(.horizontal, 8)
+                      .background {
+                          ZStack {
+                              // Standalone Translucent Frosted Glass Pill
+                              Capsule(style: .continuous)
+                                  .fill(.ultraThinMaterial)
+
+                              // Active Apple Music Liquid Glass Morphing Highlight
+                              if isSelected {
+                                  Capsule(style: .continuous)
+                                      .fill(
+                                          LinearGradient(
+                                              colors: [
+                                                  theme.accentColor.opacity(0.42),
+                                                  theme.secondaryAccent.opacity(0.24),
+                                                  Color.white.opacity(0.12)
+                                              ],
+                                              startPoint: .topLeading,
+                                              endPoint: .bottomTrailing
+                                          )
+                                      )
+                                      .matchedGeometryEffect(id: "appleMusicActiveGlass", in: glassTabNamespace)
+                              }
+                          }
+                      }
+                      .overlay(
+                          Capsule(style: .continuous)
+                              .stroke(
+                                  LinearGradient(
+                                      colors: [
+                                          .white.opacity(isSelected ? 0.75 : 0.28),
+                                          isSelected ? theme.accentColor.opacity(0.65) : .white.opacity(0.08),
+                                          .white.opacity(isSelected ? 0.35 : 0.12)
+                                      ],
+                                      startPoint: .topLeading,
+                                      endPoint: .bottomTrailing
+                                  ),
+                                  lineWidth: isSelected ? 1.4 : 0.9
+                              )
+                      )
+                      .shadow(color: isSelected ? theme.accentColor.opacity(0.32) : .black.opacity(0.28), radius: isSelected ? 10 : 5, x: 0, y: 4)
+                      .scaleEffect(isSelected ? 1.03 : 0.98)
+                  }
+                  .buttonStyle(.plain)
+              }
+
               @ViewBuilder
-              private func meterTabView(theme: LumiTheme, solved: (powerText: String, stopOffset: Double, isOutOfRange: Bool)) -> some View {
+              private func meterTabView(theme: LumiTheme, diag: ExposureDiagnostic) -> some View {
                   ScrollView(showsIndicators: false) {
-                      VStack(spacing: 12) {
+                      VStack(spacing: 11) {
+                          // Top Flash Output Callout + Feature 1 Single-Play / Tap-to-Cancel Speak Button
                           HStack {
                               VStack(alignment: .leading, spacing: 4) {
-                                  Text(store.lang == "en" ? "⚡ RECOMMENDED MANUAL FLASH POWER" : (store.lang == "ja" ? "⚡ 推奨マニュアル発光量" : "⚡ 推荐闪光灯手动输出功率比"))
-                                      .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                      .foregroundStyle(.white.opacity(0.7))
+                                  HStack(spacing: 6) {
+                                      Text(store.lang == "en" ? "⚡ FLASH POWER OUTPUT" : (store.lang == "ja" ? "⚡ フラッシュ発光量" : "⚡ 闪光灯输出功率比"))
+                                          .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                          .foregroundStyle(.white.opacity(0.75))
+                                      if store.isPowerLocked {
+                                          Text(store.lang == "en" ? "🔒 LOCKED" : "🔒 已锁定功率")
+                                              .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                                              .padding(.horizontal, 6)
+                                              .padding(.vertical, 2)
+                                              .background(theme.accentColor, in: Capsule())
+                                              .foregroundStyle(.black)
+                                      }
+                                  }
                                   HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                      Text(solved.powerText)
-                                          .font(.system(size: 30, weight: .heavy, design: .monospaced))
+                                      Text(diag.powerText)
+                                          .font(.system(size: 29, weight: .heavy, design: .monospaced))
                                           .foregroundStyle(theme.accentColor)
-                                      Text("(\(store.displayFlashTitle) · ISO \(store.iso))")
-                                          .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                          .foregroundStyle(.white.opacity(0.8))
+                                      Text("f/\(String(format: "%.1f", store.aperture).replacingOccurrences(of: ".0", with: "")) · \(String(format: "%.1fm", store.distanceM)) · 1/\(store.shutterDenom)s")
+                                          .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                          .foregroundStyle(.white.opacity(0.85))
                                   }
                               }
                               Spacer()
+
+                              // Feature 1: Speak Once & Tap Again to Cancel
                               Button {
                                   FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
-                                  speakPower(solved.powerText)
+                                  toggleSpeakCurrent(powerText: diag.powerText)
                               } label: {
-                                  VStack(spacing: 2) {
-                                      Image(systemName: "speaker.wave.3.fill")
-                                          .font(.system(size: 16, weight: .bold))
-                                      Text(store.lang == "en" ? "Speak" : (store.lang == "ja" ? "音声" : "播报"))
-                                          .font(.system(size: 10, weight: .bold))
+                                  VStack(spacing: 3) {
+                                      Image(systemName: speechManager.isSpeaking ? "stop.circle.fill" : "speaker.wave.3.fill")
+                                          .font(.system(size: 17, weight: .bold))
+                                      Text(
+                                          speechManager.isSpeaking
+                                              ? (store.lang == "en" ? "Stop" : (store.lang == "ja" ? "停止" : "取消"))
+                                              : (store.lang == "en" ? "Speak" : (store.lang == "ja" ? "音声" : "播报"))
+                                      )
+                                      .font(.system(size: 10, weight: .bold))
                                   }
                                   .foregroundStyle(.white)
-                                  .frame(width: 54, height: 50)
-                                  .background(theme.accentColor.opacity(0.85), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                  .frame(width: 58, height: 52)
+                                  .background(
+                                      speechManager.isSpeaking ? Color.red.opacity(0.88) : theme.accentColor.opacity(0.85),
+                                      in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                  )
+                                  .overlay(
+                                      RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                          .stroke(.white.opacity(0.35), lineWidth: 1)
+                                  )
                               }
                           }
-                          .padding(14)
+                          .padding(13)
                           .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                           .overlay(
                               RoundedRectangle(cornerRadius: 22, style: .continuous)
                                   .stroke(theme.accentColor.opacity(0.45), lineWidth: 1.1)
                           )
 
+                          // Feature 4 & 5: Four Metric Cards with Individual Lock Buttons (🔒 / 🔓)
                           LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                              GlassMetricTile(
+                              LockableGlassMetricTile(
                                   title: store.lang == "en" ? "① DISTANCE" : (store.lang == "ja" ? "① 撮影距離" : "① 拍摄距离"),
                                   value: String(format: "%.1f m", store.distanceM),
-                                  subtitle: String(format: "≈ %.1f ft · 点按上盘", store.distanceM * 3.28084),
+                                  subtitle: store.isDistanceMagnetOn
+                                      ? (store.lang == "en" ? "🧲 0.5m Magnet Snap" : "🧲 0.5m 磁吸步进")
+                                      : (store.lang == "en" ? "0.1m Fine Step" : "0.1m 精细步进"),
                                   isSelected: activeChannel == .distance,
-                                  accent: theme.accentColor
-                              ) {
-                                  FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
-                                  activeChannel = .distance
-                              }
+                                  isLocked: store.isDistanceLocked,
+                                  accent: theme.accentColor,
+                                  onSelect: {
+                                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                      activeChannel = .distance
+                                  },
+                                  onToggleLock: {
+                                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                      store.isDistanceLocked.toggle()
+                                  }
+                              )
 
-                              GlassMetricTile(
+                              LockableGlassMetricTile(
                                   title: store.lang == "en" ? "② FLASH POWER" : (store.lang == "ja" ? "② フラッシュ出力" : "② 闪光灯功率比"),
-                                  value: solved.powerText,
-                                  subtitle: store.lang == "en" ? "Auto Solved M" : "自动解算 M档",
-                                  isSelected: false,
-                                  accent: theme.secondaryAccent
-                              ) {
-                                  FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
-                                  speakPower(solved.powerText)
-                              }
+                                  value: diag.powerText,
+                                  subtitle: store.isPowerLocked
+                                      ? (store.lang == "en" ? "Locked · Solves f/Dist" : "已锁定 · 优先算光圈/距离")
+                                      : (store.lang == "en" ? "Tap to dial & lock" : "点按用转盘调节并锁定"),
+                                  isSelected: activeChannel == .power,
+                                  isLocked: store.isPowerLocked,
+                                  accent: theme.secondaryAccent,
+                                  onSelect: {
+                                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                      activeChannel = .power
+                                  },
+                                  onToggleLock: {
+                                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                      store.isPowerLocked.toggle()
+                                      store.solveExposure(changed: .power)
+                                  }
+                              )
 
-                              GlassMetricTile(
+                              LockableGlassMetricTile(
                                   title: store.lang == "en" ? "③ APERTURE" : (store.lang == "ja" ? "③ 絞り (f値)" : "③ 光圈大小"),
                                   value: String(format: "f/%.1f", store.aperture).replacingOccurrences(of: ".0", with: ""),
-                                  subtitle: store.lang == "en" ? "Tap to dial f-stop" : "点按用转盘调光圈",
+                                  subtitle: String(format: store.lang == "en" ? "Max Limit f/%.1f" : "最大光圈限制 f/%.1f", store.lensMaxAperture).replacingOccurrences(of: ".0", with: ""),
                                   isSelected: activeChannel == .aperture,
-                                  accent: theme.accentColor
-                              ) {
-                                  FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
-                                  activeChannel = .aperture
-                              }
+                                  isLocked: store.isApertureLocked,
+                                  accent: theme.accentColor,
+                                  onSelect: {
+                                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                      activeChannel = .aperture
+                                  },
+                                  onToggleLock: {
+                                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                      store.isApertureLocked.toggle()
+                                      store.solveExposure(changed: .aperture)
+                                  }
+                              )
 
-                              GlassMetricTile(
+                              LockableGlassMetricTile(
                                   title: store.lang == "en" ? "④ SHUTTER" : (store.lang == "ja" ? "④ シャッター速度" : "④ 快门速度"),
                                   value: "1/\(store.shutterDenom)s",
                                   subtitle: store.shutterDenom <= store.maxSyncDenom ? "X-Sync Safe" : "HSS 高速同步",
                                   isSelected: activeChannel == .shutter,
-                                  accent: theme.accentColor
-                              ) {
-                                  FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
-                                  activeChannel = .shutter
-                              }
+                                  isLocked: store.isShutterLocked,
+                                  accent: theme.accentColor,
+                                  onSelect: {
+                                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                      activeChannel = .shutter
+                                  },
+                                  onToggleLock: {
+                                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                      store.isShutterLocked.toggle()
+                                  }
+                              )
                           }
 
+                          // Mechanical Rotary Dial Section + 4-Channel Switcher + 0.5m Magnet Toggle
                           VStack(spacing: 10) {
-                              HStack(spacing: 8) {
-                                  channelPill(.distance, label: store.lang == "en" ? "Dist Ring" : (store.lang == "ja" ? "距離リング" : "距离转盘"), theme: theme)
-                                  channelPill(.aperture, label: store.lang == "en" ? "Aperture Ring" : (store.lang == "ja" ? "絞りリング" : "光圈转盘"), theme: theme)
-                                  channelPill(.shutter, label: store.lang == "en" ? "Shutter Dial" : (store.lang == "ja" ? "シャッター盤" : "快门转盘"), theme: theme)
+                              HStack(spacing: 6) {
+                                  channelPill(.distance, label: store.lang == "en" ? "Dist" : (store.lang == "ja" ? "距離" : "距离盘"), theme: theme)
+                                  channelPill(.power, label: store.lang == "en" ? "Power" : (store.lang == "ja" ? "出力" : "功率盘"), theme: theme)
+                                  channelPill(.aperture, label: store.lang == "en" ? "f-stop" : (store.lang == "ja" ? "絞り" : "光圈盘"), theme: theme)
+                                  channelPill(.shutter, label: store.lang == "en" ? "Shutter" : (store.lang == "ja" ? "速度" : "快门盘"), theme: theme)
+                              }
+
+                              // Feature 3: Magnetic 0.5m Snap Quick Bar when Distance channel is selected
+                              if activeChannel == .distance {
+                                  HStack {
+                                      Label(
+                                          store.lang == "en" ? "🧲 0.5m Magnetic Snap" : (store.lang == "ja" ? "🧲 0.5m マグネット吸着" : "🧲 距离拨盘 0.5m 磁铁吸附"),
+                                          systemImage: store.isDistanceMagnetOn ? "bolt.circle.fill" : "circle.dotted"
+                                      )
+                                      .font(.system(size: 11, weight: .bold))
+                                      .foregroundStyle(store.isDistanceMagnetOn ? theme.accentColor : .white.opacity(0.7))
+
+                                      Spacer()
+
+                                      Button {
+                                          FeedbackEngine.shared.magnetSnapTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                          store.isDistanceMagnetOn.toggle()
+                                          if store.isDistanceMagnetOn {
+                                              store.distanceM = (store.distanceM * 2.0).rounded() / 2.0
+                                              store.solveExposure(changed: .distance)
+                                          }
+                                      } label: {
+                                          Text(
+                                              store.isDistanceMagnetOn
+                                                  ? (store.lang == "en" ? "0.5m Snap ON" : "0.5m 磁吸开启")
+                                                  : (store.lang == "en" ? "0.1m Fine" : "0.1m 微调")
+                                          )
+                                          .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                                          .padding(.horizontal, 10)
+                                          .padding(.vertical, 4)
+                                          .background(
+                                              store.isDistanceMagnetOn ? theme.accentColor : Color.white.opacity(0.14),
+                                              in: Capsule()
+                                          )
+                                          .foregroundStyle(store.isDistanceMagnetOn ? .black : .white)
+                                      }
+                                  }
+                                  .padding(.horizontal, 10)
+                                  .padding(.vertical, 5)
+                                  .background(Color.black.opacity(0.24), in: Capsule())
                               }
 
                               HStack(spacing: 16) {
@@ -738,41 +1220,72 @@ jobs:
                                       .background(theme.accentColor.opacity(0.85), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                   }
                               }
-                              .padding(.vertical, 4)
+                              .padding(.vertical, 2)
 
-                              HStack {
-                                  if solved.isOutOfRange {
-                                      Image(systemName: "exclamationmark.triangle.fill")
-                                          .foregroundStyle(.orange)
-                                      Text(store.lang == "en" ? "Out of flash range. Tap to auto-balance." : "超出当前闪光灯输出范围，点右侧一键配平")
-                                          .font(.system(size: 11, weight: .medium))
-                                          .foregroundStyle(.white)
-                                      Spacer()
-                                      Button(store.lang == "en" ? "Balance" : "自动配平") {
-                                          FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
-                                          store.aperture = 2.8
-                                          store.distanceM = 2.0
-                                          WidgetCenter.shared.reloadAllTimelines()
+                              // Feature 4: Highlighted Bottom Modification Advice Banner when Flash Power is Insufficient or Excessive
+                              if diag.isUnderexposed || diag.isOverexposed {
+                                  VStack(alignment: .leading, spacing: 6) {
+                                      HStack(alignment: .center, spacing: 6) {
+                                          Image(systemName: "bolt.trianglebadge.exclamationmark.fill")
+                                              .font(.system(size: 14, weight: .black))
+                                              .foregroundStyle(.yellow)
+                                          Text(diag.warningTitle)
+                                              .font(.system(size: 12, weight: .heavy))
+                                              .foregroundStyle(.white)
+                                          Spacer()
+                                          Button {
+                                              FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                              store.applyQuickFix(diag)
+                                          } label: {
+                                              Text(diag.quickFixLabel)
+                                                  .font(.system(size: 10, weight: .heavy))
+                                                  .padding(.horizontal, 10)
+                                                  .padding(.vertical, 5)
+                                                  .background(Color.yellow, in: Capsule())
+                                                  .foregroundStyle(.black)
+                                          }
                                       }
-                                      .font(.system(size: 11, weight: .bold))
-                                      .padding(.horizontal, 10)
-                                      .padding(.vertical, 5)
-                                      .background(.orange, in: Capsule())
-                                      .foregroundStyle(.black)
-                                  } else {
+                                      Text(diag.warningAdvice)
+                                          .font(.system(size: 11, weight: .semibold))
+                                          .foregroundStyle(.white.opacity(0.95))
+                                          .fixedSize(horizontal: false, vertical: true)
+                                  }
+                                  .padding(12)
+                                  .background(
+                                      LinearGradient(
+                                          colors: [
+                                              Color(red: 0.78, green: 0.22, blue: 0.12).opacity(0.88),
+                                              Color(red: 0.58, green: 0.32, blue: 0.08).opacity(0.88)
+                                          ],
+                                          startPoint: .topLeading,
+                                          endPoint: .bottomTrailing
+                                      ),
+                                      in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                  )
+                                  .overlay(
+                                      RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                          .stroke(Color.yellow.opacity(0.85), lineWidth: 1.5)
+                                  )
+                                  .shadow(color: Color.orange.opacity(0.35), radius: 8, x: 0, y: 4)
+                              } else {
+                                  HStack {
                                       Image(systemName: "checkmark.seal.fill")
                                           .foregroundStyle(.green)
-                                      Text(store.lang == "en" ? "Exposure spot-on. Turn brass dial to adjust." : "曝光在有效范围内 · 拨动金属转盘听棘轮声与震动")
-                                          .font(.system(size: 11, weight: .medium))
-                                          .foregroundStyle(.white.opacity(0.85))
+                                      Text(
+                                          store.isPowerLocked
+                                              ? (store.lang == "en" ? "Power locked (\(diag.powerText)). Auto-solved exposure spot on." : "已锁定闪光功率 (\(diag.powerText)) · 光圈/快门/距离已精准配平")
+                                              : (store.lang == "en" ? "Exposure spot-on (\(String(format: "%+.1f", diag.evDelta)) EV). Ready to shoot." : "曝光准确 (\(String(format: "%+.1f", diag.evDelta)) EV) · 闪光功率在有效范围内")
+                                      )
+                                      .font(.system(size: 11, weight: .medium))
+                                      .foregroundStyle(.white.opacity(0.88))
                                       Spacer()
                                   }
+                                  .frame(minHeight: 36)
+                                  .padding(.horizontal, 12)
+                                  .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                               }
-                              .frame(height: 36)
-                              .padding(.horizontal, 12)
-                              .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                           }
-                          .padding(14)
+                          .padding(13)
                           .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                           .overlay(
                               RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -780,16 +1293,31 @@ jobs:
                           )
                       }
                       .padding(.horizontal, 16)
-                      .padding(.bottom, 12)
+                      .padding(.bottom, 10)
                   }
               }
 
               @ViewBuilder
-              private func ambientTabView(theme: LumiTheme, solved: (powerText: String, stopOffset: Double, isOutOfRange: Bool)) -> some View {
+              private func ambientTabView(theme: LumiTheme, diag: ExposureDiagnostic) -> some View {
                   ScrollView(showsIndicators: false) {
                       VStack(spacing: 14) {
                           VStack(alignment: .leading, spacing: 10) {
-                              Text(store.lang == "en" ? "① Flash Diffuser / Softbox Compensation" : "① 柔光附件光损补偿 (自动提高闪光功率)")
+                              Text(store.lang == "en" ? "① Ambient Light Scene (Priority Shutter)" : "① 现场环境光氛围 (决定自动匹配的快门速度)")
+                                  .font(.system(size: 14, weight: .bold))
+                                  .foregroundStyle(.white)
+
+                              HStack(spacing: 8) {
+                                  scenePill(ev: 5.0, title: store.lang == "en" ? "🌙 Night (EV5)" : "🌙 夜景 (EV5)", theme: theme)
+                                  scenePill(ev: 7.0, title: store.lang == "en" ? "☕ Indoor (EV7)" : "☕ 室内 (EV7)", theme: theme)
+                                  scenePill(ev: 10.0, title: store.lang == "en" ? "🌿 Shade (EV10)" : "🌿 逆光 (EV10)", theme: theme)
+                              }
+                          }
+                          .padding(16)
+                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                          .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.22), lineWidth: 0.8))
+
+                          VStack(alignment: .leading, spacing: 10) {
+                              Text(store.lang == "en" ? "② Flash Diffuser / Softbox Compensation" : "② 柔光附件光损补偿 (自动补偿闪光输出)")
                                   .font(.system(size: 14, weight: .bold))
                                   .foregroundStyle(.white)
 
@@ -804,7 +1332,7 @@ jobs:
                           .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.22), lineWidth: 0.8))
 
                           VStack(alignment: .leading, spacing: 10) {
-                              Text(store.lang == "en" ? "② Bounce Flash Angle" : "② 灯头跳闪反射角度补偿")
+                              Text(store.lang == "en" ? "③ Bounce Flash Angle" : "③ 灯头跳闪反射角度补偿")
                                   .font(.system(size: 14, weight: .bold))
                                   .foregroundStyle(.white)
 
@@ -882,6 +1410,13 @@ jobs:
                               }
                               .tint(theme.accentColor)
 
+                              Toggle(isOn: $store.isDistanceMagnetOn) {
+                                  Label(store.lang == "en" ? "0.5m Magnetic Distance Snap" : "距离转盘 0.5m 磁铁吸附", systemImage: "bolt.circle.fill")
+                                      .font(.system(size: 13, weight: .semibold))
+                                      .foregroundStyle(.white)
+                              }
+                              .tint(theme.accentColor)
+
                               HStack {
                                   Text("🌐 Language / 语言")
                                       .font(.system(size: 13, weight: .semibold))
@@ -902,15 +1437,33 @@ jobs:
 
                           VStack(alignment: .leading, spacing: 12) {
                               HStack {
-                                  Text(store.lang == "en" ? "⚡ Flash & Film Roll Profile" : "⚡ 闪光灯与胶卷固定档案")
+                                  Text(store.lang == "en" ? "⚡ Lens Max Aperture & Flash Profile" : "⚡ 镜头最大光圈限制与闪光灯档案")
                                       .font(.system(size: 14, weight: .bold))
                                       .foregroundStyle(.white)
                                   Spacer()
-                                  Button(store.lang == "en" ? "Open Setup Wizard" : "打开首次提问向导") {
+                                  Button(store.lang == "en" ? "Setup Wizard" : "首次设置向导") {
                                       showOnboardingSheet = true
                                   }
                                   .font(.system(size: 11, weight: .bold))
                                   .foregroundStyle(theme.accentColor)
+                              }
+
+                              HStack {
+                                  Text(store.lang == "en" ? "Lens Max Aperture Limit:" : "镜头最大光圈上限:")
+                                      .font(.system(size: 12, weight: .medium))
+                                      .foregroundStyle(.white)
+                                  Spacer()
+                                  Picker("Max Aperture", selection: $store.lensMaxAperture) {
+                                      ForEach(store.lensMaxApertureChoices, id: \.self) { fVal in
+                                          Text(String(format: "f/%.1f", fVal).replacingOccurrences(of: ".0", with: "")).tag(fVal)
+                                      }
+                                  }
+                                  .tint(theme.accentColor)
+                                  .onChange(of: store.lensMaxAperture) { _ in
+                                      store.enforceApertureLimit()
+                                      store.solveExposure(changed: .aperture)
+                                      WidgetCenter.shared.reloadAllTimelines()
+                                  }
                               }
 
                               Toggle(isOn: $store.isCustomGN) {
@@ -930,6 +1483,7 @@ jobs:
                                           .labelsHidden()
                                           .onChange(of: store.customGNVal) { _ in
                                               FeedbackEngine.shared.dialTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                              store.solveExposure()
                                               WidgetCenter.shared.reloadAllTimelines()
                                           }
                                   }
@@ -945,21 +1499,50 @@ jobs:
               }
 
               private func stepActiveChannel(by delta: Int) {
-                  FeedbackEngine.shared.dialTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
                   switch activeChannel {
                   case .distance:
-                      let next = min(max(store.distanceM + Double(delta) * 0.1, 0.4), 12.0)
-                      store.distanceM = (next * 10).rounded() / 10
+                      if store.isDistanceMagnetOn {
+                          // Feature 3: 0.5m Magnetic Snap Resolution
+                          let halfSteps = (store.distanceM * 2.0).rounded()
+                          let next = min(max((halfSteps + Double(delta)) * 0.5, 0.5), 12.0)
+                          store.distanceM = next
+                          FeedbackEngine.shared.magnetSnapTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                      } else {
+                          let next = min(max(((store.distanceM + Double(delta) * 0.1) * 10.0).rounded() / 10.0, 0.4), 12.0)
+                          store.distanceM = next
+                          let isHalfMeterMark = abs(next.truncatingRemainder(dividingBy: 0.5)) < 0.02
+                          if isHalfMeterMark {
+                              FeedbackEngine.shared.magnetSnapTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                          } else {
+                              FeedbackEngine.shared.dialTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                          }
+                      }
+                      store.solveExposure(changed: .distance)
+
+                  case .power:
+                      // Feature 4: Adjusting Power locks Power and solves Aperture/Distance/Shutter
+                      FeedbackEngine.shared.dialTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                      let minStops = -log2(Double(store.activeFlashSpec.minPowerDenom))
+                      let next = ((store.powerStopOffset + Double(delta) / 3.0) * 3.0).rounded() / 3.0
+                      store.powerStopOffset = min(max(next, minStops), 0.0)
+                      store.isPowerLocked = true
+                      store.solveExposure(changed: .power)
+
                   case .aperture:
-                      let list = store.apertureSteps
-                      let curIdx = list.enumerated().min(by: { abs($0.element - store.aperture) < abs($1.element - store.aperture) })?.offset ?? 5
+                      FeedbackEngine.shared.dialTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                      let list = store.availableApertureSteps
+                      let curIdx = list.enumerated().min(by: { abs($0.element - store.aperture) < abs($1.element - store.aperture) })?.offset ?? 0
                       let nextIdx = min(max(curIdx + delta, 0), list.count - 1)
                       store.aperture = list[nextIdx]
+                      store.solveExposure(changed: .aperture)
+
                   case .shutter:
+                      FeedbackEngine.shared.dialTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
                       let list = store.shutterSteps
                       let curIdx = list.firstIndex(of: store.shutterDenom) ?? 3
                       let nextIdx = min(max(curIdx + delta, 0), list.count - 1)
                       store.shutterDenom = list[nextIdx]
+                      store.solveExposure(changed: .shutter)
                   }
                   WidgetCenter.shared.reloadAllTimelines()
               }
@@ -971,7 +1554,7 @@ jobs:
                   } label: {
                       Text(label)
                           .font(.system(size: 11, weight: .bold))
-                          .foregroundStyle(activeChannel == chan ? .black : .white.opacity(0.8))
+                          .foregroundStyle(activeChannel == chan ? .black : .white.opacity(0.82))
                           .frame(maxWidth: .infinity)
                           .padding(.vertical, 7)
                           .background(
@@ -981,10 +1564,30 @@ jobs:
                   }
               }
 
+              private func scenePill(ev: Double, title: String, theme: LumiTheme) -> some View {
+                  Button {
+                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                      store.ambientSceneEV = ev
+                      store.solveExposure()
+                      WidgetCenter.shared.reloadAllTimelines()
+                  } label: {
+                      Text(title)
+                          .font(.system(size: 11, weight: .bold))
+                          .foregroundStyle(abs(store.ambientSceneEV - ev) < 0.1 ? .black : .white)
+                          .frame(maxWidth: .infinity)
+                          .padding(.vertical, 10)
+                          .background(
+                              abs(store.ambientSceneEV - ev) < 0.1 ? theme.accentColor : Color.white.opacity(0.08),
+                              in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                          )
+                  }
+              }
+
               private func modifierPill(loss: Double, title: String, theme: LumiTheme) -> some View {
                   Button {
                       FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
                       store.modifierLossEV = loss
+                      store.solveExposure()
                       WidgetCenter.shared.reloadAllTimelines()
                   } label: {
                       Text(title)
@@ -1003,6 +1606,7 @@ jobs:
                   Button {
                       FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
                       store.bounceLossEV = loss
+                      store.solveExposure()
                       WidgetCenter.shared.reloadAllTimelines()
                   } label: {
                       Text(title)
@@ -1017,34 +1621,19 @@ jobs:
                   }
               }
 
-              private func navButton(index: Int, icon: String, title: String, theme: LumiTheme) -> some View {
-                  Button {
-                      FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
-                      selectedTab = index
-                  } label: {
-                      VStack(spacing: 4) {
-                          Image(systemName: icon)
-                              .font(.system(size: 17, weight: .bold))
-                          Text(title)
-                              .font(.system(size: 10, weight: .bold))
-                      }
-                      .foregroundStyle(selectedTab == index ? theme.accentColor : .white.opacity(0.55))
-                      .frame(maxWidth: .infinity)
-                  }
-              }
-
-              private func speakPower(_ powerText: String) {
+              // Feature 1: Single utterance broadcast with tap-again-to-cancel
+              private func toggleSpeakCurrent(powerText: String) {
+                  let fStr = String(format: "%.1f", store.aperture).replacingOccurrences(of: ".0", with: "")
+                  let dStr = String(format: "%.1f", store.distanceM)
                   let msg: String
                   if store.lang == "en" {
-                      msg = "Distance \(String(format: "%.1f", store.distanceM)) meters, f \(String(format: "%.1f", store.aperture)). Set flash power to \(powerText)."
+                      msg = "Distance \(dStr) meters, aperture f \(fStr), shutter 1 over \(store.shutterDenom). Set flash power to \(powerText)."
                   } else if store.lang == "ja" {
-                      msg = "距離 \(String(format: "%.1f", store.distanceM)) メートル、推奨フラッシュ出力は \(powerText) です。"
+                      msg = "距離 \(dStr) メートル、絞り f \(fStr)。フラッシュ出力は \(powerText) です。"
                   } else {
-                      msg = "距离 \(String(format: "%.1f", store.distanceM)) 米，光圈 \(String(format: "%.1f", store.aperture))，请将闪光灯拨至 \(powerText) 功率。"
+                      msg = "距离 \(dStr) 米，光圈 f \(fStr)，快门 \(store.shutterDenom) 分之一秒，闪光灯输出功率 \(powerText)。"
                   }
-                  let utterance = AVSpeechUtterance(string: msg)
-                  utterance.voice = AVSpeechSynthesisVoice(language: store.lang == "en" ? "en-US" : (store.lang == "ja" ? "ja-JP" : "zh-CN"))
-                  speechSynthesizer.speak(utterance)
+                  speechManager.toggleSpeak(text: msg, lang: store.lang)
               }
           }
 
@@ -1060,11 +1649,15 @@ jobs:
               private var currentRotationDegrees: Double {
                   switch channel {
                   case .distance:
-                      let ratio = (store.distanceM - 0.4) / 11.6
+                      let ratio = (store.distanceM - 0.5) / 11.5
+                      return 135.0 - ratio * 270.0
+                  case .power:
+                      let minStops = -log2(Double(store.activeFlashSpec.minPowerDenom))
+                      let ratio = (store.powerStopOffset - minStops) / max(abs(minStops), 1.0)
                       return 135.0 - ratio * 270.0
                   case .aperture:
-                      let list = store.apertureSteps
-                      let idx = list.enumerated().min(by: { abs($0.element - store.aperture) < abs($1.element - store.aperture) })?.offset ?? 5
+                      let list = store.availableApertureSteps
+                      let idx = list.enumerated().min(by: { abs($0.element - store.aperture) < abs($1.element - store.aperture) })?.offset ?? 0
                       let ratio = Double(idx) / Double(max(list.count - 1, 1))
                       return 135.0 - ratio * 270.0
                   case .shutter:
@@ -1079,10 +1672,25 @@ jobs:
                   switch channel {
                   case .distance:
                       return String(format: "%.1fm", store.distanceM)
+                  case .power:
+                      return store.formatPower(store.powerStopOffset, minDenom: store.activeFlashSpec.minPowerDenom)
                   case .aperture:
                       return String(format: "f/%.1f", store.aperture).replacingOccurrences(of: ".0", with: "")
                   case .shutter:
                       return "1/\(store.shutterDenom)"
+                  }
+              }
+
+              private var centerSubHint: String {
+                  switch channel {
+                  case .distance:
+                      return store.isDistanceMagnetOn ? "🧲 0.5m SNAP" : "0.1m FINE"
+                  case .power:
+                      return store.isPowerLocked ? "🔒 LOCKED" : "1/3 EV"
+                  case .aperture:
+                      return String(format: "MAX f/%.1f", store.lensMaxAperture).replacingOccurrences(of: ".0", with: "")
+                  case .shutter:
+                      return "X-SYNC \(store.maxSyncDenom)"
                   }
               }
 
@@ -1101,12 +1709,12 @@ jobs:
                                   center: .center
                               )
                           )
-                          .frame(width: 196, height: 196)
+                          .frame(width: 190, height: 190)
                           .shadow(color: .black.opacity(0.45), radius: 14, x: 0, y: 8)
 
                       Circle()
                           .stroke(Color.black.opacity(0.45), style: StrokeStyle(lineWidth: 5, dash: [2.5, 2.5]))
-                          .frame(width: 192, height: 192)
+                          .frame(width: 186, height: 186)
 
                       ZStack {
                           Circle()
@@ -1115,20 +1723,26 @@ jobs:
                                       colors: [Color(red: 0.22, green: 0.20, blue: 0.18), Color(red: 0.09, green: 0.08, blue: 0.07)],
                                       center: .center,
                                       startRadius: 10,
-                                      endRadius: 90
+                                      endRadius: 88
                                   )
                               )
-                              .frame(width: 174, height: 174)
+                              .frame(width: 168, height: 168)
 
-                          ForEach(0..<36, id: \.self) { i in
-                              let angle = -135.0 + (Double(i) / 35.0) * 270.0
-                              VStack {
+                          ForEach(0..<24, id: \.self) { i in
+                              let angle = -135.0 + (Double(i) / 23.0) * 270.0
+                              let isMagnetNotch = (channel == .distance && store.isDistanceMagnetOn) || (i % 3 == 0)
+                              VStack(spacing: 2) {
                                   Rectangle()
-                                      .fill(i % 4 == 0 ? Color(red: 0.95, green: 0.90, blue: 0.78) : Color.white.opacity(0.35))
-                                      .frame(width: i % 4 == 0 ? 2.0 : 1.0, height: i % 4 == 0 ? 9 : 5)
+                                      .fill(isMagnetNotch ? accentColor : Color.white.opacity(0.35))
+                                      .frame(width: isMagnetNotch ? 2.2 : 1.0, height: isMagnetNotch ? 9 : 5)
+                                  if channel == .distance && store.isDistanceMagnetOn && i % 2 == 0 {
+                                      Circle()
+                                          .fill(accentColor.opacity(0.85))
+                                          .frame(width: 3.5, height: 3.5)
+                                  }
                                   Spacer()
                               }
-                              .frame(height: 166)
+                              .frame(height: 160)
                               .rotationEffect(.degrees(angle))
                           }
                       }
@@ -1142,7 +1756,7 @@ jobs:
                               .offset(y: -4)
                           Spacer()
                       }
-                      .frame(height: 204)
+                      .frame(height: 198)
 
                       ZStack {
                           Circle()
@@ -1153,31 +1767,34 @@ jobs:
                                       endPoint: .bottomTrailing
                                   )
                               )
-                              .frame(width: 92, height: 92)
+                              .frame(width: 90, height: 90)
 
                           Circle()
                               .fill(Color(red: 0.12, green: 0.11, blue: 0.10))
-                              .frame(width: 82, height: 82)
+                              .frame(width: 80, height: 80)
 
                           VStack(spacing: 2) {
                               Text(channel.rawValue)
                                   .font(.system(size: 9, weight: .bold, design: .monospaced))
                                   .foregroundStyle(accentColor)
                               Text(centerReadoutText)
-                                  .font(.system(size: 18, weight: .heavy, design: .monospaced))
+                                  .font(.system(size: 16, weight: .heavy, design: .monospaced))
                                   .foregroundStyle(.white)
-                              Text("ROTATE DIAL")
-                                  .font(.system(size: 7, weight: .semibold, design: .monospaced))
-                                  .foregroundStyle(.white.opacity(0.5))
+                                  .lineLimit(1)
+                                  .minimumScaleFactor(0.7)
+                              Text(centerSubHint)
+                                  .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                  .foregroundStyle(.white.opacity(0.65))
                           }
+                          .padding(.horizontal, 4)
                       }
                   }
-                  .frame(width: 204, height: 204)
+                  .frame(width: 198, height: 198)
                   .contentShape(Circle())
                   .gesture(
                       DragGesture(minimumDistance: 2)
                           .onChanged { value in
-                              let center = CGPoint(x: 102, y: 102)
+                              let center = CGPoint(x: 99, y: 99)
                               let dx = Double(value.location.x - center.x)
                               let dy = Double(value.location.y - center.y)
                               let angle = atan2(dy, dx) * 180.0 / .pi
@@ -1187,9 +1804,10 @@ jobs:
                                   if delta > 180 { delta -= 360 }
                                   if delta < -180 { delta += 360 }
                                   accumulatedAngle += delta
-                                  if abs(accumulatedAngle) >= 11.0 {
-                                      let steps = Int(accumulatedAngle / 11.0)
-                                      accumulatedAngle -= Double(steps) * 11.0
+                                  let threshold = (channel == .distance && store.isDistanceMagnetOn) ? 13.0 : 10.5
+                                  if abs(accumulatedAngle) >= threshold {
+                                      let steps = Int(accumulatedAngle / threshold)
+                                      accumulatedAngle -= Double(steps) * threshold
                                       onStep(steps > 0 ? 1 : -1)
                                   }
                               }
@@ -1203,50 +1821,72 @@ jobs:
               }
           }
 
-          struct GlassMetricTile: View {
+          // Feature 4 & 5: Glass Metric Tile with Independent Lock Toggle Button (🔒 / 🔓)
+          struct LockableGlassMetricTile: View {
               let title: String
               let value: String
               let subtitle: String
               let isSelected: Bool
+              let isLocked: Bool
               let accent: Color
-              let action: () -> Void
+              let onSelect: () -> Void
+              let onToggleLock: () -> Void
 
               var body: some View {
-                  Button(action: action) {
-                      VStack(alignment: .leading, spacing: 5) {
-                          HStack {
-                              Text(title)
-                                  .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                  .foregroundStyle(.white.opacity(0.75))
-                              Spacer()
-                              if isSelected {
-                                  Circle()
-                                      .fill(accent)
-                                      .frame(width: 7, height: 7)
+                  VStack(alignment: .leading, spacing: 5) {
+                      HStack(spacing: 4) {
+                          Text(title)
+                              .font(.system(size: 10, weight: .bold, design: .monospaced))
+                              .foregroundStyle(.white.opacity(0.78))
+                              .lineLimit(1)
+                          Spacer()
+                          Button(action: onToggleLock) {
+                              HStack(spacing: 3) {
+                                  Image(systemName: isLocked ? "lock.fill" : "lock.open")
+                                      .font(.system(size: 10, weight: .bold))
+                                  Text(isLocked ? "LOCK" : "FREE")
+                                      .font(.system(size: 8, weight: .heavy, design: .monospaced))
                               }
+                              .padding(.horizontal, 6)
+                              .padding(.vertical, 3)
+                              .background(
+                                  isLocked ? accent : Color.white.opacity(0.12),
+                                  in: Capsule()
+                              )
+                              .foregroundStyle(isLocked ? .black : .white.opacity(0.85))
                           }
-                          Text(value)
-                              .font(.system(size: 24, weight: .heavy, design: .monospaced))
-                              .foregroundStyle(isSelected ? accent : .white)
-                              .lineLimit(1)
-                              .minimumScaleFactor(0.7)
-                          Text(subtitle)
-                              .font(.system(size: 10, weight: .medium))
-                              .foregroundStyle(.white.opacity(0.6))
-                              .lineLimit(1)
+                          .buttonStyle(.plain)
                       }
-                      .frame(maxWidth: .infinity, alignment: .leading)
-                      .padding(12)
-                      .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                      .overlay(
-                          RoundedRectangle(cornerRadius: 20, style: .continuous)
-                              .stroke(isSelected ? accent : .white.opacity(0.20), lineWidth: isSelected ? 1.6 : 0.8)
-                      )
+
+                      Button(action: onSelect) {
+                          VStack(alignment: .leading, spacing: 4) {
+                              Text(value)
+                                  .font(.system(size: 23, weight: .heavy, design: .monospaced))
+                                  .foregroundStyle(isSelected ? accent : .white)
+                                  .lineLimit(1)
+                                  .minimumScaleFactor(0.7)
+                              Text(subtitle)
+                                  .font(.system(size: 9.5, weight: .medium))
+                                  .foregroundStyle(.white.opacity(0.65))
+                                  .lineLimit(1)
+                          }
+                          .frame(maxWidth: .infinity, alignment: .leading)
+                      }
+                      .buttonStyle(.plain)
                   }
-                  .buttonStyle(.plain)
+                  .padding(11)
+                  .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                  .overlay(
+                      RoundedRectangle(cornerRadius: 20, style: .continuous)
+                          .stroke(
+                              isLocked ? accent.opacity(0.9) : (isSelected ? accent : .white.opacity(0.20)),
+                              lineWidth: (isSelected || isLocked) ? 1.6 : 0.8
+                          )
+                  )
               }
           }
 
+          // Feature 2: First-Launch Inquiry Sheet asking Film ISO, Lens Max Aperture Limit, and Flash/GN
           struct FirstLaunchOnboardingSheet: View {
               @ObservedObject var store: ExposureStore
               @Binding var isPresented: Bool
@@ -1285,7 +1925,22 @@ jobs:
                                   Stepper("ISO: \(store.iso)", value: $store.iso, in: 50...3200, step: 50)
                               }
 
-                              Section(store.lang == "en" ? "2. Select Flash Unit or Custom GN" : "② 选择闪光灯型号或手动输入 GN 值") {
+                              // Feature 2: Ask for Lens Maximum Aperture & Set Aperture Limit
+                              Section(
+                                  header: Text(store.lang == "en" ? "2. Lens Max Aperture (Sets f-stop Limit)" : "② 挂机镜头最大光圈 (设置光圈大小上限 Limit)"),
+                                  footer: Text(store.lang == "en" ? "The dial and auto-solver will never open wider than this maximum aperture." : "设置后，测光解算与光圈转盘将以此作为最大可用光圈上限。")
+                              ) {
+                                  Picker(store.lang == "en" ? "Max Aperture Limit" : "镜头最大光圈 (Max f/)", selection: $store.lensMaxAperture) {
+                                      ForEach(store.lensMaxApertureChoices, id: \.self) { fVal in
+                                          Text(String(format: "f/%.1f", fVal).replacingOccurrences(of: ".0", with: "")).tag(fVal)
+                                      }
+                                  }
+                                  .onChange(of: store.lensMaxAperture) { _ in
+                                      store.enforceApertureLimit()
+                                  }
+                              }
+
+                              Section(store.lang == "en" ? "3. Select Flash Unit or Custom GN" : "③ 选择闪光灯型号或手动输入 GN 值") {
                                   Picker(store.lang == "en" ? "Flash Model" : "主力闪光灯", selection: $store.flashId) {
                                       ForEach(store.catalog) { spec in
                                           Text("\(spec.shortName) (GN\(Int(spec.baseGN)))").tag(spec.id)
@@ -1302,7 +1957,7 @@ jobs:
                                   }
                               }
 
-                              Section(store.lang == "en" ? "3. Choose UI Theme" : "③ 选择界面质感主题") {
+                              Section(store.lang == "en" ? "4. Choose UI Theme" : "④ 选择界面质感主题") {
                                   Picker("Theme", selection: $store.themeRaw) {
                                       ForEach(LumiTheme.allCases) { t in
                                           Text(t.title(lang: store.lang)).tag(t.rawValue)
@@ -1312,12 +1967,14 @@ jobs:
                           }
                           .scrollContentBackground(.hidden)
                       }
-                      .navigationTitle(store.lang == "en" ? "🎞️ Film Roll & Flash Setup" : "🎞️ 首次装卷与闪光灯设定")
+                      .navigationTitle(store.lang == "en" ? "🎞️ Film, Lens & Flash Setup" : "🎞️ 首次装卷 · 最大光圈与闪光灯设定")
                       .navigationBarTitleDisplayMode(.inline)
                       .toolbar {
                           ToolbarItem(placement: .confirmationAction) {
                               Button(store.lang == "en" ? "Save & Lock" : "锁定并进入") {
                                   FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                  store.enforceApertureLimit()
+                                  store.solveExposure()
                                   store.hasCompletedOnboarding = true
                                   WidgetCenter.shared.reloadAllTimelines()
                                   isPresented = false
@@ -1331,7 +1988,7 @@ jobs:
           }
           EOF
 
-          # 5. Generate LumiFilmWidget.swift (With both iOS 17.0 deploymentTarget AND #available guard so it never fails)
+          # 5. Generate LumiFilmWidget.swift (Respects 0.5m step & Lens Max Aperture limit)
           cat << 'EOF' > LumiFilmWidget/LumiFilmWidget.swift
           import WidgetKit
           import SwiftUI
@@ -1361,7 +2018,7 @@ jobs:
                   let defaults = UserDefaults.standard
                   let cur = defaults.double(forKey: "lf_distance_m")
                   let base = cur > 0.1 ? cur : 2.0
-                  let next = min(max(((base + delta) * 10).rounded() / 10, 0.5), 10.0)
+                  let next = min(max(((base + delta) * 2.0).rounded() / 2.0, 0.5), 10.0)
                   defaults.set(next, forKey: "lf_distance_m")
                   WidgetCenter.shared.reloadAllTimelines()
                   return .result()
@@ -1376,11 +2033,14 @@ jobs:
 
               func perform() async throws -> some IntentResult {
                   let defaults = UserDefaults.standard
-                  let steps: [Double] = [2.0, 2.8, 4.0, 5.6, 8.0, 11.0]
+                  let maxLimit = defaults.double(forKey: "lf_lens_max_aperture") > 0.5 ? defaults.double(forKey: "lf_lens_max_aperture") : 2.0
+                  let allSteps: [Double] = [1.4, 1.8, 2.0, 2.8, 4.0, 5.6, 8.0, 11.0]
+                  let steps = allSteps.filter { $0 >= maxLimit - 0.05 }
+                  let validSteps = steps.isEmpty ? [maxLimit, 5.6, 8.0] : steps
                   let cur = defaults.double(forKey: "lf_aperture")
-                  let currentF = cur > 0.5 ? cur : 4.0
-                  let idx = steps.firstIndex(where: { abs($0 - currentF) < 0.2 }) ?? 2
-                  let nextF = steps[(idx + 1) % steps.count]
+                  let currentF = max(cur > 0.5 ? cur : 4.0, maxLimit)
+                  let idx = validSteps.firstIndex(where: { abs($0 - currentF) < 0.2 }) ?? 0
+                  let nextF = validSteps[(idx + 1) % validSteps.count]
                   defaults.set(nextF, forKey: "lf_aperture")
                   WidgetCenter.shared.reloadAllTimelines()
                   return .result()
@@ -1396,7 +2056,9 @@ jobs:
                   let title = isCustom ? "用户自定义" : "Godox V350"
                   let isoVal = d.integer(forKey: "lf_iso") > 0 ? d.integer(forKey: "lf_iso") : 400
                   let dist = d.double(forKey: "lf_distance_m") > 0.1 ? d.double(forKey: "lf_distance_m") : 2.0
-                  let ap = d.double(forKey: "lf_aperture") > 0.5 ? d.double(forKey: "lf_aperture") : 4.0
+                  let maxLimit = d.double(forKey: "lf_lens_max_aperture") > 0.5 ? d.double(forKey: "lf_lens_max_aperture") : 2.0
+                  let rawAp = d.double(forKey: "lf_aperture") > 0.5 ? d.double(forKey: "lf_aperture") : 4.0
+                  let ap = max(rawAp, maxLimit)
 
                   let fullEffGN = Double(gnVal) * 0.78 * sqrt(Double(isoVal) / 100.0)
                   let reqRatio = pow((ap * dist) / max(fullEffGN, 0.1), 2.0)
@@ -1557,16 +2219,16 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
           mkdir -p Payload
           cp -r build_output/Build/Products/Release-iphoneos/LumiFilm.app Payload/
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 5.0.0" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 5.0.0" Payload/LumiFilm.app/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 50" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 50" Payload/LumiFilm.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 6.0.0" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 6.0.0" Payload/LumiFilm.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 60" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 60" Payload/LumiFilm.app/Info.plist
           if [ -f "Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist" ]; then
-            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 5.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 5.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
-            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 50" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 50" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 6.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 6.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 60" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 60" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
           fi
-          zip -r9 ../LumiFilm_Native_v5.0_Unsigned.ipa Payload
+          zip -r9 ../LumiFilm_Native_v6.0_Unsigned.ipa Payload
 
       - name: Upload Native iOS IPA Artifact
         uses: actions/upload-artifact@v5
         with:
           name: LumiFilm_Native_iOS_IPA
-          path: LumiFilm_Native_v5.0_Unsigned.ipa
+          path: LumiFilm_Native_v6.0_Unsigned.ipa
