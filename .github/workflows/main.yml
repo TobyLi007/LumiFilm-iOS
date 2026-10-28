@@ -1,4 +1,4 @@
-name: Build LumiFilm v6.2 Native iOS IPA (Full Dial Linkage + 3 Voice Personas + Native Voice Input)
+name: Build LumiFilm v6.3 Native iOS IPA (Human-Like Neural Voice Engine + Natural Conversational Phrasing)
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -167,8 +167,8 @@ jobs:
                 path: LumiFilm/Info.plist
                 properties:
                   CFBundleDisplayName: LumiFilm
-                  CFBundleShortVersionString: "6.2.0"
-                  CFBundleVersion: "62"
+                  CFBundleShortVersionString: "6.3.0"
+                  CFBundleVersion: "63"
                   UILaunchScreen: {}
                   UISupportedInterfaceOrientations:
                     - UIInterfaceOrientationPortrait
@@ -178,8 +178,8 @@ jobs:
                 base:
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app
                   ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-                  MARKETING_VERSION: "6.2.0"
-                  CURRENT_PROJECT_VERSION: "62"
+                  MARKETING_VERSION: "6.3.0"
+                  CURRENT_PROJECT_VERSION: "63"
                   CODE_SIGN_IDENTITY: ""
                   CODE_SIGNING_REQUIRED: NO
                   CODE_SIGNING_ALLOWED: NO
@@ -197,15 +197,15 @@ jobs:
                 path: LumiFilmWidget/Info.plist
                 properties:
                   CFBundleDisplayName: LumiFilm Widget
-                  CFBundleShortVersionString: "6.2.0"
-                  CFBundleVersion: "62"
+                  CFBundleShortVersionString: "6.3.0"
+                  CFBundleVersion: "63"
                   NSExtension:
                     NSExtensionPointIdentifier: com.apple.widgetkit-extension
               settings:
                 base:
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app.widget
-                  MARKETING_VERSION: "6.2.0"
-                  CURRENT_PROJECT_VERSION: "62"
+                  MARKETING_VERSION: "6.3.0"
+                  CURRENT_PROJECT_VERSION: "63"
                   CODE_SIGN_IDENTITY: ""
                   CODE_SIGNING_REQUIRED: NO
                   CODE_SIGNING_ALLOWED: NO
@@ -244,57 +244,59 @@ jobs:
               let recycleSec: Double
           }
 
-          // Feature 2: 3 Selectable Voice Personas (Gentle Female, Magnetic Male, Cute Cartoon)
+          // Human-Like Voice Personas with Natural Formant Pitch & Conversational Prosody
+          // Avoids extreme pitch shifts (which cause metallic phase-vocoder artifacts) and prioritizes Apple Neural Enhanced/Premium voices + Taiwan/Mainland soft voices
           enum VoicePersona: Int, CaseIterable, Identifiable {
               case gentleFemale = 0
               case magneticMale = 1
-              case cartoonCute = 2
+              case livelyCompanion = 2
 
               var id: Int { rawValue }
 
               func title(lang: String) -> String {
                   switch self {
                   case .gentleFemale:
-                      return lang == "en" ? "🌸 Gentle Female" : (lang == "ja" ? "🌸 優しい女性" : "🌸 温柔女声")
+                      return lang == "en" ? "🌸 Warm Natural Female (Siri/Meijia)" : (lang == "ja" ? "🌸 自然な女性音声" : "🌸 温柔自然女声 (台湾美佳/高音质婷婷)")
                   case .magneticMale:
-                      return lang == "en" ? "🎙️ Magnetic Male" : (lang == "ja" ? "🎙️ 渋い男性" : "🎙️ 磁性男声")
-                  case .cartoonCute:
-                      return lang == "en" ? "✨ Cute Cartoon" : (lang == "ja" ? "✨ アニメ風" : "✨ 趣味卡通")
+                      return lang == "en" ? "🎙️ Warm Studio Male" : (lang == "ja" ? "🎙️ 落ち着いた男性音声" : "🎙️ 沉稳摄影师男声 (自然低音)")
+                  case .livelyCompanion:
+                      return lang == "en" ? "✨ Lively Assistant" : (lang == "ja" ? "✨ 元気なアシスタント" : "✨ 元气轻快跟拍助手 (少女感)")
                   }
               }
 
               func shortBadge(lang: String) -> String {
                   switch self {
                   case .gentleFemale:
-                      return lang == "en" ? "🌸 Female" : (lang == "ja" ? "🌸 女性" : "🌸 女声")
+                      return lang == "en" ? "🌸 Warm" : (lang == "ja" ? "🌸 女性" : "🌸 温柔女声")
                   case .magneticMale:
-                      return lang == "en" ? "🎙️ Male" : (lang == "ja" ? "🎙️ 男性" : "🎙️ 男声")
-                  case .cartoonCute:
-                      return lang == "en" ? "✨ Toon" : (lang == "ja" ? "✨ アニメ" : "✨ 卡通")
+                      return lang == "en" ? "🎙️ Male" : (lang == "ja" ? "🎙️ 男性" : "🎙️ 磁性男声")
+                  case .livelyCompanion:
+                      return lang == "en" ? "✨ Lively" : (lang == "ja" ? "✨ 元気" : "✨ 元气助手")
                   }
               }
 
+              // Subtle human-range pitch multipliers (0.91 - 1.10) prevent robotic phase-vocoder distortion!
               var pitchMultiplier: Float {
                   switch self {
-                  case .gentleFemale: return 1.12
-                  case .magneticMale: return 0.78
-                  case .cartoonCute:  return 1.48
+                  case .gentleFemale:    return 1.02
+                  case .magneticMale:    return 0.91
+                  case .livelyCompanion: return 1.11
                   }
               }
 
               var rate: Float {
                   switch self {
-                  case .gentleFemale: return 0.48
-                  case .magneticMale: return 0.46
-                  case .cartoonCute:  return 0.55
+                  case .gentleFemale:    return 0.50
+                  case .magneticMale:    return 0.49
+                  case .livelyCompanion: return 0.53
                   }
               }
           }
 
           enum LumiTheme: Int, CaseIterable, Identifiable {
-              case instagram = 0   // Instagram Sunset Glass
-              case threads = 1     // Threads Monochrome Frosted Glass
-              case brass = 2       // Vintage Brass Patina (纯色胶片露铜质感)
+              case instagram = 0
+              case threads = 1
+              case brass = 2
 
               var id: Int { rawValue }
 
@@ -367,34 +369,153 @@ jobs:
               }
           }
 
-          // Feature 1 & 2: Single-utterance Speech Synthesizer with 3 Voice Personas & Tap-Again-to-Cancel
+          // Human-Like Neural Voice Selector & Conversational Prosody Engine
           final class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
               static let shared = SpeechManager()
               private let synthesizer = AVSpeechSynthesizer()
               @Published var isSpeaking: Bool = false
+              @Published var activeVoiceDescription: String = "自动优选神经网络自然人声"
 
               override init() {
                   super.init()
                   synthesizer.delegate = self
               }
 
-              private func selectVoice(lang: String, persona: VoicePersona) -> AVSpeechSynthesisVoice? {
-                  let langPrefix = lang == "en" ? "en" : (lang == "ja" ? "ja" : "zh")
-                  let defaultCode = lang == "en" ? "en-US" : (lang == "ja" ? "ja-JP" : "zh-CN")
-                  let voices = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.lowercased().hasPrefix(langPrefix) }
+              // Selects the highest-quality Neural/Enhanced voice installed on the iPhone,
+              // and for Chinese female voices prefers soft Taiwan Mandarin (Meijia) or Enhanced/Premium Mainland voices over the robotic compact fallback.
+              func selectBestHumanVoice(lang: String, persona: VoicePersona) -> AVSpeechSynthesisVoice? {
+                  let allVoices = AVSpeechSynthesisVoice.speechVoices()
 
-                  switch persona {
-                  case .gentleFemale:
-                      if let v = voices.first(where: { $0.gender == .female }) { return v }
-                  case .magneticMale:
-                      if let v = voices.first(where: { $0.gender == .male }) { return v }
-                  case .cartoonCute:
-                      if let v = voices.first(where: { $0.gender == .female }) { return v }
+                  if lang == "en" {
+                      let enVoices = allVoices.filter { $0.language.lowercased().hasPrefix("en") }
+                      let sorted = enVoices.sorted { $0.quality.rawValue > $1.quality.rawValue }
+                      switch persona {
+                      case .magneticMale:
+                          if let male = sorted.first(where: { $0.gender == .male }) { return male }
+                      case .gentleFemale, .livelyCompanion:
+                          // Prefer Samantha, Ava, Zoe, Allison or highest quality female
+                          if let premiumFem = sorted.first(where: { $0.gender == .female && $0.quality.rawValue >= 2 }) { return premiumFem }
+                          if let named = sorted.first(where: { $0.name.contains("Samantha") || $0.name.contains("Ava") || $0.name.contains("Zoe") }) { return named }
+                          if let fem = sorted.first(where: { $0.gender == .female }) { return fem }
+                      }
+                      return sorted.first ?? AVSpeechSynthesisVoice(language: "en-US")
+                  } else if lang == "ja" {
+                      let jaVoices = allVoices.filter { $0.language.lowercased().hasPrefix("ja") }
+                          .sorted { $0.quality.rawValue > $1.quality.rawValue }
+                      if persona == .magneticMale, let male = jaVoices.first(where: { $0.gender == .male }) {
+                          return male
+                      }
+                      if let fem = jaVoices.first(where: { $0.gender == .female }) {
+                          return fem
+                      }
+                      return jaVoices.first ?? AVSpeechSynthesisVoice(language: "ja-JP")
+                  } else {
+                      // Chinese (zh-CN / zh-TW / zh-HK)
+                      let zhVoices = allVoices.filter { $0.language.lowercased().hasPrefix("zh") }
+                      let sortedByQuality = zhVoices.sorted { $0.quality.rawValue > $1.quality.rawValue }
+
+                      switch persona {
+                      case .magneticMale:
+                          if let enhancedMale = sortedByQuality.first(where: { $0.gender == .male && $0.quality.rawValue >= 2 }) {
+                              return enhancedMale
+                          }
+                          if let anyMale = sortedByQuality.first(where: { $0.gender == .male }) {
+                              return anyMale
+                          }
+                      case .gentleFemale:
+                          // 1. Any Premium/Enhanced Neural Female voice installed by user
+                          if let neuralFem = sortedByQuality.first(where: { $0.gender == .female && $0.quality.rawValue >= 2 }) {
+                              return neuralFem
+                          }
+                          // 2. Taiwan Mandarin (zh-TW Meijia) sounds significantly softer and more human than compact zh-CN Tingting
+                          if let twFem = zhVoices.first(where: { $0.language.lowercased() == "zh-tw" && $0.gender == .female }) {
+                              return twFem
+                          }
+                          if let twAny = AVSpeechSynthesisVoice(language: "zh-TW") {
+                              return twAny
+                          }
+                      case .livelyCompanion:
+                          if let neuralFem = sortedByQuality.first(where: { $0.gender == .female && $0.quality.rawValue >= 2 }) {
+                              return neuralFem
+                          }
+                          if let twAny = AVSpeechSynthesisVoice(language: "zh-TW") {
+                              return twAny
+                          }
+                      }
+                      return sortedByQuality.first ?? AVSpeechSynthesisVoice(language: "zh-CN")
                   }
-                  return AVSpeechSynthesisVoice(language: defaultCode)
               }
 
-              func toggleSpeak(text: String, lang: String, persona: VoicePersona) {
+              // Converts technical symbols like "1/16 +0.3" into natural human speech ("十六分之一、加三分之一档") so TTS never reads "一斜杠十六"!
+              static func humanizePowerForSpeech(_ powerText: String, lang: String) -> String {
+                  let parts = powerText.components(separatedBy: " ")
+                  let base = parts.first ?? powerText
+                  let bonus = parts.count > 1 ? parts[1] : ""
+
+                  if lang == "en" {
+                      var enBase = base
+                      if base == "1/1" { enBase = "full power" }
+                      else if base == "1/2" { enBase = "half power" }
+                      else if base == "1/4" { enBase = "quarter power" }
+                      else if base.hasPrefix("1/") {
+                          let denom = base.replacingOccurrences(of: "1/", with: "")
+                          enBase = "one over \(denom)"
+                      }
+                      if bonus == "+0.3" { return "\(enBase), plus one third stop" }
+                      if bonus == "+0.7" { return "\(enBase), plus two thirds stop" }
+                      return enBase
+                  } else if lang == "ja" {
+                      var jaBase = base
+                      if base == "1/1" { jaBase = "フル発光" }
+                      else if base.hasPrefix("1/") {
+                          let denom = base.replacingOccurrences(of: "1/", with: "")
+                          jaBase = "\(denom)分の1"
+                      }
+                      if !bonus.isEmpty { return "\(jaBase) プラス \(bonus)" }
+                      return jaBase
+                  } else {
+                      var zhBase = base
+                      if base == "1/1" {
+                          zhBase = "全功率"
+                      } else if base.hasPrefix("1/") {
+                          let denom = base.replacingOccurrences(of: "1/", with: "")
+                          zhBase = "\(denom)分之一"
+                      }
+                      if bonus == "+0.3" { return "\(zhBase)，加三分之一档" }
+                      if bonus == "+0.7" { return "\(zhBase)，加三分之二档" }
+                      return zhBase
+                  }
+              }
+
+              static func buildConversationalSentence(distanceM: Double, aperture: Double, shutterDenom: Int, powerText: String, lang: String, persona: VoicePersona) -> String {
+                  let dStr = String(format: "%.1f", distanceM).replacingOccurrences(of: ".0", with: "")
+                  let fStr = String(format: "%.1f", aperture).replacingOccurrences(of: ".0", with: "")
+                  let humanPower = humanizePowerForSpeech(powerText, lang: lang)
+
+                  if lang == "en" {
+                      switch persona {
+                      case .gentleFemale:
+                          return "For \(dStr) meters at f \(fStr), set your flash to \(humanPower), with shutter at 1 over \(shutterDenom)."
+                      case .magneticMale:
+                          return "Distance \(dStr) meters, aperture f \(fStr). Dial flash output to \(humanPower), shutter 1 over \(shutterDenom)."
+                      case .livelyCompanion:
+                          return "All set! At \(dStr) meters and f \(fStr), use \(humanPower) flash power and 1 over \(shutterDenom) shutter!"
+                      }
+                  } else if lang == "ja" {
+                      return "距離 \(dStr) メートル、絞り f \(fStr) です。フラッシュを \(humanPower)、シャッターを \(shutterDenom)分の1秒に合わせてください。"
+                  } else {
+                      switch persona {
+                      case .gentleFemale:
+                          return "距离 \(dStr) 米，光圈 \(fStr)，把闪光灯调到 \(humanPower) 就好啦，快门 \(shutterDenom) 分之一秒。"
+                      case .magneticMale:
+                          return "当前距离 \(dStr) 米，光圈 \(fStr)，建议闪光灯拨到 \(humanPower)，快门 \(shutterDenom) 分之一秒。"
+                      case .livelyCompanion:
+                          return "测好光啦！距离 \(dStr) 米，光圈 \(fStr)，闪光灯调到 \(humanPower)，快门 \(shutterDenom) 分之一秒，快拍吧！"
+                      }
+                  }
+              }
+
+              func toggleSpeak(distanceM: Double, aperture: Double, shutterDenom: Int, powerText: String, lang: String, persona: VoicePersona) {
                   if synthesizer.isSpeaking || isSpeaking {
                       synthesizer.stopSpeaking(at: .immediate)
                       DispatchQueue.main.async {
@@ -408,13 +529,29 @@ jobs:
                       try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
                       try session.setActive(true, options: .notifyOthersOnDeactivation)
                   } catch {
-                      // Continue even if audio session category fails
+                      // Ignore session error
                   }
 
-                  let utterance = AVSpeechUtterance(string: text)
-                  utterance.voice = selectVoice(lang: lang, persona: persona)
+                  let sentence = Self.buildConversationalSentence(
+                      distanceM: distanceM,
+                      aperture: aperture,
+                      shutterDenom: shutterDenom,
+                      powerText: powerText,
+                      lang: lang,
+                      persona: persona
+                  )
+
+                  let utterance = AVSpeechUtterance(string: sentence)
+                  if let chosenVoice = selectBestHumanVoice(lang: lang, persona: persona) {
+                      utterance.voice = chosenVoice
+                      let qualityTag = chosenVoice.quality.rawValue >= 3 ? "Premium 真人神经网络" : (chosenVoice.quality.rawValue == 2 ? "Enhanced 高音质人声" : "自然口语调校")
+                      DispatchQueue.main.async {
+                          self.activeVoiceDescription = "\(chosenVoice.name) (\(chosenVoice.language) · \(qualityTag))"
+                      }
+                  }
                   utterance.rate = persona.rate
                   utterance.pitchMultiplier = persona.pitchMultiplier
+                  utterance.preUtteranceDelay = 0.04
 
                   DispatchQueue.main.async {
                       self.isSpeaking = true
@@ -444,7 +581,7 @@ jobs:
               }
           }
 
-          // Feature 3: Live Voice Input Recognizer (SFSpeechRecognizer + AVAudioEngine) & Parameter Parser
+          // Live Voice Input Recognizer (SFSpeechRecognizer + AVAudioEngine) & Parameter Parser
           final class VoiceInputManager: NSObject, ObservableObject {
               static let shared = VoiceInputManager()
 
@@ -583,7 +720,6 @@ jobs:
                   var appliedItems: [String] = []
                   var lastChanged: DialChannel = .distance
 
-                  // 1. Parse Distance (e.g. "2.5米", "3m", "2 meters")
                   if let distVal = Self.extractRegexDouble(pattern: "(\\d+(?:\\.\\d+)?)\\s*(?:米|公尺|m\\b|meters?|metres?)", in: s) {
                       let clamped = min(max(distVal, 0.5), 12.0)
                       store.distanceM = store.isDistanceMagnetOn ? ((clamped * 2.0).rounded() / 2.0) : ((clamped * 10.0).rounded() / 10.0)
@@ -591,7 +727,6 @@ jobs:
                       lastChanged = .distance
                   }
 
-                  // 2. Parse Aperture (e.g. "光圈 2.8", "f2.8", "f/4", "aperture 5.6")
                   if let apVal = Self.extractRegexDouble(pattern: "(?:光圈|絞り|aperture|f-stop|f/?)\\s*(\\d+(?:\\.\\d+)?)", in: s) {
                       let steps = store.availableApertureSteps
                       if let nearF = steps.min(by: { abs($0 - apVal) < abs($1 - apVal) }) {
@@ -601,7 +736,6 @@ jobs:
                       }
                   }
 
-                  // 3. Parse Flash Power (e.g. "1/4", "四分之一", "全光")
                   if s.contains("全光") || s.contains("1/1") || s.contains("full power") {
                       store.powerStopOffset = 0.0
                       store.isPowerLocked = true
@@ -616,7 +750,6 @@ jobs:
                       lastChanged = .power
                   }
 
-                  // 4. Parse Scene / Modifiers
                   if s.contains("夜") || s.contains("night") {
                       store.ambientSceneEV = 5.0
                       appliedItems.append("EV5")
@@ -805,7 +938,6 @@ jobs:
                   return max(gn100 * isoFactor * lossFactor, 0.1)
               }
 
-              // Fix 1: Full Reactive Bidirectional Solver — ensures changing Distance, Aperture, Power, or Shutter ALWAYS links and updates the Dial, Cards, and Top Status Bar!
               func solveExposure(changed: DialChannel? = nil) {
                   objectWillChange.send()
                   enforceApertureLimit()
@@ -813,7 +945,6 @@ jobs:
                   let minStops = -log2(Double(spec.minPowerDenom))
 
                   if isPowerLocked {
-                      // 1. Update Shutter Speed first (if unlocked) to match ambient light and avoid unnecessary HSS loss
                       if !isShutterLocked && changed != .shutter {
                           let targetEV = ambientSceneEV + 1.0
                           let isoStops = log2(Double(iso) / 100.0)
@@ -829,9 +960,6 @@ jobs:
                       let lockedEffGN = fullEffGN * sqrt(pow(2.0, powerStopOffset))
 
                       if changed == .aperture {
-                          // User explicitly turned Aperture while Power is locked:
-                          // If Distance is unlocked, solve Distance to match the new Aperture & locked Power!
-                          // Otherwise, solve Power so the status bar reflects the new Aperture!
                           if !isDistanceLocked {
                               let idealDist = lockedEffGN / max(aperture, 1.0)
                               let clampedDist = min(max(idealDist, 0.5), 12.0)
@@ -842,9 +970,6 @@ jobs:
                               powerStopOffset = min(max((rawStops * 3.0).rounded() / 3.0, minStops), 0.0)
                           }
                       } else if changed == .distance {
-                          // User explicitly turned Distance while Power is locked:
-                          // If Aperture is unlocked, solve Aperture to match the new Distance & locked Power!
-                          // Otherwise, solve Power so the status bar updates!
                           if !isApertureLocked {
                               let idealF = lockedEffGN / max(distanceM, 0.4)
                               let steps = availableApertureSteps
@@ -857,7 +982,6 @@ jobs:
                               powerStopOffset = min(max((rawStops * 3.0).rounded() / 3.0, minStops), 0.0)
                           }
                       } else {
-                          // User turned Power or Shutter (or general solve):
                           if !isApertureLocked {
                               let idealF = lockedEffGN / max(distanceM, 0.4)
                               let steps = availableApertureSteps
@@ -874,7 +998,6 @@ jobs:
                           }
                       }
                   } else {
-                      // Flash Power is UNLOCKED -> changing Distance, Aperture, or Shutter immediately solves Flash Power!
                       if !isShutterLocked && changed != .shutter {
                           let targetEV = ambientSceneEV + 1.0
                           let isoStops = log2(Double(iso) / 100.0)
@@ -1042,7 +1165,14 @@ jobs:
                   let diag = store.evaluateDiagnostic()
                   WidgetCenter.shared.reloadAllTimelines()
 
-                  let dialogText = "距离 \(String(format: "%.1f", store.distanceM)) 米，光圈 f/\(String(format: "%.1f", store.aperture))，请将【\(store.displayFlashTitle)】调至 \(diag.powerText) 功率。"
+                  let dialogText = SpeechManager.buildConversationalSentence(
+                      distanceM: store.distanceM,
+                      aperture: store.aperture,
+                      shutterDenom: store.shutterDenom,
+                      powerText: diag.powerText,
+                      lang: store.lang,
+                      persona: store.currentVoicePersona
+                  )
                   return .result(dialog: IntentDialog(stringLiteral: dialogText)) {
                       VStack(alignment: .leading, spacing: 6) {
                           Text("⚡ LumiFilm · \(store.displayFlashTitle) (GN\(Int(store.activeGN)))")
@@ -1306,7 +1436,7 @@ jobs:
               private func meterTabView(theme: LumiTheme, diag: ExposureDiagnostic) -> some View {
                   ScrollView(showsIndicators: false) {
                       VStack(spacing: 10) {
-                          // ZERO-JITTER FLASH POWER OUTPUT + VOICE INPUT & 3-PERSONA SPEAK BAR
+                          // ZERO-JITTER FLASH POWER OUTPUT + VOICE INPUT & NATURAL HUMAN SPEAK BAR
                           VStack(spacing: 6) {
                               HStack(alignment: .center, spacing: 8) {
                                   VStack(alignment: .leading, spacing: 3) {
@@ -1338,7 +1468,7 @@ jobs:
                                           }
                                           .buttonStyle(.plain)
 
-                                          // Feature 2: One-Tap Voice Persona Switcher Badge (Gentle Female / Magnetic Male / Cute Cartoon)
+                                          // One-Tap Natural Human Voice Persona Switcher Badge
                                           Button {
                                               FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
                                               store.voicePersonaRaw = (store.voicePersonaRaw + 1) % VoicePersona.allCases.count
@@ -1396,7 +1526,7 @@ jobs:
                                   }
                                   .frame(maxWidth: .infinity, alignment: .leading)
 
-                                  // Feature 3: Voice Input Button (Say Parameters Directly!)
+                                  // Voice Input Button (Say Parameters Directly!)
                                   Button {
                                       FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
                                       voiceInputManager.toggleRecording(store: store) { newChan in
@@ -1435,7 +1565,7 @@ jobs:
                                       }
                                   )
 
-                                  // Feature 1 & 2: Speak Once & Tap Again to Cancel (Using Selected Voice Persona)
+                                  // Speak Once & Tap Again to Cancel (Using Natural Human Prosody)
                                   Button {
                                       FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
                                       toggleSpeakCurrent(powerText: diag.powerText)
@@ -1474,7 +1604,7 @@ jobs:
                                   .stroke(theme.accentColor.opacity(0.45), lineWidth: 1.1)
                           )
 
-                          // Fix 1: Four Metric Cards with Full Tap-to-Link + Quick +/- Step & Lock Toggle
+                          // Four Metric Cards with Full Tap-to-Link + Quick +/- Step & Lock Toggle
                           LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                               LockableGlassMetricTile(
                                   title: store.lang == "en" ? "① DISTANCE" : (store.lang == "ja" ? "① 撮影距離" : "① 拍摄距离"),
@@ -1565,7 +1695,7 @@ jobs:
                               )
                           }
 
-                          // Mechanical Rotary Dial Section + 4-Channel Switcher + Fixed-Height Channel Utility Bar
+                          // Mechanical Rotary Dial Section
                           VStack(spacing: 8) {
                               HStack(spacing: 6) {
                                   channelPill(.distance, label: store.lang == "en" ? "Dist" : (store.lang == "ja" ? "距離" : "距离盘"), theme: theme)
@@ -1574,7 +1704,6 @@ jobs:
                                   channelPill(.shutter, label: store.lang == "en" ? "Shutter" : (store.lang == "ja" ? "速度" : "快门盘"), theme: theme)
                               }
 
-                              // Fixed-height (28pt) contextual bar for ALL channels
                               HStack {
                                   if activeChannel == .distance {
                                       Label(
@@ -1863,20 +1992,24 @@ jobs:
               private func settingsTabView(theme: LumiTheme) -> some View {
                   ScrollView(showsIndicators: false) {
                       VStack(spacing: 14) {
-                          // Feature 2: Voice Broadcast Persona Picker Card
+                          // Natural Human Voice Broadcast Persona Picker Card
                           VStack(alignment: .leading, spacing: 10) {
                               HStack {
-                                  Text(store.lang == "en" ? "🗣️ Voice Broadcast Persona (3 Styles)" : "🗣️ 语音播报音色选择 (三种声音风格)")
+                                  Text(store.lang == "en" ? "🗣️ Natural Human Voice Style" : "🗣️ 拟真人自然语音风格 (自动优选高音质声线)")
                                       .font(.system(size: 14, weight: .bold))
                                       .foregroundStyle(.white)
                                   Spacer()
-                                  Button(store.lang == "en" ? "🔊 Test Voice" : "🔊 试听音色") {
+                                  Button(store.lang == "en" ? "🔊 Test Voice" : "🔊 试听自然人声") {
                                       let diag = store.evaluateDiagnostic()
                                       toggleSpeakCurrent(powerText: diag.powerText)
                                   }
                                   .font(.system(size: 11, weight: .bold))
                                   .foregroundStyle(theme.accentColor)
                               }
+
+                              Text("当前声线引擎：\(speechManager.activeVoiceDescription)")
+                                  .font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                                  .foregroundStyle(theme.accentColor.opacity(0.9))
 
                               ForEach(VoicePersona.allCases) { persona in
                                   Button {
@@ -1889,7 +2022,7 @@ jobs:
                                   } label: {
                                       HStack {
                                           Text(persona.title(lang: store.lang))
-                                              .font(.system(size: 13, weight: .bold))
+                                              .font(.system(size: 12.5, weight: .bold))
                                               .foregroundStyle(.white)
                                           Spacer()
                                           if store.voicePersonaRaw == persona.rawValue {
@@ -1904,10 +2037,18 @@ jobs:
                                       )
                                       .overlay(
                                           RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                              .stroke(store.voicePersonaRaw == persona.rawValue ? theme.accentColor : .white.opacity(0.15), lineWidth: 1)
+                                              .stroke(store.voicePersonaRaw == persona.rawValue ? itemStrokeColor(persona: persona, theme: theme) : .white.opacity(0.15), lineWidth: 1)
                                       )
                                   }
                               }
+
+                              Text(store.lang == "en"
+                                  ? "💡 Tip: For 100% Siri-grade neural voice, open iOS Settings → Accessibility → Spoken Content → Voices → Download 'Premium / Enhanced' voice. LumiFilm automatically detects and uses it!"
+                                  : "💡 真人级音质提示：已为你默认启用自然口语断句与台湾美佳/高音质神经网络声线；若在系统「设置 → 辅助功能 → 朗读内容 → 声音 → 中文」中下载【美佳(增强版)】或【婷婷(高音质)】，本软件会自动调用该真人神经网络音色！"
+                              )
+                              .font(.system(size: 10.5, weight: .medium))
+                              .foregroundStyle(.white.opacity(0.75))
+                              .fixedSize(horizontal: false, vertical: true)
                           }
                           .padding(16)
                           .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -2057,13 +2198,14 @@ jobs:
                   }
               }
 
-              // Fix 1: Selecting any metric card or channel pill immediately syncs the dial, recalculates linked parameters, and updates the status bar
+              private func itemStrokeColor(persona: VoicePersona, theme: LumiTheme) -> Color {
+                  store.voicePersonaRaw == persona.rawValue ? theme.accentColor : Color.white.opacity(0.15)
+              }
+
               private func selectAndLinkChannel(_ chan: DialChannel) {
                   FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
                   withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
                       activeChannel = chan
-                      // If user taps Distance or Aperture while Power was auto-locked by a previous power dial turn,
-                      // ensure solveExposure runs with that channel so the dial & status bar link immediately
                       store.solveExposure(changed: chan)
                   }
                   WidgetCenter.shared.reloadAllTimelines()
@@ -2191,19 +2333,15 @@ jobs:
                   }
               }
 
-              // Feature 1 & 2: Single utterance broadcast with selected VoicePersona & tap-again-to-cancel
               private func toggleSpeakCurrent(powerText: String) {
-                  let fStr = String(format: "%.1f", store.aperture).replacingOccurrences(of: ".0", with: "")
-                  let dStr = String(format: "%.1f", store.distanceM)
-                  let msg: String
-                  if store.lang == "en" {
-                      msg = "Distance \(dStr) meters, aperture f \(fStr), shutter 1 over \(store.shutterDenom). Set flash power to \(powerText)."
-                  } else if store.lang == "ja" {
-                      msg = "距離 \(dStr) メートル、絞り f \(fStr)。フラッシュ出力は \(powerText) です。"
-                  } else {
-                      msg = "距离 \(dStr) 米，光圈 f \(fStr)，快门 \(store.shutterDenom) 分之一秒，闪光灯输出功率 \(powerText)。"
-                  }
-                  speechManager.toggleSpeak(text: msg, lang: store.lang, persona: store.currentVoicePersona)
+                  speechManager.toggleSpeak(
+                      distanceM: store.distanceM,
+                      aperture: store.aperture,
+                      shutterDenom: store.shutterDenom,
+                      powerText: powerText,
+                      lang: store.lang,
+                      persona: store.currentVoicePersona
+                  )
               }
           }
 
@@ -2393,7 +2531,6 @@ jobs:
               }
           }
 
-          // Fix 1: Entire Metric Tile is Responsive + Inline Quick Stepper (-/+) & Independent Lock Toggle
           struct LockableGlassMetricTile: View {
               let title: String
               let value: String
@@ -2439,7 +2576,6 @@ jobs:
                               .minimumScaleFactor(0.68)
                               .frame(maxWidth: .infinity, alignment: .leading)
 
-                          // Quick inline - / + steppers right on the card so users can also tap to step directly!
                           HStack(spacing: 3) {
                               Button {
                                   onQuickStep(-1)
@@ -2488,7 +2624,6 @@ jobs:
               }
           }
 
-          // Feature 3: Voice / Quick Command Sheet (Long-press Mic button or quick presets)
           struct VoiceCommandQuickSheet: View {
               @ObservedObject var store: ExposureStore
               @ObservedObject var voiceInputManager: VoiceInputManager
@@ -2632,7 +2767,7 @@ jobs:
                                   }
                               }
 
-                              Section(store.lang == "en" ? "4. Voice Style & UI Theme" : "④ 语音播报音色与界面主题") {
+                              Section(store.lang == "en" ? "4. Natural Voice Style & UI Theme" : "④ 自然人声风格与界面主题") {
                                   Picker(store.lang == "en" ? "Voice Style" : "播报声音风格", selection: $store.voicePersonaRaw) {
                                       ForEach(VoicePersona.allCases) { p in
                                           Text(p.title(lang: store.lang)).tag(p.rawValue)
@@ -2900,16 +3035,16 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
           mkdir -p Payload
           cp -r build_output/Build/Products/Release-iphoneos/LumiFilm.app Payload/
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 6.2.0" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 6.2.0" Payload/LumiFilm.app/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 62" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 62" Payload/LumiFilm.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 6.3.0" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 6.3.0" Payload/LumiFilm.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 63" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 63" Payload/LumiFilm.app/Info.plist
           if [ -f "Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist" ]; then
-            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 6.2.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 6.2.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
-            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 62" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 62" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 6.3.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 6.3.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 63" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 63" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
           fi
-          zip -r9 ../LumiFilm_Native_v6.2_Unsigned.ipa Payload
+          zip -r9 ../LumiFilm_Native_v6.3_Unsigned.ipa Payload
 
       - name: Upload Native iOS IPA Artifact
         uses: actions/upload-artifact@v5
         with:
           name: LumiFilm_Native_iOS_IPA
-          path: LumiFilm_Native_v6.2_Unsigned.ipa
+          path: LumiFilm_Native_v6.3_Unsigned.ipa
