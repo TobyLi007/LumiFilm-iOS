@@ -1322,7 +1322,7 @@ jobs:
                       DispatchQueue.main.async {
                           switch authStatus {
                           case .authorized:
-                              AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                              AVAudioApplication.requestRecordPermission { granted in
                                   DispatchQueue.main.async {
                                       if granted {
                                           FeedbackEngine.shared.startRecordingSession(lang: lang)
@@ -1450,7 +1450,7 @@ jobs:
                   SFSpeechRecognizer.requestAuthorization { authStatus in
                       DispatchQueue.main.async {
                           if authStatus == .authorized {
-                              AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                              AVAudioApplication.requestRecordPermission { granted in
                                   DispatchQueue.main.async {
                                       if granted {
                                           FeedbackEngine.shared.startRecordingSession(lang: lang)
@@ -3856,7 +3856,12 @@ jobs:
                                       aperture = maxLensAperture
                                   }
                                   hasCompletedOnboarding = true
-                                  syncWidgetDefaults()
+                                  let suite = UserDefaults(suiteName: "group.com.lumifilm.flashmeter")
+                                  suite?.set(filmISO, forKey: "lf_iso")
+                                  suite?.set(flashGN, forKey: "lf_gn")
+                                  suite?.set(aperture, forKey: "lf_aperture")
+                                  suite?.set(maxLensAperture, forKey: "lf_max_aperture")
+                                  WidgetCenter.shared.reloadAllTimelines()
                                   dismiss()
                               } label: {
                                   Text(lang == .en ? "Save & Start Metering" : "保存并进入 LumiFilm 闪光测光表")
