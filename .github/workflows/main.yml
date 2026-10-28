@@ -368,7 +368,7 @@ jobs:
                       let nextIdx = max(0, min(steps.count - 1, idx + (delta > 0 ? 1 : -1)))
                       WidgetSharedStore.setDouble(steps[nextIdx], forKey: "lf_aperture")
                   }
-                  syncWidgetDefaults()
+                  WidgetCenter.shared.reloadAllTimelines()
                   return .result()
               }
           }
@@ -383,7 +383,7 @@ jobs:
                   let cur = WidgetSharedStore.double(forKey: "lf_distance", default: 2.0)
                   let next = max(0.5, min(15.0, (round((cur + delta) * 2.0) / 2.0)))
                   WidgetSharedStore.setDouble(next, forKey: "lf_distance")
-                  syncWidgetDefaults()
+                  WidgetCenter.shared.reloadAllTimelines()
                   return .result()
               }
           }
@@ -400,7 +400,7 @@ jobs:
                   let snapped = round(clamped * 5.0) / 5.0
                   let clean = abs(snapped) < 0.05 ? 0.0 : snapped
                   WidgetSharedStore.setDouble(clean, forKey: "lf_exp_comp_ev")
-                  syncWidgetDefaults()
+                  WidgetCenter.shared.reloadAllTimelines()
                   return .result()
               }
           }
@@ -750,54 +750,55 @@ jobs:
           import AppIntents
 
           // MARK: - iPhone Action Button & iOS Shortcuts Intents (AppShortcutsProvider)
-          @available(iOS 16.0, *)
+          @available(iOS 17.0, *)
           struct LumiFilmVoiceMeterIntent: AppIntent {
-              static var title: LocalizedStringResource = "LumiFilm 语音设置参数 (Voice Meter)"
-              static var description = IntentDescription("通过 iPhone 侧边操作按钮 (Action Button) 或快捷指令直接唤醒 LumiFilm 麦克风语音调参，识别完成后自动播报一次闪光灯输出功率。")
+              static var title: LocalizedStringResource = "Voice Flash Meter (语音调参)"
+              static var description = IntentDescription("Wake up LumiFilm voice recognition via iPhone Action Button and auto-speak calculated flash power.")
               static var openAppWhenRun: Bool = true
 
-              @MainActor
               func perform() async throws -> some IntentResult {
                   UserDefaults.standard.set(true, forKey: "lf_shortcut_trigger_voice")
-                  NotificationCenter.default.post(name: Notification.Name("LumiFilmActionVoiceTrigger"), object: nil)
+                  DispatchQueue.main.async {
+                      NotificationCenter.default.post(name: Notification.Name("LumiFilmActionVoiceTrigger"), object: nil)
+                  }
                   return .result()
               }
           }
 
-          @available(iOS 16.0, *)
+          @available(iOS 17.0, *)
           struct LumiFilmSpeakPowerIntent: AppIntent {
-              static var title: LocalizedStringResource = "LumiFilm 播报闪光功率 (Speak Flash Power)"
-              static var description = IntentDescription("唤醒 LumiFilm 并立即用真人男声/女声播报一次当前计算出的闪光灯输出功率。")
+              static var title: LocalizedStringResource = "Speak Flash Power (播报功率)"
+              static var description = IntentDescription("Open LumiFilm and speak the current flash power output once.")
               static var openAppWhenRun: Bool = true
 
-              @MainActor
               func perform() async throws -> some IntentResult {
                   UserDefaults.standard.set(true, forKey: "lf_shortcut_trigger_speak")
-                  NotificationCenter.default.post(name: Notification.Name("LumiFilmActionSpeakTrigger"), object: nil)
+                  DispatchQueue.main.async {
+                      NotificationCenter.default.post(name: Notification.Name("LumiFilmActionSpeakTrigger"), object: nil)
+                  }
                   return .result()
               }
           }
 
-          @available(iOS 16.0, *)
+          @available(iOS 17.0, *)
           struct LumiFilmShortcutsProvider: AppShortcutsProvider {
               static var appShortcuts: [AppShortcut] {
                   AppShortcut(
                       intent: LumiFilmVoiceMeterIntent(),
                       phrases: [
-                          "用 \(.applicationName) 语音设置闪光灯",
-                          "打开 \(.applicationName) 语音测光",
-                          "Start \(.applicationName) voice meter"
+                          "Start \(.applicationName) voice meter",
+                          "Voice meter in \(.applicationName)"
                       ],
-                      shortTitle: "语音设置闪光参数",
+                      shortTitle: "Voice Meter",
                       systemImageName: "mic.fill"
                   )
                   AppShortcut(
                       intent: LumiFilmSpeakPowerIntent(),
                       phrases: [
-                          "用 \(.applicationName) 播报闪光功率",
-                          "Speak \(.applicationName) flash power"
+                          "Speak \(.applicationName) flash power",
+                          "Read flash power in \(.applicationName)"
                       ],
-                      shortTitle: "播报闪光灯功率",
+                      shortTitle: "Speak Power",
                       systemImageName: "bolt.circle.fill"
                   )
               }
@@ -1880,7 +1881,7 @@ jobs:
                       UserDefaults.standard.set(v, forKey: k)
                       suite?.set(v, forKey: k)
                   }
-                  syncWidgetDefaults()
+                  WidgetCenter.shared.reloadAllTimelines()
               }
 
               private func speakCurrentExposureOnce() {
