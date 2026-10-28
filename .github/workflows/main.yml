@@ -1,4 +1,4 @@
-name: Build Unsigned LumiFilm iOS App (v8.2 - Pure Crystal Liquid Glass, 0.2EV Step to Zero & Full Brand Flash Catalog)
+name: Build Unsigned LumiFilm iOS App (v8.3 - Action Button Voice Shortcut, Home Screen Power Widget & Full Flash Catalog)
 
 on:
   workflow_dispatch:
@@ -282,8 +282,8 @@ jobs:
                   INFOPLIST_KEY_CFBundleDisplayName: LumiFilm
                   INFOPLIST_KEY_NSMicrophoneUsageDescription: "LumiFilm 使用麦克风接收您的语音指令（如：光圈f3、快门200、距离2.5米），直接调节胶片闪光参数。"
                   INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "LumiFilm 使用语音识别将您说出的曝光参数实时转换为转盘与状态栏数值。"
-                  MARKETING_VERSION: "8.2.0"
-                  CURRENT_PROJECT_VERSION: "82"
+                  MARKETING_VERSION: "8.3.0"
+                  CURRENT_PROJECT_VERSION: "83"
                   GENERATE_INFOPLIST_FILE: YES
                   ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
             LumiFilmWidget:
@@ -298,23 +298,42 @@ jobs:
                   SWIFT_STRICT_CONCURRENCY: minimal
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter.widget
                   INFOPLIST_KEY_CFBundleDisplayName: LumiFilmWidget
-                  MARKETING_VERSION: "8.2.0"
-                  CURRENT_PROJECT_VERSION: "82"
+                  MARKETING_VERSION: "8.3.0"
+                  CURRENT_PROJECT_VERSION: "83"
                   GENERATE_INFOPLIST_FILE: YES
               info:
                 path: LumiFilmWidget/Info.plist
                 properties:
-                  CFBundleShortVersionString: "8.2.0"
-                  CFBundleVersion: "82"
+                  CFBundleShortVersionString: "8.3.0"
+                  CFBundleVersion: "83"
                   NSExtension:
                     NSExtensionPointIdentifier: com.apple.widgetkit-extension
           EOF
 
-          # 4. Create LumiFilmWidget.swift (iOS 17 containerBackground API + Interactive AppIntents)
+          # 4. Create LumiFilmWidget.swift (v8.3 - Home Screen & Lock Screen Flash Power Output Widget + Voice Trigger & Interactive Controls)
           cat << 'EOF' > LumiFilmBuild/LumiFilmWidget/LumiFilmWidget.swift
           import WidgetKit
           import SwiftUI
           import AppIntents
+
+          struct WidgetSharedStore {
+              static let suiteName = "group.com.lumifilm.flashmeter"
+
+              static func double(forKey key: String, default defVal: Double) -> Double {
+                  if let group = UserDefaults(suiteName: suiteName) {
+                      let v = group.double(forKey: key)
+                      if v != 0 || group.object(forKey: key) != nil { return v }
+                  }
+                  let std = UserDefaults.standard.double(forKey: key)
+                  if std != 0 || UserDefaults.standard.object(forKey: key) != nil { return std }
+                  return defVal
+              }
+
+              static func setDouble(_ val: Double, forKey key: String) {
+                  UserDefaults.standard.set(val, forKey: key)
+                  UserDefaults(suiteName: suiteName)?.set(val, forKey: key)
+              }
+          }
 
           struct FlashCalculator {
               static func powerLabel(gnAt100: Double, iso: Double, distance: Double, aperture: Double, lossEV: Double) -> (String, String) {
@@ -323,14 +342,14 @@ jobs:
                   let fullPowerAperture = effectiveGN / max(distance, 0.3)
                   let ratio = aperture / max(fullPowerAperture, 0.1)
                   let power = ratio * ratio
-                  if power > 1.05 { return ("OVER (>1/1)", "Move closer / Open f/") }
-                  if power < (1.0 / 256.0) { return ("LOW (<1/128)", "Step back / Stop down") }
+                  if power > 1.05 { return ("OVER (>1/1)", "Open f/ or Closer") }
+                  if power < (1.0 / 256.0) { return ("LOW (<1/128)", "Stop down / Further") }
                   let stops = round(log2(1.0 / max(power, 0.001)) * 3.0) / 3.0
                   let whole = Int(floor(stops + 0.05))
                   let rem = stops - Double(whole)
                   let denom = Int(pow(2.0, Double(max(0, min(7, whole)))))
                   let fracStr = denom == 1 ? "1/1" : "1/\(denom)"
-                  if abs(rem) < 0.15 { return (fracStr, "Exact Manual Step") }
+                  if abs(rem) < 0.15 { return (fracStr, "Exact Manual Power") }
                   return (String(format: "%@ %+.1fEV", fracStr, -rem), "Fine Power Trim")
               }
           }
@@ -342,14 +361,14 @@ jobs:
               init() { self.delta = 0 }
               init(delta: Double) { self.delta = delta }
               func perform() async throws -> some IntentResult {
-                  let defaults = UserDefaults.standard
-                  let cur = defaults.double(forKey: "lf_aperture") == 0 ? 4.0 : defaults.double(forKey: "lf_aperture")
-                  let maxOpen = defaults.double(forKey: "lf_max_aperture") == 0 ? 1.4 : defaults.double(forKey: "lf_max_aperture")
+                  let cur = WidgetSharedStore.double(forKey: "lf_aperture", default: 5.6)
+                  let maxOpen = WidgetSharedStore.double(forKey: "lf_max_aperture", default: 1.4)
                   let steps: [Double] = [1.2, 1.4, 1.8, 2.0, 2.4, 2.8, 3.0, 3.2, 3.5, 4.0, 4.8, 5.6, 6.7, 8.0, 9.5, 11.0, 13.0, 16.0, 22.0].filter { $0 >= maxOpen - 0.01 }
                   if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
                       let nextIdx = max(0, min(steps.count - 1, idx + (delta > 0 ? 1 : -1)))
-                      defaults.set(steps[nextIdx], forKey: "lf_aperture")
+                      WidgetSharedStore.setDouble(steps[nextIdx], forKey: "lf_aperture")
                   }
+                  syncWidgetDefaults()
                   return .result()
               }
           }
@@ -361,10 +380,27 @@ jobs:
               init() { self.delta = 0 }
               init(delta: Double) { self.delta = delta }
               func perform() async throws -> some IntentResult {
-                  let defaults = UserDefaults.standard
-                  let cur = defaults.double(forKey: "lf_distance") == 0 ? 2.0 : defaults.double(forKey: "lf_distance")
+                  let cur = WidgetSharedStore.double(forKey: "lf_distance", default: 2.0)
                   let next = max(0.5, min(15.0, (round((cur + delta) * 2.0) / 2.0)))
-                  defaults.set(next, forKey: "lf_distance")
+                  WidgetSharedStore.setDouble(next, forKey: "lf_distance")
+                  syncWidgetDefaults()
+                  return .result()
+              }
+          }
+
+          @available(iOS 17.0, *)
+          struct AdjustEVCompIntent: AppIntent {
+              static var title: LocalizedStringResource = "Adjust EV Comp"
+              @Parameter(title: "Delta") var delta: Double
+              init() { self.delta = 0 }
+              init(delta: Double) { self.delta = delta }
+              func perform() async throws -> some IntentResult {
+                  let cur = WidgetSharedStore.double(forKey: "lf_exp_comp_ev", default: 0.0)
+                  let clamped = max(-2.0, min(2.0, cur + delta))
+                  let snapped = round(clamped * 5.0) / 5.0
+                  let clean = abs(snapped) < 0.05 ? 0.0 : snapped
+                  WidgetSharedStore.setDouble(clean, forKey: "lf_exp_comp_ev")
+                  syncWidgetDefaults()
                   return .result()
               }
           }
@@ -375,136 +411,316 @@ jobs:
               let gn: Double
               let distance: Double
               let aperture: Double
+              let evComp: Double
               let powerText: String
               let noteText: String
+
+              var voiceDeepLinkURL: URL {
+                  let urlStr = String(format: "lumifilm://voice?ap=%.1f&dist=%.1f&ev=%.1f&iso=%.0f&gn=%.0f", aperture, distance, evComp, iso, gn)
+                  return URL(string: urlStr) ?? URL(string: "lumifilm://voice")!
+              }
+
+              var speakDeepLinkURL: URL {
+                  let urlStr = String(format: "lumifilm://speak?ap=%.1f&dist=%.1f&ev=%.1f&iso=%.0f&gn=%.0f", aperture, distance, evComp, iso, gn)
+                  return URL(string: urlStr) ?? URL(string: "lumifilm://speak")!
+              }
+
+              var meterDeepLinkURL: URL {
+                  let urlStr = String(format: "lumifilm://meter?ap=%.1f&dist=%.1f&ev=%.1f&iso=%.0f&gn=%.0f", aperture, distance, evComp, iso, gn)
+                  return URL(string: urlStr) ?? URL(string: "lumifilm://meter")!
+              }
           }
 
           struct LumiFilmProvider: TimelineProvider {
               func placeholder(in context: Context) -> LumiFilmEntry {
-                  LumiFilmEntry(date: Date(), iso: 400, gn: 36, distance: 2.0, aperture: 5.6, powerText: "1/4", noteText: "Exact Manual Step")
+                  LumiFilmEntry(date: Date(), iso: 400, gn: 36, distance: 2.0, aperture: 5.6, evComp: 0.0, powerText: "1/4", noteText: "Exact Manual Power")
               }
               func getSnapshot(in context: Context, completion: @escaping (LumiFilmEntry) -> Void) {
                   completion(loadEntry())
               }
               func getTimeline(in context: Context, completion: @escaping (Timeline<LumiFilmEntry>) -> Void) {
                   let entry = loadEntry()
-                  completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(900))))
+                  completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(600))))
               }
               private func loadEntry() -> LumiFilmEntry {
-                  let d = UserDefaults.standard
-                  let iso = d.double(forKey: "lf_iso") == 0 ? 400 : d.double(forKey: "lf_iso")
-                  let gn = d.double(forKey: "lf_gn") == 0 ? 36 : d.double(forKey: "lf_gn")
-                  let dist = d.double(forKey: "lf_distance") == 0 ? 2.0 : d.double(forKey: "lf_distance")
-                  let ap = d.double(forKey: "lf_aperture") == 0 ? 5.6 : d.double(forKey: "lf_aperture")
-                  let res = FlashCalculator.powerLabel(gnAt100: gn, iso: iso, distance: dist, aperture: ap, lossEV: 0.0)
-                  return LumiFilmEntry(date: Date(), iso: iso, gn: gn, distance: dist, aperture: ap, powerText: res.0, noteText: res.1)
+                  let iso = WidgetSharedStore.double(forKey: "lf_iso", default: 400.0)
+                  let gn = WidgetSharedStore.double(forKey: "lf_gn", default: 36.0)
+                  let dist = WidgetSharedStore.double(forKey: "lf_distance", default: 2.0)
+                  let ap = WidgetSharedStore.double(forKey: "lf_aperture", default: 5.6)
+                  let evComp = WidgetSharedStore.double(forKey: "lf_exp_comp_ev", default: 0.0)
+                  let modLoss = WidgetSharedStore.double(forKey: "lf_modifier_loss", default: 0.0)
+                  let bounceLoss = WidgetSharedStore.double(forKey: "lf_bounce_loss", default: 0.0)
+                  let filterLoss = WidgetSharedStore.double(forKey: "lf_filter_loss_ev", default: 0.0)
+                  let totalLoss = modLoss + bounceLoss + filterLoss + evComp
+                  let res = FlashCalculator.powerLabel(gnAt100: gn, iso: iso, distance: dist, aperture: ap, lossEV: totalLoss)
+                  return LumiFilmEntry(date: Date(), iso: iso, gn: gn, distance: dist, aperture: ap, evComp: evComp, powerText: res.0, noteText: res.1)
               }
           }
 
           struct LumiFilmWidgetEntryView: View {
               var entry: LumiFilmProvider.Entry
+              @Environment(\.widgetFamily) private var family
 
               var body: some View {
-                  VStack(alignment: .leading, spacing: 6) {
-                      HStack {
-                          Image(systemName: "bolt.circle.fill")
-                              .foregroundStyle(Color.orange)
-                          Text("LUMIFILM")
-                              .font(.system(size: 10, weight: .black, design: .monospaced))
-                              .foregroundStyle(Color.white.opacity(0.85))
-                          Spacer()
-                          Text("ISO \(Int(entry.iso))")
-                              .font(.system(size: 10, weight: .bold, design: .monospaced))
-                              .foregroundStyle(Color.orange)
-                      }
-
-                      VStack(alignment: .leading, spacing: 1) {
-                          Text("FLASH POWER")
-                              .font(.system(size: 8, weight: .bold, design: .monospaced))
-                              .foregroundStyle(Color.white.opacity(0.5))
-                          Text(entry.powerText)
-                              .font(.system(size: 20, weight: .black, design: .rounded))
-                              .foregroundStyle(Color.white)
-                              .minimumScaleFactor(0.6)
-                              .lineLimit(1)
-                      }
-                      .padding(.vertical, 2)
-
-                      HStack(spacing: 6) {
-                          if #available(iOSApplicationExtension 17.0, *) {
-                              Button(intent: AdjustApertureIntent(delta: -1)) {
-                                  Text("f/-")
-                                      .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                      .frame(maxWidth: .infinity)
-                                      .padding(.vertical, 4)
-                                      .background(Color.white.opacity(0.14))
-                                      .clipShape(RoundedRectangle(cornerRadius: 6))
-                              }
-                              .buttonStyle(.plain)
-
-                              Text(String(format: "f/%.1f", entry.aperture))
-                                  .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                  .foregroundStyle(Color.orange)
-
-                              Button(intent: AdjustApertureIntent(delta: 1)) {
-                                  Text("f/+")
-                                      .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                      .frame(maxWidth: .infinity)
-                                      .padding(.vertical, 4)
-                                      .background(Color.white.opacity(0.14))
-                                      .clipShape(RoundedRectangle(cornerRadius: 6))
-                              }
-                              .buttonStyle(.plain)
-                          } else {
-                              Text(String(format: "f/%.1f", entry.aperture))
-                                  .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                  .foregroundStyle(Color.orange)
-                          }
-                      }
-
-                      HStack(spacing: 6) {
-                          if #available(iOSApplicationExtension 17.0, *) {
-                              Button(intent: AdjustDistanceIntent(delta: -0.5)) {
-                                  Text("-0.5m")
-                                      .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                      .frame(maxWidth: .infinity)
-                                      .padding(.vertical, 4)
-                                      .background(Color.white.opacity(0.14))
-                                      .clipShape(RoundedRectangle(cornerRadius: 6))
-                              }
-                              .buttonStyle(.plain)
-
-                              Text(String(format: "%.1fm", entry.distance))
-                                  .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                  .foregroundStyle(Color.cyan)
-
-                              Button(intent: AdjustDistanceIntent(delta: 0.5)) {
-                                  Text("+0.5m")
-                                      .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                      .frame(maxWidth: .infinity)
-                                      .padding(.vertical, 4)
-                                      .background(Color.white.opacity(0.14))
-                                      .clipShape(RoundedRectangle(cornerRadius: 6))
-                              }
-                              .buttonStyle(.plain)
-                          } else {
-                              Text(String(format: "%.1fm", entry.distance))
-                                  .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                  .foregroundStyle(Color.cyan)
-                          }
+                  Group {
+                      switch family {
+                      case .systemMedium:
+                          mediumWidgetBody
+                      case .accessoryRectangular:
+                          lockScreenRectangularBody
+                      default:
+                          smallWidgetBody
                       }
                   }
-                  .foregroundStyle(Color.white)
+                  .widgetURL(entry.meterDeepLinkURL)
                   .containerBackground(for: .widget) {
                       LinearGradient(
                           colors: [
-                              Color(red: 0.08, green: 0.08, blue: 0.11),
-                              Color(red: 0.16, green: 0.12, blue: 0.10),
-                              Color(red: 0.25, green: 0.16, blue: 0.09)
+                              Color(red: 0.07, green: 0.08, blue: 0.11),
+                              Color(red: 0.15, green: 0.11, blue: 0.09),
+                              Color(red: 0.24, green: 0.15, blue: 0.08)
                           ],
                           startPoint: .topLeading,
                           endPoint: .bottomTrailing
                       )
+                  }
+              }
+
+              private var smallWidgetBody: some View {
+                  VStack(alignment: .leading, spacing: 5) {
+                      HStack(spacing: 4) {
+                          Image(systemName: "bolt.circle.fill")
+                              .font(.system(size: 12, weight: .bold))
+                              .foregroundStyle(Color.orange)
+                          Text("POWER")
+                              .font(.system(size: 9.5, weight: .black, design: .monospaced))
+                              .foregroundStyle(Color.white.opacity(0.85))
+                          Spacer()
+                          Link(destination: entry.voiceDeepLinkURL) {
+                              HStack(spacing: 2) {
+                                  Image(systemName: "mic.fill")
+                                      .font(.system(size: 9, weight: .bold))
+                                  Text("语音")
+                                      .font(.system(size: 9, weight: .bold))
+                              }
+                              .foregroundStyle(Color.black)
+                              .padding(.horizontal, 6)
+                              .padding(.vertical, 2.5)
+                              .background(Color.orange, in: Capsule())
+                          }
+                      }
+
+                      Link(destination: entry.meterDeepLinkURL) {
+                          VStack(alignment: .leading, spacing: 1) {
+                              Text(entry.powerText)
+                                  .font(.system(size: 24, weight: .black, design: .rounded))
+                                  .foregroundStyle(Color.white)
+                                  .minimumScaleFactor(0.55)
+                                  .lineLimit(1)
+                              Text(String(format: "ISO %.0f · GN %.0f · %+.1fEV", entry.iso, entry.gn, entry.evComp))
+                                  .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                  .foregroundStyle(Color.white.opacity(0.62))
+                                  .lineLimit(1)
+                          }
+                      }
+
+                      Spacer(minLength: 1)
+
+                      HStack(spacing: 5) {
+                          if #available(iOSApplicationExtension 17.0, *) {
+                              Button(intent: AdjustApertureIntent(delta: -1)) {
+                                  Text("f/-")
+                                      .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                      .frame(maxWidth: .infinity)
+                                      .padding(.vertical, 3.5)
+                                      .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+                              }
+                              .buttonStyle(.plain)
+
+                              Text(String(format: "f/%.1f", entry.aperture))
+                                  .font(.system(size: 10.5, weight: .black, design: .monospaced))
+                                  .foregroundStyle(Color.orange)
+
+                              Button(intent: AdjustApertureIntent(delta: 1)) {
+                                  Text("f/+")
+                                      .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                      .frame(maxWidth: .infinity)
+                                      .padding(.vertical, 3.5)
+                                      .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+                              }
+                              .buttonStyle(.plain)
+                          }
+                      }
+
+                      HStack(spacing: 5) {
+                          if #available(iOSApplicationExtension 17.0, *) {
+                              Button(intent: AdjustDistanceIntent(delta: -0.5)) {
+                                  Text("-0.5")
+                                      .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                      .frame(maxWidth: .infinity)
+                                      .padding(.vertical, 3.5)
+                                      .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+                              }
+                              .buttonStyle(.plain)
+
+                              Text(String(format: "%.1fm", entry.distance))
+                                  .font(.system(size: 10.5, weight: .black, design: .monospaced))
+                                  .foregroundStyle(Color.cyan)
+
+                              Button(intent: AdjustDistanceIntent(delta: 0.5)) {
+                                  Text("+0.5")
+                                      .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                      .frame(maxWidth: .infinity)
+                                      .padding(.vertical, 3.5)
+                                      .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+                              }
+                              .buttonStyle(.plain)
+                          }
+                      }
+                  }
+                  .foregroundStyle(Color.white)
+              }
+
+              private var mediumWidgetBody: some View {
+                  HStack(spacing: 12) {
+                      VStack(alignment: .leading, spacing: 4) {
+                          HStack(spacing: 5) {
+                              Image(systemName: "bolt.circle.fill")
+                                  .foregroundStyle(Color.orange)
+                              Text("LUMIFILM POWER")
+                                  .font(.system(size: 10, weight: .black, design: .monospaced))
+                                  .foregroundStyle(Color.white.opacity(0.8))
+                          }
+
+                          Text(entry.powerText)
+                              .font(.system(size: 30, weight: .black, design: .rounded))
+                              .foregroundStyle(Color.white)
+                              .minimumScaleFactor(0.55)
+                              .lineLimit(1)
+
+                          Text("ISO \(Int(entry.iso)) · GN \(Int(entry.gn)) · \(entry.noteText)")
+                              .font(.system(size: 9, weight: .bold, design: .monospaced))
+                              .foregroundStyle(Color.white.opacity(0.65))
+                              .lineLimit(1)
+
+                          Spacer(minLength: 2)
+
+                          HStack(spacing: 6) {
+                              Link(destination: entry.voiceDeepLinkURL) {
+                                  HStack(spacing: 4) {
+                                      Image(systemName: "mic.fill")
+                                          .font(.system(size: 10, weight: .bold))
+                                      Text("语音调参 Voice")
+                                          .font(.system(size: 10, weight: .bold))
+                                  }
+                                  .foregroundStyle(Color.black)
+                                  .padding(.horizontal, 9)
+                                  .padding(.vertical, 5)
+                                  .background(Color.orange, in: Capsule())
+                              }
+
+                              Link(destination: entry.speakDeepLinkURL) {
+                                  HStack(spacing: 3) {
+                                      Image(systemName: "speaker.wave.2.fill")
+                                          .font(.system(size: 10, weight: .bold))
+                                      Text("播报")
+                                          .font(.system(size: 10, weight: .bold))
+                                  }
+                                  .foregroundStyle(Color.white)
+                                  .padding(.horizontal, 8)
+                                  .padding(.vertical, 5)
+                                  .background(Color.white.opacity(0.16), in: Capsule())
+                              }
+                          }
+                      }
+                      .frame(maxWidth: .infinity, alignment: .leading)
+
+                      VStack(spacing: 6) {
+                          if #available(iOSApplicationExtension 17.0, *) {
+                              HStack(spacing: 5) {
+                                  Button(intent: AdjustApertureIntent(delta: -1)) {
+                                      Text("f/-")
+                                          .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                          .frame(width: 34, height: 26)
+                                          .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 7))
+                                  }
+                                  .buttonStyle(.plain)
+
+                                  Text(String(format: "f/%.1f", entry.aperture))
+                                      .font(.system(size: 11, weight: .black, design: .monospaced))
+                                      .foregroundStyle(Color.orange)
+                                      .frame(width: 44)
+
+                                  Button(intent: AdjustApertureIntent(delta: 1)) {
+                                      Text("f/+")
+                                          .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                          .frame(width: 34, height: 26)
+                                          .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 7))
+                                  }
+                                  .buttonStyle(.plain)
+                              }
+
+                              HStack(spacing: 5) {
+                                  Button(intent: AdjustDistanceIntent(delta: -0.5)) {
+                                      Text("-0.5")
+                                          .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                          .frame(width: 34, height: 26)
+                                          .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 7))
+                                  }
+                                  .buttonStyle(.plain)
+
+                                  Text(String(format: "%.1fm", entry.distance))
+                                      .font(.system(size: 11, weight: .black, design: .monospaced))
+                                      .foregroundStyle(Color.cyan)
+                                      .frame(width: 44)
+
+                                  Button(intent: AdjustDistanceIntent(delta: 0.5)) {
+                                      Text("+0.5")
+                                          .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                          .frame(width: 34, height: 26)
+                                          .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 7))
+                                  }
+                                  .buttonStyle(.plain)
+                              }
+
+                              HStack(spacing: 5) {
+                                  Button(intent: AdjustEVCompIntent(delta: -0.2)) {
+                                      Text("-0.2")
+                                          .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                          .frame(width: 34, height: 26)
+                                          .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 7))
+                                  }
+                                  .buttonStyle(.plain)
+
+                                  Text(String(format: "%+.1fEV", entry.evComp))
+                                      .font(.system(size: 10, weight: .black, design: .monospaced))
+                                      .foregroundStyle(Color.green)
+                                      .frame(width: 44)
+
+                                  Button(intent: AdjustEVCompIntent(delta: 0.2)) {
+                                      Text("+0.2")
+                                          .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                          .frame(width: 34, height: 26)
+                                          .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 7))
+                                  }
+                                  .buttonStyle(.plain)
+                              }
+                          }
+                      }
+                  }
+                  .foregroundStyle(Color.white)
+              }
+
+              private var lockScreenRectangularBody: some View {
+                  VStack(alignment: .leading, spacing: 2) {
+                      HStack(spacing: 4) {
+                          Image(systemName: "bolt.fill")
+                          Text("FLASH: \(entry.powerText)")
+                              .font(.system(size: 13, weight: .black, design: .rounded))
+                      }
+                      Text(String(format: "f/%.1f · %.1fm · ISO %.0f · GN%.0f", entry.aperture, entry.distance, entry.iso, entry.gn))
+                          .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                          .opacity(0.85)
                   }
               }
           }
@@ -516,9 +732,9 @@ jobs:
                   StaticConfiguration(kind: kind, provider: LumiFilmProvider()) { entry in
                       LumiFilmWidgetEntryView(entry: entry)
                   }
-                  .configurationDisplayName("LumiFilm Flash Meter")
-                  .description("Interactive film flash power calculator & quick parameter control.")
-                  .supportedFamilies([.systemSmall, .systemMedium])
+                  .configurationDisplayName("LumiFilm 闪光输出功率")
+                  .description("桌面与锁屏实时显示闪光灯输出功率 (1/4 等)，支持一键唤醒语音调参及光圈/距离微调。")
+                  .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
               }
           }
           EOF
@@ -531,6 +747,61 @@ jobs:
           import UIKit
           import WidgetKit
           import Speech
+          import AppIntents
+
+          // MARK: - iPhone Action Button & iOS Shortcuts Intents (AppShortcutsProvider)
+          @available(iOS 16.0, *)
+          struct LumiFilmVoiceMeterIntent: AppIntent {
+              static var title: LocalizedStringResource = "LumiFilm 语音设置参数 (Voice Meter)"
+              static var description = IntentDescription("通过 iPhone 侧边操作按钮 (Action Button) 或快捷指令直接唤醒 LumiFilm 麦克风语音调参，识别完成后自动播报一次闪光灯输出功率。")
+              static var openAppWhenRun: Bool = true
+
+              @MainActor
+              func perform() async throws -> some IntentResult {
+                  UserDefaults.standard.set(true, forKey: "lf_shortcut_trigger_voice")
+                  NotificationCenter.default.post(name: Notification.Name("LumiFilmActionVoiceTrigger"), object: nil)
+                  return .result()
+              }
+          }
+
+          @available(iOS 16.0, *)
+          struct LumiFilmSpeakPowerIntent: AppIntent {
+              static var title: LocalizedStringResource = "LumiFilm 播报闪光功率 (Speak Flash Power)"
+              static var description = IntentDescription("唤醒 LumiFilm 并立即用真人男声/女声播报一次当前计算出的闪光灯输出功率。")
+              static var openAppWhenRun: Bool = true
+
+              @MainActor
+              func perform() async throws -> some IntentResult {
+                  UserDefaults.standard.set(true, forKey: "lf_shortcut_trigger_speak")
+                  NotificationCenter.default.post(name: Notification.Name("LumiFilmActionSpeakTrigger"), object: nil)
+                  return .result()
+              }
+          }
+
+          @available(iOS 16.0, *)
+          struct LumiFilmShortcutsProvider: AppShortcutsProvider {
+              static var appShortcuts: [AppShortcut] {
+                  AppShortcut(
+                      intent: LumiFilmVoiceMeterIntent(),
+                      phrases: [
+                          "用 \(.applicationName) 语音设置闪光灯",
+                          "打开 \(.applicationName) 语音测光",
+                          "Start \(.applicationName) voice meter"
+                      ],
+                      shortTitle: "语音设置闪光参数",
+                      systemImageName: "mic.fill"
+                  )
+                  AppShortcut(
+                      intent: LumiFilmSpeakPowerIntent(),
+                      phrases: [
+                          "用 \(.applicationName) 播报闪光功率",
+                          "Speak \(.applicationName) flash power"
+                      ],
+                      shortTitle: "播报闪光灯功率",
+                      systemImageName: "bolt.circle.fill"
+                  )
+              }
+          }
 
           @main
           struct LumiFilmApp: App {
@@ -869,6 +1140,7 @@ jobs:
               private var recognitionTask: SFSpeechRecognitionTask?
               private let audioEngine = AVAudioEngine()
               private var onCommandRecognized: ((String) -> Void)?
+              private var onAutoStopAfterActionTrigger: (() -> Void)?
               private var silenceTimerWorkItem: DispatchWorkItem?
               private var currentLanguage: AppLanguage = .zh
 
@@ -1150,8 +1422,42 @@ jobs:
                       voiceStatusHint = currentLanguage == .en
                           ? "Synced: \"\(recognizedTranscript)\""
                           : "已识别同步：“\(recognizedTranscript)”"
+                      if let speakAfter = onAutoStopAfterActionTrigger {
+                          onAutoStopAfterActionTrigger = nil
+                          DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                              speakAfter()
+                          }
+                      }
                   } else {
+                      onAutoStopAfterActionTrigger = nil
                       voiceStatusHint = ""
+                  }
+              }
+
+              func startVoiceFromShortcut(lang: AppLanguage, onRecognized: @escaping (String) -> Void, onAutoStoppedSpeak: @escaping () -> Void) {
+                  self.currentLanguage = lang
+                  if synthesizer.isSpeaking {
+                      synthesizer.stopSpeaking(at: .immediate)
+                      isSpeaking = false
+                  }
+                  if isListening {
+                      stopListening()
+                  }
+                  self.onCommandRecognized = onRecognized
+                  self.onAutoStopAfterActionTrigger = onAutoStoppedSpeak
+
+                  SFSpeechRecognizer.requestAuthorization { authStatus in
+                      DispatchQueue.main.async {
+                          if authStatus == .authorized {
+                              AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                                  DispatchQueue.main.async {
+                                      if granted {
+                                          FeedbackEngine.shared.startRecordingSession(lang: lang)
+                                      }
+                                  }
+                              }
+                          }
+                      }
                   }
               }
           }
@@ -1553,7 +1859,102 @@ jobs:
                       if lockPower {
                           solveForLockedPower(changed: changed)
                       }
-                      WidgetCenter.shared.reloadAllTimelines()
+                      syncWidgetDefaults()
+                  }
+              }
+
+              private func syncWidgetDefaults() {
+                  let suite = UserDefaults(suiteName: "group.com.lumifilm.flashmeter")
+                  let keysAndVals: [(String, Double)] = [
+                      ("lf_iso", filmISO),
+                      ("lf_gn", flashGN),
+                      ("lf_distance", distance),
+                      ("lf_aperture", aperture),
+                      ("lf_max_aperture", maxLensAperture),
+                      ("lf_exp_comp_ev", exposureCompEV),
+                      ("lf_modifier_loss", modifierLossEV),
+                      ("lf_bounce_loss", bounceLossEV),
+                      ("lf_filter_loss_ev", filterLossEV)
+                  ]
+                  for (k, v) in keysAndVals {
+                      UserDefaults.standard.set(v, forKey: k)
+                      suite?.set(v, forKey: k)
+                  }
+                  syncWidgetDefaults()
+              }
+
+              private func speakCurrentExposureOnce() {
+                  let msg = lang == .en
+                      ? "ISO \(Int(filmISO)), aperture \(formatFStop(aperture)), shutter 1 over \(shutterDenom), distance \(String(format: "%.1f", distance)) meters, flash power \(exposureResult.powerTitle)"
+                      : "感光度 \(Int(filmISO))，光圈 \(formatFStop(aperture))，快门 \(shutterDenom) 分之一秒，距离 \(String(format: "%.1f", distance)) 米，建议闪光输出 \(exposureResult.powerTitle)"
+                  if feedback.isSpeaking {
+                      feedback.toggleSpeakExposure(msg, soundEnabled: true, persona: voicePersona, lang: lang)
+                  }
+                  feedback.toggleSpeakExposure(msg, soundEnabled: true, persona: voicePersona, lang: lang)
+              }
+
+              private func triggerActionButtonVoiceFlow() {
+                  withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+                      selectedTab = 0
+                  }
+                  feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+                  feedback.startVoiceFromShortcut(
+                      lang: lang,
+                      onRecognized: { spokenText in
+                          applyVoiceCommand(spokenText)
+                      },
+                      onAutoStoppedSpeak: {
+                          speakCurrentExposureOnce()
+                      }
+                  )
+              }
+
+              private func handleIncomingURL(_ url: URL) {
+                  guard url.scheme?.lowercased() == "lumifilm" else { return }
+                  if let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                     let items = comps.queryItems {
+                      for item in items {
+                          if let val = Double(item.value ?? "") {
+                              switch item.name {
+                              case "ap": aperture = max(maxLensAperture, min(22.0, val))
+                              case "dist": distance = max(0.5, min(15.0, val))
+                              case "ev": setExposureCompClean(val)
+                              case "iso": filmISO = val
+                              case "gn": flashGN = val
+                              default: break
+                              }
+                          }
+                      }
+                  }
+                  let host = (url.host ?? "").lowercased()
+                  if host.contains("voice") || host.contains("listen") {
+                      triggerActionButtonVoiceFlow()
+                  } else if host.contains("speak") {
+                      withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+                          selectedTab = 0
+                      }
+                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                          speakCurrentExposureOnce()
+                      }
+                  } else {
+                      withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+                          selectedTab = 0
+                      }
+                  }
+                  syncWidgetDefaults()
+              }
+
+              private func checkPendingShortcutTriggers() {
+                  if UserDefaults.standard.bool(forKey: "lf_shortcut_trigger_voice") {
+                      UserDefaults.standard.set(false, forKey: "lf_shortcut_trigger_voice")
+                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                          triggerActionButtonVoiceFlow()
+                      }
+                  } else if UserDefaults.standard.bool(forKey: "lf_shortcut_trigger_speak") {
+                      UserDefaults.standard.set(false, forKey: "lf_shortcut_trigger_speak")
+                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                          speakCurrentExposureOnce()
+                      }
                   }
               }
 
@@ -1645,21 +2046,38 @@ jobs:
                       // Ensure exposureCompEV is snapped to exact 0.2 increments (fixes legacy +0.1 leftover)
                       setExposureCompClean(exposureCompEV)
                       feedback.refreshVoiceQualityStatus(persona: voicePersona, lang: lang)
+                      syncWidgetDefaults()
                       if !hasCompletedOnboarding {
                           showOnboardingSheet = true
+                      } else {
+                          checkPendingShortcutTriggers()
                       }
+                  }
+                  .onOpenURL { url in
+                      handleIncomingURL(url)
+                  }
+                  .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LumiFilmActionVoiceTrigger"))) { _ in
+                      UserDefaults.standard.set(false, forKey: "lf_shortcut_trigger_voice")
+                      triggerActionButtonVoiceFlow()
+                  }
+                  .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LumiFilmActionSpeakTrigger"))) { _ in
+                      UserDefaults.standard.set(false, forKey: "lf_shortcut_trigger_speak")
+                      speakCurrentExposureOnce()
+                  }
+                  .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                      checkPendingShortcutTriggers()
                   }
                   .onChange(of: aperture) { _, _ in
                       if lastEditedParameter == .aperture && lockPower {
                           solveForLockedPower(changed: .aperture)
                       }
-                      WidgetCenter.shared.reloadAllTimelines()
+                      syncWidgetDefaults()
                   }
                   .onChange(of: distance) { _, _ in
                       if lastEditedParameter == .distance && lockPower {
                           solveForLockedPower(changed: .distance)
                       }
-                      WidgetCenter.shared.reloadAllTimelines()
+                      syncWidgetDefaults()
                   }
                   .onChange(of: shutterDenom) { _, _ in
                       if lastEditedParameter == .shutter && lockPower {
@@ -2667,7 +3085,7 @@ jobs:
                                                       flashGN = model.gnAtISO100
                                                   }
                                                   if lockPower { solveForLockedPower(changed: .flashPower) }
-                                                  WidgetCenter.shared.reloadAllTimelines()
+                                                  syncWidgetDefaults()
                                               }
                                           } label: {
                                               HStack {
@@ -2702,7 +3120,7 @@ jobs:
                                   flashGN = max(5.0, flashGN - 1.0)
                                   selectedFlashID = "custom"
                                   if lockPower { solveForLockedPower(changed: .flashPower) }
-                                  WidgetCenter.shared.reloadAllTimelines()
+                                  syncWidgetDefaults()
                               }
                           } label: {
                               Image(systemName: "minus")
@@ -2732,7 +3150,7 @@ jobs:
                                   flashGN = min(80.0, flashGN + 1.0)
                                   selectedFlashID = "custom"
                                   if lockPower { solveForLockedPower(changed: .flashPower) }
-                                  WidgetCenter.shared.reloadAllTimelines()
+                                  syncWidgetDefaults()
                               }
                           } label: {
                               Image(systemName: "plus")
@@ -2762,7 +3180,7 @@ jobs:
                                           withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                                               filmISO = isoVal
                                               if lockPower { solveForLockedPower(changed: .flashPower) }
-                                              WidgetCenter.shared.reloadAllTimelines()
+                                              syncWidgetDefaults()
                                           }
                                       } label: {
                                           Text("ISO \(Int(isoVal))")
@@ -2974,6 +3392,44 @@ jobs:
                                   .foregroundStyle(Color.white)
                           }
                           .tint(theme.accent)
+                      }
+
+                      HStack(spacing: 8) {
+                          Button {
+                              UIPasteboard.general.string = "lumifilm://voice"
+                              feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+                              triggerActionButtonVoiceFlow()
+                          } label: {
+                              HStack(spacing: 4) {
+                                  Image(systemName: "button.vertical.left.press.fill")
+                                      .font(.system(size: 11, weight: .bold))
+                                  Text(lang == .en ? "Copy & Test Action Button Voice" : "复制侧边键语音链接并测试")
+                                      .font(.system(size: 10.5, weight: .bold))
+                                      .lineLimit(1)
+                              }
+                              .foregroundStyle(Color.white)
+                              .frame(maxWidth: .infinity)
+                              .padding(.vertical, 7.5)
+                              .background(Color.cyan.opacity(0.28), in: RoundedRectangle(cornerRadius: 10))
+                              .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.cyan.opacity(0.55), lineWidth: 1))
+                          }
+
+                          Button {
+                              feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+                              syncWidgetDefaults()
+                          } label: {
+                              HStack(spacing: 4) {
+                                  Image(systemName: "apps.iphone.badge.plus")
+                                      .font(.system(size: 11, weight: .bold))
+                                  Text(lang == .en ? "Sync Widget" : "刷新桌面插件")
+                                      .font(.system(size: 10.5, weight: .bold))
+                                      .lineLimit(1)
+                              }
+                              .foregroundStyle(Color.white)
+                              .padding(.horizontal, 10)
+                              .padding(.vertical, 7.5)
+                              .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
+                          }
                       }
 
                       Button {
@@ -3399,7 +3855,7 @@ jobs:
                                       aperture = maxLensAperture
                                   }
                                   hasCompletedOnboarding = true
-                                  WidgetCenter.shared.reloadAllTimelines()
+                                  syncWidgetDefaults()
                                   dismiss()
                               } label: {
                                   Text(lang == .en ? "Save & Start Metering" : "保存并进入 LumiFilm 闪光测光表")
@@ -3682,14 +4138,22 @@ jobs:
           APP_PATH=$(find build_output -name "LumiFilm.app" -type d | head -n 1)
           echo "Found built app at: $APP_PATH"
 
+          # Register lumifilm:// URL Scheme for iPhone Action Button, iOS Shortcuts & Home Screen Widget Deep Links
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$APP_PATH/Info.plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string com.lumifilm.flashmeter" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string lumifilm" "$APP_PATH/Info.plist"
+
           # Ensure Main App Info.plist has valid non-empty Bundle Version strings (fixes Sideloadly IXErrorDomain Code=17)
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.2.0" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.2.0" "$APP_PATH/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 82" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 82" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.3.0" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.3.0" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 83" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 83" "$APP_PATH/Info.plist"
 
           # Ensure Embedded Widget Extension Info.plist also has valid non-empty Bundle Version strings
           if [ -d "$APP_PATH/PlugIns/LumiFilmWidget.appex" ]; then
-            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.2.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.2.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
-            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 82" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 82" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.3.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.3.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 83" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 83" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
           fi
 
           mkdir -p Payload
