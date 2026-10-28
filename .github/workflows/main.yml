@@ -1,4 +1,4 @@
-name: Build Unsigned LumiFilm iOS App (v8.1 - Balanced Layout, Separated EV & Frame Cards, Apple Music 3D Liquid Glass Bar)
+name: Build Unsigned LumiFilm iOS App (v8.2 - Pure Crystal Liquid Glass, 0.2EV Step to Zero & Full Brand Flash Catalog)
 
 on:
   workflow_dispatch:
@@ -282,8 +282,8 @@ jobs:
                   INFOPLIST_KEY_CFBundleDisplayName: LumiFilm
                   INFOPLIST_KEY_NSMicrophoneUsageDescription: "LumiFilm 使用麦克风接收您的语音指令（如：光圈f3、快门200、距离2.5米），直接调节胶片闪光参数。"
                   INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "LumiFilm 使用语音识别将您说出的曝光参数实时转换为转盘与状态栏数值。"
-                  MARKETING_VERSION: "8.1.0"
-                  CURRENT_PROJECT_VERSION: "81"
+                  MARKETING_VERSION: "8.2.0"
+                  CURRENT_PROJECT_VERSION: "82"
                   GENERATE_INFOPLIST_FILE: YES
                   ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
             LumiFilmWidget:
@@ -298,14 +298,14 @@ jobs:
                   SWIFT_STRICT_CONCURRENCY: minimal
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter.widget
                   INFOPLIST_KEY_CFBundleDisplayName: LumiFilmWidget
-                  MARKETING_VERSION: "8.1.0"
-                  CURRENT_PROJECT_VERSION: "81"
+                  MARKETING_VERSION: "8.2.0"
+                  CURRENT_PROJECT_VERSION: "82"
                   GENERATE_INFOPLIST_FILE: YES
               info:
                 path: LumiFilmWidget/Info.plist
                 properties:
-                  CFBundleShortVersionString: "8.1.0"
-                  CFBundleVersion: "81"
+                  CFBundleShortVersionString: "8.2.0"
+                  CFBundleVersion: "82"
                   NSExtension:
                     NSExtensionPointIdentifier: com.apple.widgetkit-extension
           EOF
@@ -523,7 +523,7 @@ jobs:
           }
           EOF
 
-          # 5. Create Main LumiFilmApp.swift (v8.1 - Zero Middle Gap, Separated EV Comp & Frame Log Cards, Apple Music 3D Liquid Glass Tab Bar)
+          # 5. Create Main LumiFilmApp.swift (v8.2 - Pure Crystal Liquid Glass, 0.2EV Step to Zero & Full Brand Flash Database)
           cat << 'EOF' > LumiFilmBuild/LumiFilm/LumiFilmApp.swift
           import SwiftUI
           import AVFoundation
@@ -562,6 +562,93 @@ jobs:
                   case .en: return "en-US"
                   }
               }
+          }
+
+          // MARK: - Flash Brand & Comprehensive Flash Unit Catalog (Godox, Contax, Canon, Nikon, Leica/Fuji/Metz, Custom)
+          enum FlashBrandCategory: String, CaseIterable, Identifiable {
+              case all = "all"
+              case godox = "godox"
+              case contax = "contax"
+              case canon = "canon"
+              case nikon = "nikon"
+              case leicaFuji = "leica_fuji"
+              case custom = "custom"
+
+              var id: String { rawValue }
+
+              func title(for lang: AppLanguage) -> String {
+                  switch self {
+                  case .all: return lang == .en ? "All" : "全部"
+                  case .godox: return lang == .en ? "Godox" : "神牛 Godox"
+                  case .contax: return "Contax"
+                  case .canon: return lang == .en ? "Canon" : "佳能 Canon"
+                  case .nikon: return lang == .en ? "Nikon" : "尼康 Nikon"
+                  case .leicaFuji: return lang == .en ? "Leica / Fuji" : "徕卡 / 富士"
+                  case .custom: return lang == .en ? "Custom GN" : "自定义 GN"
+                  }
+              }
+          }
+
+          struct FlashUnitModel: Identifiable, Equatable {
+              let id: String
+              let brand: FlashBrandCategory
+              let nameZh: String
+              let nameEn: String
+              let shortBadge: String
+              let gnAtISO100: Double
+
+              func displayName(for lang: AppLanguage) -> String {
+                  let base = (lang == .en) ? nameEn : nameZh
+                  if id == "custom" {
+                      return base
+                  }
+                  return "\(base) (GN\(Int(gnAtISO100)))"
+              }
+
+              static let catalog: [FlashUnitModel] = [
+                  // Godox (神牛)
+                  FlashUnitModel(id: "godox_lux_cadet", brand: .godox, nameZh: "神牛 Lux Cadet 复古小闪", nameEn: "Godox Lux Cadet", shortBadge: "Lux Cadet", gnAtISO100: 10),
+                  FlashUnitModel(id: "godox_lux_jr", brand: .godox, nameZh: "神牛 Lux Junior 复古街拍灯", nameEn: "Godox Lux Junior", shortBadge: "Lux Jr", gnAtISO100: 12),
+                  FlashUnitModel(id: "godox_lux_sr", brand: .godox, nameZh: "神牛 Lux Senior 复古折叠扇", nameEn: "Godox Lux Senior", shortBadge: "Lux Sr", gnAtISO100: 14),
+                  FlashUnitModel(id: "godox_im30", brand: .godox, nameZh: "神牛 iM30 / iM20 迷你机顶灯", nameEn: "Godox iM30 Mini", shortBadge: "Godox iM30", gnAtISO100: 15),
+                  FlashUnitModel(id: "godox_lux_master", brand: .godox, nameZh: "神牛 Lux Master 复古手柄灯", nameEn: "Godox Lux Master", shortBadge: "Lux Master", gnAtISO100: 25),
+                  FlashUnitModel(id: "godox_v350", brand: .godox, nameZh: "神牛 V350 / TT350 便携主力灯", nameEn: "Godox V350 / TT350", shortBadge: "Godox V350", gnAtISO100: 36),
+                  FlashUnitModel(id: "godox_v1", brand: .godox, nameZh: "神牛 V1 / V1Pro 圆头旗舰灯", nameEn: "Godox V1 / V1Pro", shortBadge: "Godox V1", gnAtISO100: 42),
+                  FlashUnitModel(id: "godox_ad100", brand: .godox, nameZh: "神牛 AD100Pro 口袋外拍灯", nameEn: "Godox AD100Pro", shortBadge: "AD100Pro", gnAtISO100: 44),
+                  FlashUnitModel(id: "godox_ad200", brand: .godox, nameZh: "神牛 AD200Pro II 外拍灯", nameEn: "Godox AD200Pro II", shortBadge: "AD200Pro", gnAtISO100: 52),
+                  FlashUnitModel(id: "godox_v860iii", brand: .godox, nameZh: "神牛 V860III / TT685II / TT600", nameEn: "Godox V860III / TT685II", shortBadge: "Godox V860", gnAtISO100: 60),
+
+                  // Contax (康泰时胶片闪光灯)
+                  FlashUnitModel(id: "contax_tla140", brand: .contax, nameZh: "Contax TLA 140 (G1/G2 便携灯)", nameEn: "Contax TLA 140", shortBadge: "TLA 140", gnAtISO100: 14),
+                  FlashUnitModel(id: "contax_tla200", brand: .contax, nameZh: "Contax TLA 200 (G2 经典饼干灯)", nameEn: "Contax TLA 200", shortBadge: "TLA 200", gnAtISO100: 20),
+                  FlashUnitModel(id: "contax_tla280", brand: .contax, nameZh: "Contax TLA 280 胶片闪光灯", nameEn: "Contax TLA 280", shortBadge: "TLA 280", gnAtISO100: 28),
+                  FlashUnitModel(id: "contax_tla360", brand: .contax, nameZh: "Contax TLA 360 专业胶片灯", nameEn: "Contax TLA 360", shortBadge: "TLA 360", gnAtISO100: 36),
+
+                  // Canon (佳能 Speedlite)
+                  FlashUnitModel(id: "canon_270ex2", brand: .canon, nameZh: "佳能 Speedlite 270EX II / EL-100", nameEn: "Canon 270EX II / EL-100", shortBadge: "Canon 270EX", gnAtISO100: 27),
+                  FlashUnitModel(id: "canon_380ex", brand: .canon, nameZh: "佳能 Speedlite 380EX / 420EX", nameEn: "Canon 380EX / 420EX", shortBadge: "Canon 380EX", gnAtISO100: 38),
+                  FlashUnitModel(id: "canon_430ex3", brand: .canon, nameZh: "佳能 Speedlite 430EX III-RT", nameEn: "Canon 430EX III-RT", shortBadge: "Canon 430EX", gnAtISO100: 43),
+                  FlashUnitModel(id: "canon_580ex2", brand: .canon, nameZh: "佳能 Speedlite 580EX II", nameEn: "Canon 580EX II", shortBadge: "Canon 580EX", gnAtISO100: 58),
+                  FlashUnitModel(id: "canon_600ex2", brand: .canon, nameZh: "佳能 Speedlite 600EX II / EL-5 / EL-1", nameEn: "Canon 600EX II / EL-5", shortBadge: "Canon 600EX", gnAtISO100: 60),
+
+                  // Nikon (尼康 Speedlight)
+                  FlashUnitModel(id: "nikon_sb30", brand: .nikon, nameZh: "尼康 SB-30 / SB-400 超薄机顶灯", nameEn: "Nikon SB-30 / SB-400", shortBadge: "Nikon SB-30", gnAtISO100: 18),
+                  FlashUnitModel(id: "nikon_sb20", brand: .nikon, nameZh: "尼康 SB-20 / SB-22s / SB-700", nameEn: "Nikon SB-20 / SB-700", shortBadge: "Nikon SB-700", gnAtISO100: 28),
+                  FlashUnitModel(id: "nikon_sb28", brand: .nikon, nameZh: "尼康 SB-24 / SB-26 / SB-28 经典胶片灯", nameEn: "Nikon SB-24 / SB-26 / SB-28", shortBadge: "Nikon SB-28", gnAtISO100: 36),
+                  FlashUnitModel(id: "nikon_sb800", brand: .nikon, nameZh: "尼康 SB-800 / SB-900 / SB-910", nameEn: "Nikon SB-800 / SB-910", shortBadge: "Nikon SB-800", gnAtISO100: 38),
+                  FlashUnitModel(id: "nikon_sb5000", brand: .nikon, nameZh: "尼康 SB-5000 旗舰闪光灯", nameEn: "Nikon SB-5000", shortBadge: "Nikon SB5000", gnAtISO100: 55),
+
+                  // Leica / Fujifilm / Metz / Profoto
+                  FlashUnitModel(id: "fuji_efx20", brand: .leicaFuji, nameZh: "富士 EF-X20 / 徕卡 SF 20 金属饼干灯", nameEn: "Fuji EF-X20 / Leica SF 20", shortBadge: "EF-X20/SF20", gnAtISO100: 20),
+                  FlashUnitModel(id: "leica_sf24d", brand: .leicaFuji, nameZh: "徕卡 Leica SF 24D / SF 26", nameEn: "Leica SF 24D / SF 26", shortBadge: "Leica SF24D", gnAtISO100: 24),
+                  FlashUnitModel(id: "metz_32ct3", brand: .leicaFuji, nameZh: "美兹 Metz 32 CT-3 / 32 MZ-3", nameEn: "Metz 32 CT-3", shortBadge: "Metz 32", gnAtISO100: 32),
+                  FlashUnitModel(id: "leica_sf40", brand: .leicaFuji, nameZh: "徕卡 Leica SF 40 / Profoto A10", nameEn: "Leica SF 40 / Profoto A10", shortBadge: "SF40 / A10", gnAtISO100: 40),
+                  FlashUnitModel(id: "metz_45cl4", brand: .leicaFuji, nameZh: "美兹 Metz 45 CL-4 手柄灯", nameEn: "Metz 45 CL-4 Hammerhead", shortBadge: "Metz 45", gnAtISO100: 45),
+                  FlashUnitModel(id: "leica_sf60", brand: .leicaFuji, nameZh: "徕卡 Leica SF 60 / 富士 EF-60", nameEn: "Leica SF 60 / Fuji EF-60", shortBadge: "Leica SF60", gnAtISO100: 60),
+
+                  // Custom GN
+                  FlashUnitModel(id: "custom", brand: .custom, nameZh: "用户自定义闪光灯 GN", nameEn: "User Custom Flash GN", shortBadge: "Custom", gnAtISO100: 36)
+              ]
           }
 
           // Strongly-typed Identifiable Preset Option for Dropdown Menus
@@ -1071,10 +1158,11 @@ jobs:
 
           // MARK: - Main ContentView
           struct ContentView: View {
-              @AppStorage("lf_onboarded_v5") private var hasCompletedOnboarding: Bool = false
+              @AppStorage("lf_onboarded_v82") private var hasCompletedOnboarding: Bool = false
               @AppStorage("lf_lang_v8") private var langRaw: Int = 0
               @AppStorage("lf_iso") private var filmISO: Double = 400.0
               @AppStorage("lf_gn") private var flashGN: Double = 36.0
+              @AppStorage("lf_flash_model_id") private var selectedFlashID: String = "godox_v350"
               @AppStorage("lf_max_aperture") private var maxLensAperture: Double = 1.4
               @AppStorage("lf_sync_speed") private var maxSyncSpeed: Int = 125
               @AppStorage("lf_aperture") private var aperture: Double = 5.6
@@ -1114,7 +1202,6 @@ jobs:
               ]
               private let shutterSteps: [Int] = [15, 30, 60, 100, 125, 160, 200, 250, 500, 1000, 2000, 4000]
               private let isoSteps: [Double] = [50, 100, 160, 200, 400, 800, 1600, 3200]
-              private let gnSteps: [Double] = [12, 16, 20, 24, 28, 32, 36, 42, 50, 58, 60]
               private let maxAperturePresets: [Double] = [1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0]
               private let syncPresets: [Int] = [60, 125, 200, 250, 500]
               private let powerDenominators: [Int] = [1, 2, 4, 8, 16, 32, 64, 128]
@@ -1147,6 +1234,20 @@ jobs:
 
               private var lang: AppLanguage {
                   AppLanguage(rawValue: langRaw) ?? .zh
+              }
+
+              private var selectedFlashModel: FlashUnitModel {
+                  if let found = FlashUnitModel.catalog.first(where: { $0.id == selectedFlashID }) {
+                      return found
+                  }
+                  return FlashUnitModel.catalog.last!
+              }
+
+              private var topBarFlashSummary: String {
+                  if selectedFlashID == "custom" {
+                      return lang == .en ? "Custom GN\(Int(flashGN))" : "自定义 GN\(Int(flashGN))"
+                  }
+                  return "\(selectedFlashModel.shortBadge) GN\(Int(flashGN))"
               }
 
               private var apertureSteps: [Double] {
@@ -1198,6 +1299,13 @@ jobs:
                       return "f/\(Int(round(val)))"
                   }
                   return String(format: "f/%.1f", val)
+              }
+
+              // Snap Exposure Comp to exact 0.2 EV increments & guarantee exact 0.0 EV
+              private func setExposureCompClean(_ rawVal: Double) {
+                  let clamped = max(-2.0, min(2.0, rawVal))
+                  let snapped = round(clamped * 5.0) / 5.0
+                  exposureCompEV = abs(snapped) < 0.05 ? 0.0 : snapped
               }
 
               private func computeFullEffectiveGN(forShutter shutter: Int) -> Double {
@@ -1505,7 +1613,6 @@ jobs:
                           .blur(radius: 70)
                           .offset(x: 110, y: 190)
 
-                      // Harmonious Full-Screen Layout (No Middle Empty Hole)
                       VStack(spacing: 8) {
                           headerBar
                               .padding(.horizontal, 14)
@@ -1526,7 +1633,6 @@ jobs:
                           .padding(.horizontal, 14)
                           .frame(maxHeight: .infinity)
 
-                          // Apple Music iOS 26 Style 3D Liquid-Glass Bottom Bar
                           appleMusicLiquidGlassBottomBar
                               .padding(.horizontal, 16)
                               .padding(.bottom, 4)
@@ -1536,6 +1642,8 @@ jobs:
                       if aperture < maxLensAperture {
                           aperture = maxLensAperture
                       }
+                      // Ensure exposureCompEV is snapped to exact 0.2 increments (fixes legacy +0.1 leftover)
+                      setExposureCompClean(exposureCompEV)
                       feedback.refreshVoiceQualityStatus(persona: voicePersona, lang: lang)
                       if !hasCompletedOnboarding {
                           showOnboardingSheet = true
@@ -1563,7 +1671,12 @@ jobs:
                           solveForLockedPower(changed: .flashPower)
                       }
                   }
-                  .onChange(of: exposureCompEV) { _, _ in
+                  .onChange(of: exposureCompEV) { _, newVal in
+                      let snapped = round(newVal * 5.0) / 5.0
+                      let cleanVal = abs(snapped) < 0.05 ? 0.0 : snapped
+                      if abs(cleanVal - newVal) > 0.005 {
+                          exposureCompEV = cleanVal
+                      }
                       if lockPower {
                           solveForLockedPower(changed: .flashPower)
                       }
@@ -1572,6 +1685,7 @@ jobs:
                       OnboardingSetupSheet(
                           filmISO: $filmISO,
                           flashGN: $flashGN,
+                          selectedFlashID: $selectedFlashID,
                           maxLensAperture: $maxLensAperture,
                           maxSyncSpeed: $maxSyncSpeed,
                           aperture: $aperture,
@@ -1621,13 +1735,14 @@ jobs:
                       } label: {
                           HStack(spacing: 5) {
                               Image(systemName: "film")
-                                  .font(.system(size: 11, weight: .bold))
-                              Text("ISO \(Int(filmISO)) · GN\(Int(flashGN))")
-                                  .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                  .font(.system(size: 10, weight: .bold))
+                              Text("ISO \(Int(filmISO)) · \(topBarFlashSummary)")
+                                  .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                                  .lineLimit(1)
                                   .contentTransition(.numericText())
                           }
                           .foregroundStyle(Color.white)
-                          .padding(.horizontal, 11)
+                          .padding(.horizontal, 10)
                           .padding(.vertical, 6)
                           .background(.ultraThinMaterial, in: Capsule())
                           .overlay(Capsule().stroke(theme.accent.opacity(0.55), lineWidth: 1))
@@ -1635,30 +1750,25 @@ jobs:
                   }
               }
 
-              // MARK: - Tab 0: Harmoniously Proportioned Meter Tab (Separated EV & Frame Log Cards, Zero Middle Gap)
+              // MARK: - Tab 0: Harmoniously Proportioned Meter Tab
               private var meterMainTab: some View {
                   VStack(spacing: 0) {
-                      // 1. Top Flash Output Card (with integrated warning/status line so height is rock-solid)
                       flashOutputBannerCard
 
                       Spacer(minLength: 6)
 
-                      // 2. Proportioned 2x2 Parameter Lock & Readout Grid
                       parameterLockGridCard
 
                       Spacer(minLength: 6)
 
-                      // 3. Dedicated Full-Width Exposure Compensation Card (Separated for Easy Control)
                       dedicatedExposureCompensationCard
 
                       Spacer(minLength: 6)
 
-                      // 4. Dedicated Full-Width Quick Frame Logger Card (Separated for Easy Control)
                       dedicatedQuickFrameLoggerCard
 
                       Spacer(minLength: 6)
 
-                      // 5. Bottom Ergonomic Thumb-Zone Rotary Dial Card
                       rotaryDialBottomCard
                   }
               }
@@ -1762,7 +1872,6 @@ jobs:
                       }
                       .frame(height: 32)
 
-                      // Integrated Status / Voice / Warning Line (keeps card height stable)
                       HStack(spacing: 5) {
                           if feedback.isListening || !feedback.voiceStatusHint.isEmpty {
                               Image(systemName: feedback.isListening ? "waveform.circle.fill" : "checkmark.circle.fill")
@@ -1838,7 +1947,7 @@ jobs:
                   }
               }
 
-              // MARK: - Separated Card 1: Dedicated Full-Width Exposure Compensation Card
+              // MARK: - Separated Card 1: Exposure Compensation Card (Exact 0.2 EV Step, Lands Cleanly on 0.0 EV)
               private var dedicatedExposureCompensationCard: some View {
                   HStack(spacing: 8) {
                       HStack(spacing: 5) {
@@ -1851,11 +1960,11 @@ jobs:
                               .fixedSize()
                       }
 
-                      // -0.3 EV Fine Button
+                      // -0.2 EV Step Button
                       Button {
                           feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
                           withAnimation(.spring(response: 0.25, dampingFraction: 0.78)) {
-                              exposureCompEV = max(-2.0, round((exposureCompEV - 0.3) * 10.0) / 10.0)
+                              setExposureCompClean(exposureCompEV - 0.2)
                           }
                       } label: {
                           Image(systemName: "minus")
@@ -1865,15 +1974,15 @@ jobs:
                               .background(Color.white.opacity(0.12), in: Circle())
                       }
 
-                      // Wide Full-Width Slider
-                      Slider(value: $exposureCompEV, in: -2.0...2.0, step: 0.3)
+                      // Wide Slider with 0.2 EV Step (10 exact steps on each side of 0.0 EV)
+                      Slider(value: $exposureCompEV, in: -2.0...2.0, step: 0.2)
                           .tint(theme.accent)
 
-                      // +0.3 EV Fine Button
+                      // +0.2 EV Step Button
                       Button {
                           feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
                           withAnimation(.spring(response: 0.25, dampingFraction: 0.78)) {
-                              exposureCompEV = min(2.0, round((exposureCompEV + 0.3) * 10.0) / 10.0)
+                              setExposureCompClean(exposureCompEV + 0.2)
                           }
                       } label: {
                           Image(systemName: "plus")
@@ -1883,17 +1992,17 @@ jobs:
                               .background(Color.white.opacity(0.12), in: Circle())
                       }
 
-                      // Tap Readout to Reset to 0.0 EV
+                      // Tap Readout Pill to Reset to Exact 0.0 EV
                       Button {
                           feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
                           withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
                               exposureCompEV = 0.0
                           }
                       } label: {
-                          Text(String(format: "%+.1f EV", exposureCompEV))
+                          Text(abs(exposureCompEV) < 0.05 ? "0.0 EV" : String(format: "%+.1f EV", exposureCompEV))
                               .font(.system(size: 11, weight: .black, design: .monospaced))
-                              .foregroundStyle(abs(exposureCompEV) < 0.05 ? Color.white.opacity(0.85) : Color.black)
-                              .frame(width: 58, height: 28)
+                              .foregroundStyle(abs(exposureCompEV) < 0.05 ? Color.white.opacity(0.88) : Color.black)
+                              .frame(width: 60, height: 28)
                               .background(abs(exposureCompEV) < 0.05 ? Color.white.opacity(0.12) : theme.accent, in: Capsule())
                       }
                   }
@@ -1919,7 +2028,6 @@ jobs:
                               .fixedSize()
                       }
 
-                      // Previous Frame Button
                       Button {
                           feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
                           withAnimation(.spring(response: 0.25, dampingFraction: 0.78)) {
@@ -1939,7 +2047,6 @@ jobs:
                           .contentTransition(.numericText())
                           .frame(width: 68)
 
-                      // Next Frame Button
                       Button {
                           feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
                           withAnimation(.spring(response: 0.25, dampingFraction: 0.78)) {
@@ -1955,7 +2062,6 @@ jobs:
 
                       Spacer(minLength: 4)
 
-                      // Prominent One-Tap Record Frame Button
                       Button {
                           recordCurrentFrameToLog()
                       } label: {
@@ -1989,7 +2095,7 @@ jobs:
                   )
               }
 
-              // MARK: - Bottom Ergonomic Thumb-Zone Rotary Dial Card (4 Shooting Parameters)
+              // MARK: - Bottom Ergonomic Thumb-Zone Rotary Dial Card
               private var rotaryDialBottomCard: some View {
                   VStack(spacing: 7) {
                       Picker("调节项", selection: $selectedParameter) {
@@ -2341,17 +2447,18 @@ jobs:
 
                       Divider().background(Color.white.opacity(0.15))
 
+                      // 0.2 EV Step Slider on Modifiers Page as well
                       HStack(spacing: 8) {
                           Text(lang == .en ? "Exp Comp" : "曝光补偿")
                               .font(.system(size: 11, weight: .semibold))
                               .foregroundStyle(Color.white.opacity(0.85))
                               .frame(width: 64, alignment: .leading)
-                          Slider(value: $exposureCompEV, in: -2.0...2.0, step: 0.3)
+                          Slider(value: $exposureCompEV, in: -2.0...2.0, step: 0.2)
                               .tint(theme.accent)
-                          Text(String(format: "%+.1f EV", exposureCompEV))
+                          Text(abs(exposureCompEV) < 0.05 ? "0.0 EV" : String(format: "%+.1f EV", exposureCompEV))
                               .font(.system(size: 11, weight: .bold, design: .monospaced))
                               .foregroundStyle(theme.accent)
-                              .frame(width: 54, alignment: .trailing)
+                              .frame(width: 56, alignment: .trailing)
                       }
 
                       HStack(spacing: 8) {
@@ -2364,7 +2471,7 @@ jobs:
                           Text(String(format: "EV %.0f", ambientEV100))
                               .font(.system(size: 11, weight: .bold, design: .monospaced))
                               .foregroundStyle(theme.secondaryAccent)
-                              .frame(width: 54, alignment: .trailing)
+                              .frame(width: 56, alignment: .trailing)
                       }
                   }
                   .padding(14)
@@ -2523,9 +2630,9 @@ jobs:
                   )
               }
 
-              // MARK: - Tab 2: Settings (Film ISO, Flash GN, Language, Theme & Voice)
+              // MARK: - Tab 2: Settings (Flash Model Catalog + Custom GN + Film ISO + Language + Theme + Voice)
               private var settingsTab: some View {
-                  VStack(spacing: 10) {
+                  VStack(spacing: 9) {
                       gearAndLanguageSettingsCard
                       themeSelectorCompactCard
                       voiceAndFeedbackSettingsCard
@@ -2534,97 +2641,162 @@ jobs:
               }
 
               private var gearAndLanguageSettingsCard: some View {
-                  VStack(alignment: .leading, spacing: 10) {
+                  VStack(alignment: .leading, spacing: 9) {
                       HStack {
-                          Label(lang == .en ? "Film ISO, Flash GN & Language" : "胶卷 ISO · 闪光灯 GN · 语言设置", systemImage: "gearshape.2.fill")
-                              .font(.system(size: 13, weight: .bold))
+                          Label(lang == .en ? "Flash Model, Custom GN & Film ISO" : "闪光灯型号 · 自定义 GN · 胶卷与语言", systemImage: "gearshape.2.fill")
+                              .font(.system(size: 12.5, weight: .bold))
                               .foregroundStyle(Color.white)
                           Spacer()
                       }
 
+                      // 1. Categorized Flash Model Selector (Godox, Contax, Canon, Nikon, Leica/Fuji, Custom)
                       HStack {
-                          Label(lang == .en ? "Language / 语言" : "界面与语音语言", systemImage: "globe")
+                          Label(lang == .en ? "Flash Model" : "闪光灯型号", systemImage: "bolt.fill")
                               .font(.system(size: 12, weight: .semibold))
                               .foregroundStyle(Color.white)
                           Spacer()
                           Menu {
-                              ForEach(AppLanguage.allCases) { l in
-                                  Button {
-                                      feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-                                      withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
-                                          langRaw = l.rawValue
-                                          feedback.refreshVoiceQualityStatus(persona: voicePersona, lang: l)
-                                      }
-                                  } label: {
-                                      HStack {
-                                          Text(l.displayName)
-                                          if langRaw == l.rawValue {
-                                              Image(systemName: "checkmark")
+                              ForEach([FlashBrandCategory.godox, .contax, .canon, .nikon, .leicaFuji, .custom]) { brandCat in
+                                  Section(header: Text(brandCat.title(for: lang))) {
+                                      ForEach(FlashUnitModel.catalog.filter { $0.brand == brandCat }) { model in
+                                          Button {
+                                              feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true)
+                                              withAnimation(.spring(response: 0.3, dampingFraction: 0.76)) {
+                                                  selectedFlashID = model.id
+                                                  if model.id != "custom" {
+                                                      flashGN = model.gnAtISO100
+                                                  }
+                                                  if lockPower { solveForLockedPower(changed: .flashPower) }
+                                                  WidgetCenter.shared.reloadAllTimelines()
+                                              }
+                                          } label: {
+                                              HStack {
+                                                  Text(model.displayName(for: lang))
+                                                  if selectedFlashID == model.id {
+                                                      Image(systemName: "checkmark")
+                                                  }
+                                              }
                                           }
                                       }
                                   }
                               }
                           } label: {
-                              dropdownCapsuleLabel(text: lang.displayName)
+                              dropdownCapsuleLabel(
+                                  text: selectedFlashID == "custom"
+                                      ? (lang == .en ? "Custom (GN\(Int(flashGN)))" : "自定义 (GN\(Int(flashGN)))")
+                                      : "\(selectedFlashModel.shortBadge) (GN\(Int(flashGN)))"
+                              )
                           }
                       }
 
-                      HStack {
-                          Label(lang == .en ? "Film Roll ISO" : "胶卷感光度 (Film ISO)", systemImage: "film.fill")
-                              .font(.system(size: 12, weight: .semibold))
-                              .foregroundStyle(Color.white)
-                          Spacer()
-                          Menu {
-                              ForEach(isoSteps, id: \.self) { isoVal in
-                                  Button {
-                                      feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true)
-                                      withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                          filmISO = isoVal
-                                          if lockPower { solveForLockedPower(changed: .flashPower) }
-                                          WidgetCenter.shared.reloadAllTimelines()
-                                      }
-                                  } label: {
-                                      HStack {
+                      // 2. Direct Custom GN Fine Adjustment Row (-1 / Slider / +1 -> Automatically marks as Custom if modified)
+                      HStack(spacing: 8) {
+                          Text(lang == .en ? "Custom GN (ISO100·m)" : "自定义 GN 值 (米)")
+                              .font(.system(size: 11.5, weight: .semibold))
+                              .foregroundStyle(Color.white.opacity(0.88))
+                              .fixedSize()
+
+                          Button {
+                              feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+                              withAnimation(.spring(response: 0.25, dampingFraction: 0.78)) {
+                                  flashGN = max(5.0, flashGN - 1.0)
+                                  selectedFlashID = "custom"
+                                  if lockPower { solveForLockedPower(changed: .flashPower) }
+                                  WidgetCenter.shared.reloadAllTimelines()
+                              }
+                          } label: {
+                              Image(systemName: "minus")
+                                  .font(.system(size: 10, weight: .black))
+                                  .foregroundStyle(Color.white)
+                                  .frame(width: 26, height: 26)
+                                  .background(Color.white.opacity(0.12), in: Circle())
+                          }
+
+                          Slider(
+                              value: Binding(
+                                  get: { flashGN },
+                                  set: { newVal in
+                                      flashGN = round(newVal)
+                                      selectedFlashID = "custom"
+                                      if lockPower { solveForLockedPower(changed: .flashPower) }
+                                  }
+                              ),
+                              in: 8...64,
+                              step: 1
+                          )
+                          .tint(theme.accent)
+
+                          Button {
+                              feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+                              withAnimation(.spring(response: 0.25, dampingFraction: 0.78)) {
+                                  flashGN = min(80.0, flashGN + 1.0)
+                                  selectedFlashID = "custom"
+                                  if lockPower { solveForLockedPower(changed: .flashPower) }
+                                  WidgetCenter.shared.reloadAllTimelines()
+                              }
+                          } label: {
+                              Image(systemName: "plus")
+                                  .font(.system(size: 10, weight: .black))
+                                  .foregroundStyle(Color.white)
+                                  .frame(width: 26, height: 26)
+                                  .background(Color.white.opacity(0.12), in: Circle())
+                          }
+
+                          Text("GN \(Int(flashGN))")
+                              .font(.system(size: 11, weight: .black, design: .monospaced))
+                              .foregroundStyle(theme.accent)
+                              .frame(width: 48, alignment: .trailing)
+                      }
+
+                      // 3. Film ISO & Language in One Row
+                      HStack(spacing: 10) {
+                          HStack {
+                              Text("ISO")
+                                  .font(.system(size: 11.5, weight: .semibold))
+                                  .foregroundStyle(Color.white.opacity(0.88))
+                              Spacer()
+                              Menu {
+                                  ForEach(isoSteps, id: \.self) { isoVal in
+                                      Button {
+                                          feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true)
+                                          withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                              filmISO = isoVal
+                                              if lockPower { solveForLockedPower(changed: .flashPower) }
+                                              WidgetCenter.shared.reloadAllTimelines()
+                                          }
+                                      } label: {
                                           Text("ISO \(Int(isoVal))")
-                                          if abs(filmISO - isoVal) < 1 {
-                                              Image(systemName: "checkmark")
-                                          }
                                       }
                                   }
+                              } label: {
+                                  dropdownCapsuleLabel(text: "ISO \(Int(filmISO))")
                               }
-                          } label: {
-                              dropdownCapsuleLabel(text: "ISO \(Int(filmISO))")
+                          }
+
+                          HStack {
+                              Text(lang == .en ? "Lang" : "语言")
+                                  .font(.system(size: 11.5, weight: .semibold))
+                                  .foregroundStyle(Color.white.opacity(0.88))
+                              Spacer()
+                              Menu {
+                                  ForEach(AppLanguage.allCases) { l in
+                                      Button {
+                                          feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+                                          withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+                                              langRaw = l.rawValue
+                                              feedback.refreshVoiceQualityStatus(persona: voicePersona, lang: l)
+                                          }
+                                      } label: {
+                                          Text(l.displayName)
+                                      }
+                                  }
+                              } label: {
+                                  dropdownCapsuleLabel(text: lang.displayName)
+                              }
                           }
                       }
 
-                      HStack {
-                          Label(lang == .en ? "Flash Guide Number (GN)" : "闪光灯指数 (GN @ ISO100)", systemImage: "bolt.fill")
-                              .font(.system(size: 12, weight: .semibold))
-                              .foregroundStyle(Color.white)
-                          Spacer()
-                          Menu {
-                              ForEach(gnSteps, id: \.self) { gnVal in
-                                  Button {
-                                      feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true)
-                                      withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                          flashGN = gnVal
-                                          if lockPower { solveForLockedPower(changed: .flashPower) }
-                                          WidgetCenter.shared.reloadAllTimelines()
-                                      }
-                                  } label: {
-                                      HStack {
-                                          Text("GN \(Int(gnVal))")
-                                          if abs(flashGN - gnVal) < 0.5 {
-                                              Image(systemName: "checkmark")
-                                          }
-                                      }
-                                  }
-                              }
-                          } label: {
-                              dropdownCapsuleLabel(text: "GN \(Int(flashGN))")
-                          }
-                      }
-
+                      // 4. Max Lens Aperture & Max Sync Speed in One Row
                       HStack(spacing: 10) {
                           HStack {
                               Text(lang == .en ? "Max f/" : "最大光圈")
@@ -2670,7 +2842,7 @@ jobs:
                           }
                       }
                   }
-                  .padding(14)
+                  .padding(13)
                   .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                   .overlay(
                       RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -2683,6 +2855,7 @@ jobs:
                       Text(text)
                           .font(.system(size: 11, weight: .bold, design: .monospaced))
                           .foregroundStyle(Color.white)
+                          .lineLimit(1)
                           .contentTransition(.numericText())
                       Image(systemName: "chevron.up.chevron.down")
                           .font(.system(size: 9, weight: .bold))
@@ -2719,11 +2892,11 @@ jobs:
                                       ZStack {
                                           Circle()
                                               .fill(LinearGradient(colors: item.backgroundGradient, startPoint: .topLeading, endPoint: .bottomTrailing))
-                                              .frame(width: 34, height: 34)
+                                              .frame(width: 32, height: 32)
                                               .overlay(Circle().stroke(item.accent, lineWidth: isCur ? 2.0 : 1.0))
                                           Image(systemName: item.icon)
                                               .foregroundStyle(item.accent)
-                                              .font(.system(size: 14, weight: .bold))
+                                              .font(.system(size: 13, weight: .bold))
                                       }
                                       Text(item.name(for: lang))
                                           .font(.system(size: 10, weight: .bold))
@@ -2732,14 +2905,14 @@ jobs:
                                           .minimumScaleFactor(0.75)
                                   }
                                   .frame(maxWidth: .infinity)
-                                  .padding(.vertical, 9)
+                                  .padding(.vertical, 8)
                                   .background(isCur ? theme.accent : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                   .scaleEffect(isCur ? 1.02 : 0.98)
                               }
                           }
                       }
                   }
-                  .padding(14)
+                  .padding(13)
                   .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                   .overlay(
                       RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -2748,7 +2921,7 @@ jobs:
               }
 
               private var voiceAndFeedbackSettingsCard: some View {
-                  VStack(alignment: .leading, spacing: 10) {
+                  VStack(alignment: .leading, spacing: 9) {
                       HStack {
                           VStack(alignment: .leading, spacing: 1) {
                               Label(lang == .en ? "Voice Persona" : "语音播报音色", systemImage: "waveform.and.mic")
@@ -2809,16 +2982,16 @@ jobs:
                       } label: {
                           HStack {
                               Image(systemName: "sparkles.rectangle.stack")
-                              Text(lang == .en ? "Open Quick Setup Wizard" : "打开首次快速设定向导")
+                              Text(lang == .en ? "Open Flash & ISO Setup Wizard" : "打开首次胶卷与闪光灯设定向导")
                                   .font(.system(size: 11.5, weight: .bold))
                           }
                           .foregroundStyle(Color.black)
                           .frame(maxWidth: .infinity)
-                          .padding(.vertical, 9)
+                          .padding(.vertical, 8.5)
                           .background(theme.accent, in: RoundedRectangle(cornerRadius: 12))
                       }
                   }
-                  .padding(14)
+                  .padding(13)
                   .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                   .overlay(
                       RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -2826,27 +2999,25 @@ jobs:
                   )
               }
 
-              // MARK: - Apple Music iOS 26 Style 3D Liquid-Glass Bottom Bar (Matches Reference Image f44034cc.jpeg)
+              // MARK: - Pure Crystal 3D Liquid-Glass Bottom Bar (Zero Pink Reflection in Top-Left!)
               private var appleMusicLiquidGlassBottomBar: some View {
                   ZStack {
-                      // 1. Outer 3D Frosted Liquid-Glass Capsule Dock
                       Capsule()
                           .fill(.ultraThinMaterial)
                           .overlay(
-                              // Two-Tone Glass Refraction Body (Bright Upper Half + Translucent Lower Half like Apple Music Bar)
                               VStack(spacing: 0) {
                                   LinearGradient(
                                       colors: [
-                                          Color.white.opacity(0.28),
-                                          Color.white.opacity(0.10)
+                                          Color.white.opacity(0.26),
+                                          Color.white.opacity(0.08)
                                       ],
                                       startPoint: .top,
                                       endPoint: .bottom
                                   )
                                   LinearGradient(
                                       colors: [
-                                          theme.accent.opacity(0.12),
-                                          Color.black.opacity(0.18)
+                                          Color.white.opacity(0.04),
+                                          Color.black.opacity(0.20)
                                       ],
                                       startPoint: .top,
                                       endPoint: .bottom
@@ -2855,45 +3026,43 @@ jobs:
                               .clipShape(Capsule())
                           )
                           .overlay(
-                              // Top Specular Tube Reflection Bar (Bright Horizontal Gloss Tube along Top Rim)
+                              // Top Crystal Specular Tube Reflection Bar
                               VStack {
                                   Capsule()
                                       .fill(
                                           LinearGradient(
                                               colors: [
-                                                  Color.white.opacity(0.75),
-                                                  Color.white.opacity(0.15)
+                                                  Color.white.opacity(0.72),
+                                                  Color.white.opacity(0.12)
                                               ],
                                               startPoint: .top,
                                               endPoint: .bottom
                                           )
                                       )
-                                      .frame(height: 5)
+                                      .frame(height: 4.5)
                                       .padding(.horizontal, 26)
                                       .padding(.top, 3.5)
                                   Spacer()
                               }
                           )
                           .overlay(
-                              // Outer Specular Rim Border
                               Capsule()
                                   .stroke(
                                       LinearGradient(
                                           colors: [
-                                              Color.white.opacity(0.82),
-                                              theme.accent.opacity(0.42),
-                                              Color.white.opacity(0.25),
-                                              Color.white.opacity(0.55)
+                                              Color.white.opacity(0.80),
+                                              Color.white.opacity(0.28),
+                                              Color.white.opacity(0.18),
+                                              Color.white.opacity(0.50)
                                           ],
                                           startPoint: .topLeading,
                                           endPoint: .bottomTrailing
                                       ),
-                                      lineWidth: 1.5
+                                      lineWidth: 1.4
                                   )
                           )
                           .shadow(color: Color.black.opacity(0.45), radius: 18, x: 0, y: 8)
 
-                      // 2. Three Vertical-Stack Tab Items (Icon on Top + Label Below) with 3D Liquid-Glass Lens Bubble
                       HStack(spacing: 6) {
                           appleMusicLiquidTabButton(index: 0, title: "Meter", icon: "dial.medium.fill")
                           appleMusicLiquidTabButton(index: 1, title: "Modifiers", icon: "camera.filters")
@@ -2908,7 +3077,7 @@ jobs:
               private func appleMusicLiquidTabButton(index: Int, title: String, icon: String) -> some View {
                   let isSelected = (selectedTab == index)
                   let activeColor: Color = theme.accent
-                  let inactiveColor: Color = Color.white.opacity(0.78)
+                  let inactiveColor: Color = Color.white.opacity(0.76)
 
                   return Button {
                       feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
@@ -2918,74 +3087,70 @@ jobs:
                   } label: {
                       ZStack {
                           if isSelected {
-                              // Plump 3D Convex Liquid-Glass Droplet Bubble (Matches "New" Bubble in Apple Music Photo)
+                              // Pure Crystal-Clear 3D Convex Liquid-Glass Droplet Bubble (NO Pink Reflection!)
                               ZStack {
-                                  // Base Refractive Glass Lens Fill
                                   Capsule()
                                       .fill(.thinMaterial)
 
-                                  // Inner Convex Dome Gloss & Theme Tint Refraction
+                                  // Pure Optical Glass Refraction (Crystal White & Subtle Silver-Glass Sheen)
                                   Capsule()
                                       .fill(
                                           LinearGradient(
                                               colors: [
-                                                  Color.white.opacity(0.52),
-                                                  theme.accent.opacity(0.26),
-                                                  Color.white.opacity(0.08),
-                                                  theme.secondaryAccent.opacity(0.28)
+                                                  Color.white.opacity(0.48),
+                                                  Color.white.opacity(0.16),
+                                                  Color.white.opacity(0.05),
+                                                  Color.white.opacity(0.22)
                                               ],
                                               startPoint: .top,
                                               endPoint: .bottom
                                           )
                                       )
 
-                                  // Top Curved Specular Dome Highlight (Liquid Water Droplet Sheen)
+                                  // Top Curved Specular Water-Droplet Dome Highlight
                                   VStack {
                                       Capsule()
                                           .fill(
                                               LinearGradient(
                                                   colors: [
-                                                      Color.white.opacity(0.92),
-                                                      Color.white.opacity(0.18)
+                                                      Color.white.opacity(0.90),
+                                                      Color.white.opacity(0.14)
                                                   ],
                                                   startPoint: .top,
                                                   endPoint: .bottom
                                               )
                                           )
-                                          .frame(height: 14)
+                                          .frame(height: 13)
                                           .padding(.horizontal, 12)
                                           .padding(.top, 3)
                                       Spacer()
                                   }
 
-                                  // Prismatic Iridescent Chromatic Rim Border (Cyan / Magenta / Amber / White Specular Refraction)
+                                  // Pure Crystal Specular Rim Border (Zero Pink — Only Crystal White & Silver-Ice)
                                   Capsule()
                                       .stroke(
-                                          AngularGradient(
+                                          LinearGradient(
                                               colors: [
                                                   Color.white.opacity(0.95),
-                                                  Color.cyan.opacity(0.85),
-                                                  theme.accent.opacity(0.90),
-                                                  Color.pink.opacity(0.85),
-                                                  Color.yellow.opacity(0.80),
-                                                  Color.white.opacity(0.95)
+                                                  Color.white.opacity(0.42),
+                                                  Color.white.opacity(0.25),
+                                                  Color.white.opacity(0.78)
                                               ],
-                                              center: .center
+                                              startPoint: .top,
+                                              endPoint: .bottom
                                           ),
-                                          lineWidth: 2.0
+                                          lineWidth: 1.8
                                       )
 
-                                  // Inner White Rim Glow
                                   Capsule()
                                       .inset(by: 1.5)
-                                      .stroke(Color.white.opacity(0.65), lineWidth: 0.9)
+                                      .stroke(Color.white.opacity(0.55), lineWidth: 0.8)
                               }
-                              .shadow(color: theme.accent.opacity(0.45), radius: 10, x: 0, y: 4)
-                              .shadow(color: Color.white.opacity(0.28), radius: 4, x: 0, y: -1)
+                              .shadow(color: Color.black.opacity(0.32), radius: 8, x: 0, y: 4)
+                              .shadow(color: Color.white.opacity(0.22), radius: 3, x: 0, y: -1)
                               .matchedGeometryEffect(id: "ActiveLiquidGlassBubble", in: glassTabNamespace)
                           }
 
-                          // Vertical Icon + Text Stack (Just like Apple Music Tab Bar)
                           VStack(spacing: 3) {
                               Image(systemName: icon)
                                   .font(.system(size: isSelected ? 20 : 18, weight: .bold))
@@ -2995,7 +3160,6 @@ jobs:
                                   .lineLimit(1)
                           }
                           .foregroundStyle(isSelected ? activeColor : inactiveColor)
-                          .shadow(color: isSelected ? theme.accent.opacity(0.35) : Color.clear, radius: 4, x: 0, y: 1)
                           .padding(.vertical, 7)
                           .frame(maxWidth: .infinity)
                       }
@@ -3173,10 +3337,11 @@ jobs:
               }
           }
 
-          // MARK: - First-Launch Onboarding Sheet
+          // MARK: - First-Launch Onboarding Sheet (With Full Brand Flash Model Picker & Custom GN)
           struct OnboardingSetupSheet: View {
               @Binding var filmISO: Double
               @Binding var flashGN: Double
+              @Binding var selectedFlashID: String
               @Binding var maxLensAperture: Double
               @Binding var maxSyncSpeed: Int
               @Binding var aperture: Double
@@ -3186,16 +3351,21 @@ jobs:
               let theme: AppTheme
 
               @Environment(\.dismiss) private var dismiss
+              @State private var selectedBrandFilter: FlashBrandCategory = .godox
 
               private let isoPresets: [Double] = [100, 160, 200, 400, 800, 1600]
-              private let gnOptions: [PresetOption] = [
-                  PresetOption("gn16", zh: "小闪光灯 GN16", en: "Mini Flash GN16", value: 16),
-                  PresetOption("gn28", zh: "便携灯 GN28", en: "Compact GN28", value: 28),
-                  PresetOption("gn36", zh: "标准灯 GN36", en: "Standard GN36", value: 36),
-                  PresetOption("gn58", zh: "专业机顶灯 GN58", en: "Pro Speedlight GN58", value: 58)
-              ]
               private let maxAperturePresets: [Double] = [1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0]
               private let syncPresets: [Int] = [60, 125, 250, 500]
+
+              private var filteredFlashModels: [FlashUnitModel] {
+                  if selectedBrandFilter == .all {
+                      return FlashUnitModel.catalog.filter { $0.id != "custom" }
+                  }
+                  if selectedBrandFilter == .custom {
+                      return FlashUnitModel.catalog.filter { $0.id == "custom" }
+                  }
+                  return FlashUnitModel.catalog.filter { $0.brand == selectedBrandFilter }
+              }
 
               var body: some View {
                   ZStack {
@@ -3203,7 +3373,7 @@ jobs:
                           .ignoresSafeArea()
 
                       ScrollView {
-                          VStack(alignment: .leading, spacing: 16) {
+                          VStack(alignment: .leading, spacing: 15) {
                               HStack(spacing: 12) {
                                   Image(systemName: "bolt.circle.fill")
                                       .font(.system(size: 34))
@@ -3212,8 +3382,8 @@ jobs:
                                       Text(lang == .en ? "Welcome to LumiFilm" : "欢迎使用 LumiFilm")
                                           .font(.system(size: 20, weight: .black, design: .rounded))
                                           .foregroundStyle(Color.white)
-                                      Text(lang == .en ? "Set your film ISO, lens max aperture & flash GN" : "首次胶卷、镜头最大光圈与闪光灯预设（自动记忆）")
-                                          .font(.system(size: 11))
+                                      Text(lang == .en ? "Select your Film ISO, Lens & Flash Model (or Custom GN)" : "首次设定胶卷 ISO、镜头最大光圈与闪光灯型号（随时可在 Settings 修改）")
+                                          .font(.system(size: 10.5))
                                           .foregroundStyle(Color.white.opacity(0.72))
                                   }
                               }
@@ -3221,7 +3391,7 @@ jobs:
 
                               isoSetupCard
                               apertureLimitSetupCard
-                              gnAndSyncSetupCard
+                              flashCatalogAndCustomGNCard
                               themeSetupCard
 
                               Button {
@@ -3308,10 +3478,10 @@ jobs:
                   .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
               }
 
-              private var gnAndSyncSetupCard: some View {
+              private var flashCatalogAndCustomGNCard: some View {
                   VStack(alignment: .leading, spacing: 10) {
                       HStack {
-                          Text(lang == .en ? "3. Flash Guide Number (GN @ ISO 100, m)" : "3. 闪光灯指数 GN (ISO 100 · 米)")
+                          Text(lang == .en ? "3. Select Flash Model or Custom GN" : "3. 选择闪光灯型号 或 自定义 GN")
                               .font(.system(size: 13, weight: .bold))
                               .foregroundStyle(Color.white)
                           Spacer()
@@ -3320,21 +3490,114 @@ jobs:
                               .foregroundStyle(theme.accent)
                       }
 
-                      LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                          ForEach(gnOptions) { preset in
-                              let isSel = abs(flashGN - preset.value) < 1
-                              Button {
-                                  withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
-                                      flashGN = preset.value
+                      // Brand Filter Tabs (神牛 Godox / Contax / 佳能 Canon / 尼康 Nikon / 徕卡富士 / 自定义)
+                      ScrollView(.horizontal, showsIndicators: false) {
+                          HStack(spacing: 6) {
+                              ForEach([FlashBrandCategory.godox, .contax, .canon, .nikon, .leicaFuji, .all, .custom]) { cat in
+                                  let isCatSel = (selectedBrandFilter == cat)
+                                  Button {
+                                      withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+                                          selectedBrandFilter = cat
+                                          if cat == .custom {
+                                              selectedFlashID = "custom"
+                                          }
+                                      }
+                                  } label: {
+                                      Text(cat.title(for: lang))
+                                          .font(.system(size: 11, weight: .bold))
+                                          .foregroundStyle(isCatSel ? Color.black : Color.white)
+                                          .padding(.horizontal, 10)
+                                          .padding(.vertical, 6)
+                                          .background(isCatSel ? theme.accent : Color.white.opacity(0.12), in: Capsule())
                                   }
-                              } label: {
-                                  Text(preset.title(for: lang))
-                                      .font(.system(size: 11, weight: .bold))
-                                      .foregroundStyle(isSel ? Color.black : Color.white)
-                                      .frame(maxWidth: .infinity)
-                                      .padding(.vertical, 8)
-                                      .background(isSel ? theme.accent : Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
                               }
+                          }
+                      }
+
+                      // Flash Model Selection List for Selected Brand
+                      if selectedBrandFilter != .custom {
+                          VStack(spacing: 6) {
+                              ForEach(filteredFlashModels) { model in
+                                  let isModelSel = (selectedFlashID == model.id)
+                                  Button {
+                                      withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+                                          selectedFlashID = model.id
+                                          flashGN = model.gnAtISO100
+                                      }
+                                  } label: {
+                                      HStack {
+                                          Text(lang == .en ? model.nameEn : model.nameZh)
+                                              .font(.system(size: 12, weight: .semibold))
+                                              .foregroundStyle(isModelSel ? Color.black : Color.white)
+                                              .lineLimit(1)
+                                          Spacer()
+                                          Text("GN \(Int(model.gnAtISO100))")
+                                              .font(.system(size: 11, weight: .black, design: .monospaced))
+                                              .foregroundStyle(isModelSel ? Color.black : theme.accent)
+                                          Image(systemName: isModelSel ? "checkmark.circle.fill" : "circle")
+                                              .font(.system(size: 14))
+                                              .foregroundStyle(isModelSel ? Color.black : Color.white.opacity(0.4))
+                                      }
+                                      .padding(.horizontal, 12)
+                                      .padding(.vertical, 9)
+                                      .background(isModelSel ? theme.accent : Color.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 11))
+                                  }
+                              }
+                          }
+                      }
+
+                      Divider().background(Color.white.opacity(0.15))
+
+                      // Custom GN Direct Slider & Stepper (Always Accessible)
+                      VStack(alignment: .leading, spacing: 6) {
+                          HStack {
+                              Text(lang == .en ? "Custom GN Fine Adjust (ISO 100 · m)" : "手动微调 / 自定义闪光灯 GN 值 (米)")
+                                  .font(.system(size: 11.5, weight: .semibold))
+                                  .foregroundStyle(Color.white.opacity(0.85))
+                              Spacer()
+                              if selectedFlashID == "custom" {
+                                  Text(lang == .en ? "Custom Active" : "当前：用户自定义")
+                                      .font(.system(size: 10, weight: .bold))
+                                      .foregroundStyle(theme.accent)
+                              }
+                          }
+
+                          HStack(spacing: 10) {
+                              Button {
+                                  flashGN = max(5.0, flashGN - 1.0)
+                                  selectedFlashID = "custom"
+                              } label: {
+                                  Image(systemName: "minus.circle.fill")
+                                      .font(.system(size: 22))
+                                      .foregroundStyle(theme.accent)
+                              }
+
+                              Slider(
+                                  value: Binding(
+                                      get: { flashGN },
+                                      set: { newVal in
+                                          flashGN = round(newVal)
+                                          selectedFlashID = "custom"
+                                      }
+                                  ),
+                                  in: 8...64,
+                                  step: 1
+                              )
+                              .tint(theme.accent)
+
+                              Button {
+                                  flashGN = min(80.0, flashGN + 1.0)
+                                  selectedFlashID = "custom"
+                              } label: {
+                                  Image(systemName: "plus.circle.fill")
+                                      .font(.system(size: 22))
+                                      .foregroundStyle(theme.accent)
+                              }
+
+                              Text("GN \(Int(flashGN))")
+                                  .font(.system(size: 13, weight: .black, design: .monospaced))
+                                  .foregroundStyle(Color.white)
+                                  .frame(width: 54, alignment: .trailing)
                           }
                       }
 
@@ -3420,13 +3683,13 @@ jobs:
           echo "Found built app at: $APP_PATH"
 
           # Ensure Main App Info.plist has valid non-empty Bundle Version strings (fixes Sideloadly IXErrorDomain Code=17)
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.1.0" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.1.0" "$APP_PATH/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 81" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 81" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.2.0" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.2.0" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 82" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 82" "$APP_PATH/Info.plist"
 
           # Ensure Embedded Widget Extension Info.plist also has valid non-empty Bundle Version strings
           if [ -d "$APP_PATH/PlugIns/LumiFilmWidget.appex" ]; then
-            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.1.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.1.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
-            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 81" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 81" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.2.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.2.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 82" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 82" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
           fi
 
           mkdir -p Payload
