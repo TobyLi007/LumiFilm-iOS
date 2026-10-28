@@ -1,4 +1,4 @@
-name: Build LumiFilm v6.0 Native iOS IPA (Single Speak + Lens Limit + 0.5m Magnet + Multi-Lock + Apple Music Glass Tabs)
+name: Build LumiFilm v6.1 Native iOS IPA (Zero-Jitter Fixed Layout + Single Speak + Lens Limit + 0.5m Magnet + Multi-Lock)
 
 on:
   push:
@@ -164,8 +164,8 @@ jobs:
                 path: LumiFilm/Info.plist
                 properties:
                   CFBundleDisplayName: LumiFilm
-                  CFBundleShortVersionString: "6.0.0"
-                  CFBundleVersion: "60"
+                  CFBundleShortVersionString: "6.1.0"
+                  CFBundleVersion: "61"
                   UILaunchScreen: {}
                   UISupportedInterfaceOrientations:
                     - UIInterfaceOrientationPortrait
@@ -175,8 +175,8 @@ jobs:
                 base:
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app
                   ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-                  MARKETING_VERSION: "6.0.0"
-                  CURRENT_PROJECT_VERSION: "60"
+                  MARKETING_VERSION: "6.1.0"
+                  CURRENT_PROJECT_VERSION: "61"
                   CODE_SIGN_IDENTITY: ""
                   CODE_SIGNING_REQUIRED: NO
                   CODE_SIGNING_ALLOWED: NO
@@ -194,15 +194,15 @@ jobs:
                 path: LumiFilmWidget/Info.plist
                 properties:
                   CFBundleDisplayName: LumiFilm Widget
-                  CFBundleShortVersionString: "6.0.0"
-                  CFBundleVersion: "60"
+                  CFBundleShortVersionString: "6.1.0"
+                  CFBundleVersion: "61"
                   NSExtension:
                     NSExtensionPointIdentifier: com.apple.widgetkit-extension
               settings:
                 base:
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.exposure.app.widget
-                  MARKETING_VERSION: "6.0.0"
-                  CURRENT_PROJECT_VERSION: "60"
+                  MARKETING_VERSION: "6.1.0"
+                  CURRENT_PROJECT_VERSION: "61"
                   CODE_SIGN_IDENTITY: ""
                   CODE_SIGNING_REQUIRED: NO
                   CODE_SIGNING_ALLOWED: NO
@@ -542,7 +542,7 @@ jobs:
                   if isPowerLocked {
                       // 1. Priority 1: Adjust Shutter Speed (if unlocked) to avoid HSS power loss and match ambient scene
                       if !isShutterLocked && changed != .shutter {
-                          let targetEV = ambientSceneEV + 1.0 // -1.0 EV background bias
+                          let targetEV = ambientSceneEV + 1.0
                           let isoStops = log2(Double(iso) / 100.0)
                           let idealDenom = pow(2.0, targetEV + isoStops) / pow(aperture, 2.0)
                           let safeCandidates = shutterSteps.filter { $0 <= maxSyncDenom }
@@ -632,7 +632,7 @@ jobs:
                       if neededStopsRaw <= 0.15 {
                           if lang == "en" {
                               warnTitle = "⚠️ Insufficient Flash Power (-\(deficitStr) EV)"
-                              warnAdvice = "Suggestion: Unlock & increase flash power to \(suggestedPowerStr), or move closer to \(String(format: "%.1f", snappedSugDist))m (Lens limit: \(maxApStr))."
+                              warnAdvice = "Suggestion: Increase flash power to \(suggestedPowerStr), or move closer to \(String(format: "%.1f", snappedSugDist))m (Lens limit: \(maxApStr))."
                               fixLabel = "⚡ Boost to \(suggestedPowerStr)"
                           } else if lang == "ja" {
                               warnTitle = "⚠️ フラッシュ光量不足 (-\(deficitStr) EV)"
@@ -690,16 +690,13 @@ jobs:
               }
 
               func applyQuickFix(_ diag: ExposureDiagnostic) {
-                  let spec = activeFlashSpec
                   let fullEffGN = computeFullEffectiveGN(forShutter: shutterDenom)
                   let reqGN = aperture * distanceM
                   let neededStopsRaw = log2(max(pow(reqGN / fullEffGN, 2.0), 1e-6))
 
                   if neededStopsRaw <= 0.15 {
-                      // Increase or decrease flash power directly to match
                       powerStopOffset = diag.suggestedPowerStops
                   } else {
-                      // Boost power to 1/1 full and bring aperture/distance into range
                       powerStopOffset = 0.0
                       if !isApertureLocked {
                           aperture = lensMaxAperture
@@ -779,7 +776,7 @@ jobs:
           }
           EOF
 
-          # 4. Generate ContentView.swift
+          # 4. Generate ContentView.swift (With Fixed-Height Zero-Jitter Top Flash Output Bar & Stacked Summary Line)
           cat << 'EOF' > LumiFilm/ContentView.swift
           import SwiftUI
           import WidgetKit
@@ -829,6 +826,7 @@ jobs:
                                   Text("\(store.displayFlashTitle) (GN\(Int(store.activeGN))) · ISO \(store.iso) · Max \(maxApStr)")
                                       .font(.system(size: 11, weight: .medium, design: .monospaced))
                                       .foregroundStyle(.white.opacity(0.78))
+                                      .lineLimit(1)
                               }
                               Spacer()
 
@@ -849,7 +847,7 @@ jobs:
                               }
                           }
                           .padding(.horizontal, 16)
-                          .padding(.top, 8)
+                          .padding(.top, 6)
                           .padding(.bottom, 8)
 
                           // Main Tab Content with Glass Refraction Shimmer on Tab Switch
@@ -947,11 +945,9 @@ jobs:
                       .padding(.horizontal, 8)
                       .background {
                           ZStack {
-                              // Standalone Translucent Frosted Glass Pill
                               Capsule(style: .continuous)
                                   .fill(.ultraThinMaterial)
 
-                              // Active Apple Music Liquid Glass Morphing Highlight
                               if isSelected {
                                   Capsule(style: .continuous)
                                       .fill(
@@ -993,51 +989,84 @@ jobs:
               @ViewBuilder
               private func meterTabView(theme: LumiTheme, diag: ExposureDiagnostic) -> some View {
                   ScrollView(showsIndicators: false) {
-                      VStack(spacing: 11) {
-                          // Top Flash Output Callout + Feature 1 Single-Play / Tap-to-Cancel Speak Button
-                          HStack {
-                              VStack(alignment: .leading, spacing: 4) {
+                      VStack(spacing: 10) {
+                          // ZERO-JITTER FIXED-HEIGHT FLASH POWER OUTPUT BANNER
+                          // Power value and parameter summary are stacked on dedicated single-line rows so they NEVER wrap or jump!
+                          HStack(alignment: .center, spacing: 12) {
+                              VStack(alignment: .leading, spacing: 3) {
+                                  // Row 1: Fixed-height Header + Status Pill
                                   HStack(spacing: 6) {
                                       Text(store.lang == "en" ? "⚡ FLASH POWER OUTPUT" : (store.lang == "ja" ? "⚡ フラッシュ発光量" : "⚡ 闪光灯输出功率比"))
                                           .font(.system(size: 10, weight: .bold, design: .monospaced))
                                           .foregroundStyle(.white.opacity(0.75))
-                                      if store.isPowerLocked {
-                                          Text(store.lang == "en" ? "🔒 LOCKED" : "🔒 已锁定功率")
-                                              .font(.system(size: 9, weight: .heavy, design: .monospaced))
-                                              .padding(.horizontal, 6)
-                                              .padding(.vertical, 2)
-                                              .background(theme.accentColor, in: Capsule())
-                                              .foregroundStyle(.black)
-                                      }
+                                          .lineLimit(1)
+
+                                      Text(
+                                          store.isPowerLocked
+                                              ? (store.lang == "en" ? "🔒 LOCKED" : "🔒 已锁定")
+                                              : (store.lang == "en" ? "AUTO M" : "自动解算")
+                                      )
+                                      .font(.system(size: 8.5, weight: .heavy, design: .monospaced))
+                                      .padding(.horizontal, 6)
+                                      .padding(.vertical, 2)
+                                      .background(
+                                          store.isPowerLocked ? theme.accentColor : Color.white.opacity(0.14),
+                                          in: Capsule()
+                                      )
+                                      .foregroundStyle(store.isPowerLocked ? .black : .white.opacity(0.85))
                                   }
-                                  HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                      Text(diag.powerText)
-                                          .font(.system(size: 29, weight: .heavy, design: .monospaced))
-                                          .foregroundStyle(theme.accentColor)
-                                      Text("f/\(String(format: "%.1f", store.aperture).replacingOccurrences(of: ".0", with: "")) · \(String(format: "%.1fm", store.distanceM)) · 1/\(store.shutterDenom)s")
-                                          .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                                          .foregroundStyle(.white.opacity(0.85))
+                                  .frame(height: 16)
+
+                                  // Row 2: Dedicated Full-Width Line for Big Flash Power Readout (Never shares line with f/stop!)
+                                  Text(diag.powerText)
+                                      .font(.system(size: 28, weight: .heavy, design: .monospaced))
+                                      .foregroundStyle(theme.accentColor)
+                                      .lineLimit(1)
+                                      .minimumScaleFactor(0.75)
+                                      .frame(height: 32, alignment: .leading)
+
+                                  // Row 3: Dedicated Single-Line Parameter Readout Pill Row below the power number
+                                  HStack(spacing: 6) {
+                                      Text("f/\(String(format: "%.1f", store.aperture).replacingOccurrences(of: ".0", with: ""))")
+                                          .foregroundStyle(.white.opacity(0.92))
+                                      Text("·")
+                                          .foregroundStyle(.white.opacity(0.45))
+                                      Text(String(format: "%.1fm", store.distanceM))
+                                          .foregroundStyle(.white.opacity(0.92))
+                                      Text("·")
+                                          .foregroundStyle(.white.opacity(0.45))
+                                      Text("1/\(store.shutterDenom)s")
+                                          .foregroundStyle(.white.opacity(0.92))
+                                      Text("·")
+                                          .foregroundStyle(.white.opacity(0.45))
+                                      Text("ISO \(store.iso)")
+                                          .foregroundStyle(theme.accentColor.opacity(0.9))
                                   }
+                                  .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
+                                  .lineLimit(1)
+                                  .minimumScaleFactor(0.75)
+                                  .frame(height: 16, alignment: .leading)
                               }
-                              Spacer()
+                              .frame(maxWidth: .infinity, alignment: .leading)
 
                               // Feature 1: Speak Once & Tap Again to Cancel
                               Button {
                                   FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
                                   toggleSpeakCurrent(powerText: diag.powerText)
                               } label: {
-                                  VStack(spacing: 3) {
+                                  VStack(spacing: 4) {
                                       Image(systemName: speechManager.isSpeaking ? "stop.circle.fill" : "speaker.wave.3.fill")
-                                          .font(.system(size: 17, weight: .bold))
+                                          .font(.system(size: 18, weight: .bold))
                                       Text(
                                           speechManager.isSpeaking
                                               ? (store.lang == "en" ? "Stop" : (store.lang == "ja" ? "停止" : "取消"))
                                               : (store.lang == "en" ? "Speak" : (store.lang == "ja" ? "音声" : "播报"))
                                       )
                                       .font(.system(size: 10, weight: .bold))
+                                      .lineLimit(1)
                                   }
                                   .foregroundStyle(.white)
-                                  .frame(width: 58, height: 52)
+                                  .frame(width: 60, height: 62)
                                   .background(
                                       speechManager.isSpeaking ? Color.red.opacity(0.88) : theme.accentColor.opacity(0.85),
                                       in: RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -1048,14 +1077,16 @@ jobs:
                                   )
                               }
                           }
-                          .padding(13)
+                          .padding(.horizontal, 14)
+                          .padding(.vertical, 10)
+                          .frame(height: 90)
                           .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                           .overlay(
                               RoundedRectangle(cornerRadius: 22, style: .continuous)
                                   .stroke(theme.accentColor.opacity(0.45), lineWidth: 1.1)
                           )
 
-                          // Feature 4 & 5: Four Metric Cards with Individual Lock Buttons (🔒 / 🔓)
+                          // Feature 4 & 5: Four Metric Cards with Individual Lock Buttons (🔒 / 🔓) and Fixed Height
                           LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                               LockableGlassMetricTile(
                                   title: store.lang == "en" ? "① DISTANCE" : (store.lang == "ja" ? "① 撮影距離" : "① 拍摄距离"),
@@ -1132,8 +1163,8 @@ jobs:
                               )
                           }
 
-                          // Mechanical Rotary Dial Section + 4-Channel Switcher + 0.5m Magnet Toggle
-                          VStack(spacing: 10) {
+                          // Mechanical Rotary Dial Section + 4-Channel Switcher + Fixed-Height Channel Utility Bar
+                          VStack(spacing: 8) {
                               HStack(spacing: 6) {
                                   channelPill(.distance, label: store.lang == "en" ? "Dist" : (store.lang == "ja" ? "距離" : "距离盘"), theme: theme)
                                   channelPill(.power, label: store.lang == "en" ? "Power" : (store.lang == "ja" ? "出力" : "功率盘"), theme: theme)
@@ -1141,15 +1172,16 @@ jobs:
                                   channelPill(.shutter, label: store.lang == "en" ? "Shutter" : (store.lang == "ja" ? "速度" : "快门盘"), theme: theme)
                               }
 
-                              // Feature 3: Magnetic 0.5m Snap Quick Bar when Distance channel is selected
-                              if activeChannel == .distance {
-                                  HStack {
+                              // Fixed-height (28pt) contextual bar for ALL channels so switching Dist/Power/f-stop/Shutter NEVER shifts the dial!
+                              HStack {
+                                  if activeChannel == .distance {
                                       Label(
                                           store.lang == "en" ? "🧲 0.5m Magnetic Snap" : (store.lang == "ja" ? "🧲 0.5m マグネット吸着" : "🧲 距离拨盘 0.5m 磁铁吸附"),
                                           systemImage: store.isDistanceMagnetOn ? "bolt.circle.fill" : "circle.dotted"
                                       )
                                       .font(.system(size: 11, weight: .bold))
-                                      .foregroundStyle(store.isDistanceMagnetOn ? theme.accentColor : .white.opacity(0.7))
+                                      .foregroundStyle(store.isDistanceMagnetOn ? theme.accentColor : .white.opacity(0.75))
+                                      .lineLimit(1)
 
                                       Spacer()
 
@@ -1168,18 +1200,86 @@ jobs:
                                           )
                                           .font(.system(size: 10, weight: .heavy, design: .monospaced))
                                           .padding(.horizontal, 10)
-                                          .padding(.vertical, 4)
+                                          .padding(.vertical, 3)
                                           .background(
                                               store.isDistanceMagnetOn ? theme.accentColor : Color.white.opacity(0.14),
                                               in: Capsule()
                                           )
                                           .foregroundStyle(store.isDistanceMagnetOn ? .black : .white)
                                       }
+                                  } else if activeChannel == .power {
+                                      Label(
+                                          store.lang == "en" ? "⚡ Manual Flash Output (1/3 EV)" : "⚡ 闪光灯功率调节 (1/3 档步进)",
+                                          systemImage: "bolt.fill"
+                                      )
+                                      .font(.system(size: 11, weight: .bold))
+                                      .foregroundStyle(theme.accentColor)
+                                      .lineLimit(1)
+
+                                      Spacer()
+
+                                      Button {
+                                          FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                          store.isPowerLocked.toggle()
+                                          store.solveExposure(changed: .power)
+                                      } label: {
+                                          Text(store.isPowerLocked ? (store.lang == "en" ? "🔒 Power Locked" : "🔒 已锁定功率") : (store.lang == "en" ? "🔓 Auto Power" : "🔓 自动解算"))
+                                              .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                                              .padding(.horizontal, 10)
+                                              .padding(.vertical, 3)
+                                              .background(store.isPowerLocked ? theme.accentColor : Color.white.opacity(0.14), in: Capsule())
+                                              .foregroundStyle(store.isPowerLocked ? .black : .white)
+                                      }
+                                  } else if activeChannel == .aperture {
+                                      let maxApText = String(format: "f/%.1f", store.lensMaxAperture).replacingOccurrences(of: ".0", with: "")
+                                      Label(
+                                          store.lang == "en" ? "📷 Lens Max Limit: \(maxApText)" : "📷 镜头最大光圈限制: \(maxApText)",
+                                          systemImage: "camera.aperture"
+                                      )
+                                      .font(.system(size: 11, weight: .bold))
+                                      .foregroundStyle(theme.accentColor)
+                                      .lineLimit(1)
+
+                                      Spacer()
+
+                                      Button {
+                                          FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                          showOnboardingSheet = true
+                                      } label: {
+                                          Text(store.lang == "en" ? "Change Limit" : "修改上限")
+                                              .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                                              .padding(.horizontal, 10)
+                                              .padding(.vertical, 3)
+                                              .background(Color.white.opacity(0.14), in: Capsule())
+                                              .foregroundStyle(.white)
+                                      }
+                                  } else {
+                                      Label(
+                                          store.lang == "en" ? "⏱ Max X-Sync: 1/\(store.maxSyncDenom)s" : "⏱ 最高同步快门: 1/\(store.maxSyncDenom)s",
+                                          systemImage: "timer"
+                                      )
+                                      .font(.system(size: 11, weight: .bold))
+                                      .foregroundStyle(theme.accentColor)
+                                      .lineLimit(1)
+
+                                      Spacer()
+
+                                      Button {
+                                          FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
+                                          store.isShutterLocked.toggle()
+                                      } label: {
+                                          Text(store.isShutterLocked ? (store.lang == "en" ? "🔒 Locked" : "🔒 已锁定") : (store.lang == "en" ? "🔓 Ambient Sync" : "🔓 环境光匹配"))
+                                              .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                                              .padding(.horizontal, 10)
+                                              .padding(.vertical, 3)
+                                              .background(store.isShutterLocked ? theme.accentColor : Color.white.opacity(0.14), in: Capsule())
+                                              .foregroundStyle(store.isShutterLocked ? .black : .white)
+                                      }
                                   }
-                                  .padding(.horizontal, 10)
-                                  .padding(.vertical, 5)
-                                  .background(Color.black.opacity(0.24), in: Capsule())
                               }
+                              .padding(.horizontal, 10)
+                              .frame(height: 28)
+                              .background(Color.black.opacity(0.24), in: Capsule())
 
                               HStack(spacing: 16) {
                                   Button {
@@ -1220,18 +1320,20 @@ jobs:
                                       .background(theme.accentColor.opacity(0.85), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                   }
                               }
-                              .padding(.vertical, 2)
+                              .padding(.vertical, 1)
 
-                              // Feature 4: Highlighted Bottom Modification Advice Banner when Flash Power is Insufficient or Excessive
+                              // Feature 4: Fixed-Min-Height Bottom Status / Modification Advice Bar
                               if diag.isUnderexposed || diag.isOverexposed {
-                                  VStack(alignment: .leading, spacing: 6) {
+                                  VStack(alignment: .leading, spacing: 4) {
                                       HStack(alignment: .center, spacing: 6) {
                                           Image(systemName: "bolt.trianglebadge.exclamationmark.fill")
-                                              .font(.system(size: 14, weight: .black))
+                                              .font(.system(size: 13, weight: .black))
                                               .foregroundStyle(.yellow)
                                           Text(diag.warningTitle)
-                                              .font(.system(size: 12, weight: .heavy))
+                                              .font(.system(size: 11.5, weight: .heavy))
                                               .foregroundStyle(.white)
+                                              .lineLimit(1)
+                                              .minimumScaleFactor(0.8)
                                           Spacer()
                                           Button {
                                               FeedbackEngine.shared.buttonTap(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
@@ -1239,18 +1341,21 @@ jobs:
                                           } label: {
                                               Text(diag.quickFixLabel)
                                                   .font(.system(size: 10, weight: .heavy))
-                                                  .padding(.horizontal, 10)
-                                                  .padding(.vertical, 5)
+                                                  .padding(.horizontal, 9)
+                                                  .padding(.vertical, 4)
                                                   .background(Color.yellow, in: Capsule())
                                                   .foregroundStyle(.black)
                                           }
                                       }
                                       Text(diag.warningAdvice)
-                                          .font(.system(size: 11, weight: .semibold))
+                                          .font(.system(size: 10.5, weight: .semibold))
                                           .foregroundStyle(.white.opacity(0.95))
-                                          .fixedSize(horizontal: false, vertical: true)
+                                          .lineLimit(2)
+                                          .minimumScaleFactor(0.85)
                                   }
-                                  .padding(12)
+                                  .padding(.horizontal, 12)
+                                  .padding(.vertical, 8)
+                                  .frame(minHeight: 54)
                                   .background(
                                       LinearGradient(
                                           colors: [
@@ -1266,9 +1371,8 @@ jobs:
                                       RoundedRectangle(cornerRadius: 16, style: .continuous)
                                           .stroke(Color.yellow.opacity(0.85), lineWidth: 1.5)
                                   )
-                                  .shadow(color: Color.orange.opacity(0.35), radius: 8, x: 0, y: 4)
                               } else {
-                                  HStack {
+                                  HStack(spacing: 8) {
                                       Image(systemName: "checkmark.seal.fill")
                                           .foregroundStyle(.green)
                                       Text(
@@ -1278,14 +1382,16 @@ jobs:
                                       )
                                       .font(.system(size: 11, weight: .medium))
                                       .foregroundStyle(.white.opacity(0.88))
+                                      .lineLimit(1)
+                                      .minimumScaleFactor(0.8)
                                       Spacer()
                                   }
-                                  .frame(minHeight: 36)
                                   .padding(.horizontal, 12)
-                                  .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                  .frame(minHeight: 54)
+                                  .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                               }
                           }
-                          .padding(13)
+                          .padding(12)
                           .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                           .overlay(
                               RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -1502,7 +1608,6 @@ jobs:
                   switch activeChannel {
                   case .distance:
                       if store.isDistanceMagnetOn {
-                          // Feature 3: 0.5m Magnetic Snap Resolution
                           let halfSteps = (store.distanceM * 2.0).rounded()
                           let next = min(max((halfSteps + Double(delta)) * 0.5, 0.5), 12.0)
                           store.distanceM = next
@@ -1520,7 +1625,6 @@ jobs:
                       store.solveExposure(changed: .distance)
 
                   case .power:
-                      // Feature 4: Adjusting Power locks Power and solves Aperture/Distance/Shutter
                       FeedbackEngine.shared.dialTick(soundOn: store.soundOn, hapticsOn: store.hapticsOn)
                       let minStops = -log2(Double(store.activeFlashSpec.minPowerDenom))
                       let next = ((store.powerStopOffset + Double(delta) / 3.0) * 3.0).rounded() / 3.0
@@ -1767,24 +1871,26 @@ jobs:
                                       endPoint: .bottomTrailing
                                   )
                               )
-                              .frame(width: 90, height: 90)
+                              .frame(width: 96, height: 96)
 
                           Circle()
                               .fill(Color(red: 0.12, green: 0.11, blue: 0.10))
-                              .frame(width: 80, height: 80)
+                              .frame(width: 86, height: 86)
 
                           VStack(spacing: 2) {
                               Text(channel.rawValue)
                                   .font(.system(size: 9, weight: .bold, design: .monospaced))
                                   .foregroundStyle(accentColor)
                               Text(centerReadoutText)
-                                  .font(.system(size: 16, weight: .heavy, design: .monospaced))
+                                  .font(.system(size: 15, weight: .heavy, design: .monospaced))
                                   .foregroundStyle(.white)
                                   .lineLimit(1)
-                                  .minimumScaleFactor(0.7)
+                                  .minimumScaleFactor(0.62)
+                                  .frame(maxWidth: 76)
                               Text(centerSubHint)
                                   .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                                   .foregroundStyle(.white.opacity(0.65))
+                                  .lineLimit(1)
                           }
                           .padding(.horizontal, 4)
                       }
@@ -1821,7 +1927,7 @@ jobs:
               }
           }
 
-          // Feature 4 & 5: Glass Metric Tile with Independent Lock Toggle Button (🔒 / 🔓)
+          // Feature 4 & 5: Glass Metric Tile with Independent Lock Toggle Button (🔒 / 🔓) & Fixed Height
           struct LockableGlassMetricTile: View {
               let title: String
               let value: String
@@ -1861,10 +1967,11 @@ jobs:
                       Button(action: onSelect) {
                           VStack(alignment: .leading, spacing: 4) {
                               Text(value)
-                                  .font(.system(size: 23, weight: .heavy, design: .monospaced))
+                                  .font(.system(size: 22, weight: .heavy, design: .monospaced))
                                   .foregroundStyle(isSelected ? accent : .white)
                                   .lineLimit(1)
-                                  .minimumScaleFactor(0.7)
+                                  .minimumScaleFactor(0.72)
+                                  .frame(height: 26, alignment: .leading)
                               Text(subtitle)
                                   .font(.system(size: 9.5, weight: .medium))
                                   .foregroundStyle(.white.opacity(0.65))
@@ -1875,6 +1982,7 @@ jobs:
                       .buttonStyle(.plain)
                   }
                   .padding(11)
+                  .frame(height: 82)
                   .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                   .overlay(
                       RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -1925,7 +2033,6 @@ jobs:
                                   Stepper("ISO: \(store.iso)", value: $store.iso, in: 50...3200, step: 50)
                               }
 
-                              // Feature 2: Ask for Lens Maximum Aperture & Set Aperture Limit
                               Section(
                                   header: Text(store.lang == "en" ? "2. Lens Max Aperture (Sets f-stop Limit)" : "② 挂机镜头最大光圈 (设置光圈大小上限 Limit)"),
                                   footer: Text(store.lang == "en" ? "The dial and auto-solver will never open wider than this maximum aperture." : "设置后，测光解算与光圈转盘将以此作为最大可用光圈上限。")
@@ -1988,7 +2095,7 @@ jobs:
           }
           EOF
 
-          # 5. Generate LumiFilmWidget.swift (Respects 0.5m step & Lens Max Aperture limit)
+          # 5. Generate LumiFilmWidget.swift
           cat << 'EOF' > LumiFilmWidget/LumiFilmWidget.swift
           import WidgetKit
           import SwiftUI
@@ -2219,16 +2326,16 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
           mkdir -p Payload
           cp -r build_output/Build/Products/Release-iphoneos/LumiFilm.app Payload/
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 6.0.0" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 6.0.0" Payload/LumiFilm.app/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 60" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 60" Payload/LumiFilm.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 6.1.0" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 6.1.0" Payload/LumiFilm.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 61" Payload/LumiFilm.app/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 61" Payload/LumiFilm.app/Info.plist
           if [ -f "Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist" ]; then
-            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 6.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 6.0.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
-            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 60" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 60" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 6.1.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 6.1.0" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 61" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 61" Payload/LumiFilm.app/PlugIns/LumiFilmWidget.appex/Info.plist
           fi
-          zip -r9 ../LumiFilm_Native_v6.0_Unsigned.ipa Payload
+          zip -r9 ../LumiFilm_Native_v6.1_Unsigned.ipa Payload
 
       - name: Upload Native iOS IPA Artifact
         uses: actions/upload-artifact@v5
         with:
           name: LumiFilm_Native_iOS_IPA
-          path: LumiFilm_Native_v6.0_Unsigned.ipa
+          path: LumiFilm_Native_v6.1_Unsigned.ipa
