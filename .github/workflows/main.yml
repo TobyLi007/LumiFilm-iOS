@@ -1,4 +1,4 @@
-name: Build Unsigned LumiFilm iOS App (v8.5 - All A-F Pro Photography Upgrades, Clean Meter Page & Camera EV Meter)
+name: Build Unsigned LumiFilm iOS App (v8.6 - Centered Glass Flash Role Popover, Standalone 30fps Live Camera EV Meter & Accuracy Calibration)
 
 on:
   workflow_dispatch:
@@ -283,8 +283,8 @@ jobs:
                   INFOPLIST_KEY_NSMicrophoneUsageDescription: "LumiFilm 使用麦克风接收您的语音指令（如：光圈f3、快门200、距离2.5米），直接调节胶片闪光参数。"
                   INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "LumiFilm 使用语音识别将您说出的曝光参数实时转换为转盘与状态栏数值。"
                   INFOPLIST_KEY_NSCameraUsageDescription: "LumiFilm 使用摄像头传感器实时测量现场环境光亮度 (EV100)，帮助您精准控制闪光与环境光比。"
-                  MARKETING_VERSION: "8.5.0"
-                  CURRENT_PROJECT_VERSION: "85"
+                  MARKETING_VERSION: "8.6.0"
+                  CURRENT_PROJECT_VERSION: "86"
                   GENERATE_INFOPLIST_FILE: YES
                   ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
             LumiFilmWidget:
@@ -299,14 +299,14 @@ jobs:
                   SWIFT_STRICT_CONCURRENCY: minimal
                   PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter.widget
                   INFOPLIST_KEY_CFBundleDisplayName: LumiFilmWidget
-                  MARKETING_VERSION: "8.5.0"
-                  CURRENT_PROJECT_VERSION: "85"
+                  MARKETING_VERSION: "8.6.0"
+                  CURRENT_PROJECT_VERSION: "86"
                   GENERATE_INFOPLIST_FILE: YES
               info:
                 path: LumiFilmWidget/Info.plist
                 properties:
-                  CFBundleShortVersionString: "8.5.0"
-                  CFBundleVersion: "85"
+                  CFBundleShortVersionString: "8.6.0"
+                  CFBundleVersion: "86"
                   NSExtension:
                     NSExtensionPointIdentifier: com.apple.widgetkit-extension
           EOF
@@ -875,22 +875,35 @@ jobs:
               func title(for lang: AppLanguage) -> String {
                   switch self {
                   case .keyAutoSum:
-                      return lang == .en ? "⚡ Key + Ambient Auto-Balance" : "⚡ 主光 (自动扣减环境光防过曝)"
+                      return lang == .en ? "⚡ Key + Ambient Auto-Sum" : "⚡ 主光联动 (扣减环境防过曝)"
                   case .fillNatural:
-                      return lang == .en ? "🌤️ Natural Fill Flash (-1.3 EV)" : "🌤️ 自然逆光补光 (Fill -1.3 EV)"
+                      return lang == .en ? "🌤️ Natural Fill (-1.3 EV)" : "🌤️ 自然逆光补光 (-1.3 EV)"
                   case .catchlightSoft:
-                      return lang == .en ? "✨ Soft Catchlight (-2.0 EV)" : "✨ 眼神光微补 (Catchlight -2.0 EV)"
+                      return lang == .en ? "✨ Soft Catchlight (-2.0 EV)" : "✨ 眼神光微补 (-2.0 EV)"
                   case .pureFlash:
-                      return lang == .en ? "🌑 Pure Flash GN (Ignore Ambient)" : "🌑 纯闪光模式 (忽略环境光叠加)"
+                      return lang == .en ? "🌑 Pure Flash (Ignore Ambient)" : "🌑 纯闪光模式 (忽略环境光)"
+                  }
+              }
+
+              func subtitle(for lang: AppLanguage) -> String {
+                  switch self {
+                  case .keyAutoSum:
+                      return lang == .en ? "Subtracts ambient light share so Flash + Ambient = 0 EV" : "自动扣减现场环境光占比，防止窗边/逆光人像叠加过曝"
+                  case .fillNatural:
+                      return lang == .en ? "Outputs -1.3 EV below key to soften shadows naturally" : "比主光低 1.3 档输出，柔和提亮暗部并保留现场氛围"
+                  case .catchlightSoft:
+                      return lang == .en ? "Subtle -2.0 EV fill for eye catchlights only" : "比主光低 2.0 档微弱输出，仅点亮人物眼神光"
+                  case .pureFlash:
+                      return lang == .en ? "Standard studio GN calculation without ambient offset" : "按暗室标准 GN 公式全额计算，不扣减环境光"
                   }
               }
 
               func shortTag(for lang: AppLanguage) -> String {
                   switch self {
-                  case .keyAutoSum: return lang == .en ? "Key+Amb" : "主光联动"
-                  case .fillNatural: return lang == .en ? "Fill -1.3" : "补光-1.3"
-                  case .catchlightSoft: return lang == .en ? "Fill -2.0" : "眼神-2.0"
-                  case .pureFlash: return lang == .en ? "Pure GN" : "纯闪光"
+                  case .keyAutoSum: return lang == .en ? "⚡ Key+Amb" : "⚡ 主光联动"
+                  case .fillNatural: return lang == .en ? "🌤️ Fill -1.3" : "🌤️ 补光 -1.3"
+                  case .catchlightSoft: return lang == .en ? "✨ Fill -2.0" : "✨ 眼神 -2.0"
+                  case .pureFlash: return lang == .en ? "🌑 Pure GN" : "🌑 纯闪光"
                   }
               }
           }
@@ -979,27 +992,41 @@ jobs:
               ]
           }
 
-          // MARK: - Enhancement C: Real-Time Camera Sensor Ambient EV100 Reader
-          final class CameraAmbientEVReader: NSObject, ObservableObject {
+          // MARK: - Enhancement C (Fixed v8.6): True 30fps Real-Time Camera Sensor Ambient EV100 Reader
+          // Attaches AVCaptureVideoDataOutput so iOS ISP continuously updates exposureDuration, ISO & exposureTargetOffset on every frame!
+          final class CameraAmbientEVReader: NSObject, ObservableObject, AVCaptureVideoDataOutputSampleBufferDelegate {
+              static let shared = CameraAmbientEVReader()
+
               @Published var liveEV100: Double = 9.0
               @Published var cameraISO: Float = 200
               @Published var cameraShutterDenom: Int = 125
               @Published var cameraAperture: Float = 1.8
+              @Published var cameraTargetOffset: Float = 0.0
+              @Published var calibrationTrimEV: Double = 0.0
               @Published var isRunning: Bool = false
+              @Published var continuousSyncToMeter: Bool = true
               @Published var statusText: String = ""
 
-              private let session = AVCaptureSession()
+              let session = AVCaptureSession()
               private var device: AVCaptureDevice?
-              private var timer: Timer?
+              private let videoOutput = AVCaptureVideoDataOutput()
+              private let videoQueue = DispatchQueue(label: "com.lumifilm.camera.ev.queue", qos: .userInteractive)
+              private var isConfigured: Bool = false
+              private var smoothedEV: Double = 9.0
+              private var lastUIUpdateTime: TimeInterval = 0
+              var onLiveEVUpdated: ((Double) -> Void)?
 
-              func startReading(lang: AppLanguage) {
+              func startReading(lang: AppLanguage, onEVUpdate: ((Double) -> Void)? = nil) {
+                  if let cb = onEVUpdate {
+                      self.onLiveEVUpdated = cb
+                  }
                   AVCaptureDevice.requestAccess(for: .video) { granted in
                       DispatchQueue.main.async {
                           if granted {
                               self.setupAndStartSession(lang: lang)
                           } else {
                               self.statusText = lang == .en
-                                  ? "Camera access denied in iOS Settings."
+                                  ? "Please allow Camera access in iOS Settings."
                                   : "请在 iOS 设置中允许相机权限以实时测光"
                           }
                       }
@@ -1007,54 +1034,143 @@ jobs:
               }
 
               private func setupAndStartSession(lang: AppLanguage) {
-                  guard !isRunning else { return }
-                  guard let cam = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
-                      statusText = lang == .en ? "Rear camera unavailable" : "未检测到后置摄像头"
-                      return
-                  }
-                  self.device = cam
-                  session.beginConfiguration()
-                  session.sessionPreset = .low
-                  if let input = try? AVCaptureDeviceInput(device: cam), session.canAddInput(input) {
-                      session.addInput(input)
-                  }
-                  session.commitConfiguration()
+                  if !isConfigured {
+                      guard let cam = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+                          statusText = lang == .en ? "Rear camera unavailable" : "未检测到后置摄像头"
+                          return
+                      }
+                      self.device = cam
+                      session.beginConfiguration()
+                      session.sessionPreset = .medium
 
-                  DispatchQueue.global(qos: .userInitiated).async {
-                      self.session.startRunning()
-                      DispatchQueue.main.async {
-                          self.isRunning = true
-                          self.statusText = lang == .en ? "Point iPhone at scene to read live EV100" : "将手机对准拍摄主体或背景，实时读取现场环境 EV"
-                          self.timer?.invalidate()
-                          self.timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
-                              self.sampleExposureTelemetry()
+                      if let input = try? AVCaptureDeviceInput(device: cam), session.canAddInput(input) {
+                          session.addInput(input)
+                      }
+
+                      videoOutput.alwaysDiscardsLateVideoFrames = true
+                      videoOutput.setSampleBufferDelegate(self, queue: videoQueue)
+                      if session.canAddOutput(videoOutput) {
+                          session.addOutput(videoOutput)
+                      }
+                      session.commitConfiguration()
+                      isConfigured = true
+                  }
+
+                  if let cam = device {
+                      do {
+                          try cam.lockForConfiguration()
+                          if cam.isExposureModeSupported(.continuousAutoExposure) {
+                              cam.exposureMode = .continuousAutoExposure
                           }
+                          if cam.isExposurePointOfInterestSupported {
+                              cam.exposurePointOfInterest = CGPoint(x: 0.5, y: 0.5)
+                          }
+                          cam.unlockForConfiguration()
+                      } catch {}
+                  }
+
+                  statusText = lang == .en
+                      ? "Real-time ISP metering active (18% gray center-weighted)"
+                      : "实时连续测光中（对准主体面部或中灰区域，移动手机即刻变化）"
+
+                  if !session.isRunning {
+                      videoQueue.async {
+                          self.session.startRunning()
+                          DispatchQueue.main.async {
+                              self.isRunning = true
+                          }
+                      }
+                  } else {
+                      isRunning = true
+                  }
+              }
+
+              // Called 30 times per second as video frames flow through the ISP
+              func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+                  guard let cam = device else { return }
+                  let now = Date().timeIntervalSinceReferenceDate
+                  guard now - lastUIUpdateTime >= 0.10 else { return }
+                  lastUIUpdateTime = now
+
+                  let ap = Double(max(cam.lensAperture, 1.2))
+                  let dur = max(CMTimeGetSeconds(cam.exposureDuration), 0.00005)
+                  let isoVal = Double(max(cam.iso, 20.0))
+                  let targetOffset = Double(cam.exposureTargetOffset)
+
+                  // True reflected-light EV100 with Smart HDR highlight-headroom compensation (-targetOffset)
+                  let rawEV100 = log2((ap * ap) / dur) - log2(isoVal / 100.0) - targetOffset + calibrationTrimEV
+                  let clampedRaw = max(1.0, min(18.0, rawEV100))
+
+                  let nextSmoothed = (smoothedEV * 0.65) + (clampedRaw * 0.35)
+                  smoothedEV = nextSmoothed
+                  let roundedTenth = round(nextSmoothed * 10.0) / 10.0
+
+                  let curAp = cam.lensAperture
+                  let curISO = cam.iso
+                  let curShutter = max(1, Int(round(1.0 / dur)))
+                  let curOffset = cam.exposureTargetOffset
+
+                  DispatchQueue.main.async {
+                      self.cameraAperture = curAp
+                      self.cameraISO = curISO
+                      self.cameraShutterDenom = curShutter
+                      self.cameraTargetOffset = curOffset
+                      self.liveEV100 = roundedTenth
+                      if self.continuousSyncToMeter {
+                          self.onLiveEVUpdated?(roundedTenth)
                       }
                   }
               }
 
-              private func sampleExposureTelemetry() {
+              func recenterExposurePoint() {
                   guard let cam = device else { return }
-                  let ap = Double(max(cam.lensAperture, 1.4))
-                  let dur = max(CMTimeGetSeconds(cam.exposureDuration), 0.0001)
-                  let isoVal = Double(max(cam.iso, 25.0))
-                  let ev100 = log2((ap * ap) / dur) - log2(isoVal / 100.0)
-                  let clamped = max(2.0, min(17.0, round(ev100 * 2.0) / 2.0))
-                  self.cameraAperture = cam.lensAperture
-                  self.cameraISO = cam.iso
-                  self.cameraShutterDenom = max(1, Int(round(1.0 / dur)))
-                  self.liveEV100 = clamped
+                  do {
+                      try cam.lockForConfiguration()
+                      if cam.isExposurePointOfInterestSupported {
+                          cam.exposurePointOfInterest = CGPoint(x: 0.5, y: 0.5)
+                      }
+                      if cam.isExposureModeSupported(.continuousAutoExposure) {
+                          cam.exposureMode = .continuousAutoExposure
+                      }
+                      cam.unlockForConfiguration()
+                  } catch {}
               }
 
               func stopReading() {
-                  timer?.invalidate()
-                  timer = nil
                   if session.isRunning {
-                      DispatchQueue.global(qos: .background).async {
+                      videoQueue.async {
                           self.session.stopRunning()
+                          DispatchQueue.main.async {
+                              self.isRunning = false
+                          }
                       }
+                  } else {
+                      isRunning = false
                   }
-                  isRunning = false
+              }
+          }
+
+          // Live Camera Viewfinder Layer for Real-Time EV Metering
+          struct CameraPreviewLayerView: UIViewRepresentable {
+              let session: AVCaptureSession
+
+              final class PreviewUIView: UIView {
+                  override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+                  var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+              }
+
+              func makeUIView(context: Context) -> PreviewUIView {
+                  let view = PreviewUIView()
+                  view.backgroundColor = UIColor.black
+                  view.previewLayer.session = session
+                  view.previewLayer.videoGravity = .resizeAspectFill
+                  return view
+              }
+
+              func updateUIView(_ uiView: PreviewUIView, context: Context) {
+                  if uiView.previewLayer.session !== session {
+                      uiView.previewLayer.session = session
+                  }
               }
           }
 
@@ -1639,6 +1755,8 @@ jobs:
               @State private var lastEditedParameter: DialParameter = .aperture
               @State private var showOnboardingSheet: Bool = false
               @State private var showCameraEVMeterSheet: Bool = false
+              @State private var showFlashRoleCenteredMenu: Bool = false
+              @StateObject private var cameraEVReader = CameraAmbientEVReader.shared
               @State private var selectedTab: Int = 0
               @State private var logSavedToast: String? = nil
               @Namespace private var glassTabNamespace
@@ -2283,6 +2401,12 @@ jobs:
                               .padding(.horizontal, 16)
                               .padding(.bottom, 4)
                       }
+
+                      if showFlashRoleCenteredMenu {
+                          flashRoleCenteredPopoverOverlay
+                              .transition(.opacity.combined(with: .scale(scale: 0.94)))
+                              .zIndex(50)
+                      }
                   }
                   .onAppear {
                       if aperture < maxLensAperture {
@@ -2350,7 +2474,7 @@ jobs:
                           lang: lang,
                           theme: theme
                       )
-                      .presentationDetents([.medium])
+                      .presentationDetents([.height(435), .large])
                   }
                   .sheet(isPresented: $showOnboardingSheet) {
                       OnboardingSetupSheet(
@@ -2520,7 +2644,7 @@ jobs:
 
                       HStack(alignment: .firstTextBaseline, spacing: 8) {
                           Text(exposureResult.powerTitle)
-                              .font(.system(size: 30, weight: .black, design: .rounded))
+                              .font(.system(size: 28, weight: .black, design: .rounded))
                               .foregroundStyle(Color.white)
                               .lineLimit(1)
                               .minimumScaleFactor(0.55)
@@ -2528,71 +2652,70 @@ jobs:
 
                           Spacer(minLength: 4)
 
-                          Menu {
-                              Section(header: Text(lang == .en ? "Flash Role (Energy Balance)" : "闪光角色 (主光能量叠加 / 补光)")) {
-                                  ForEach(FlashRoleMode.allCases) { role in
-                                      Button {
-                                          feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-                                          withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
-                                              flashRoleRaw = role.rawValue
-                                              if lockPower { solveForLockedPower(changed: .flashPower) }
-                                              syncWidgetDefaults()
-                                          }
-                                      } label: {
-                                          HStack {
-                                              Text(role.title(for: lang))
-                                              if flashRoleRaw == role.rawValue {
-                                                  Image(systemName: "checkmark")
-                                              }
-                                          }
-                                      }
-                                  }
-                              }
+                          HStack(spacing: 4) {
+                              Circle()
+                                  .fill(exposureResult.statusColor)
+                                  .frame(width: 6.5, height: 6.5)
+                              Text(ambientBalanceBadgeText)
+                                  .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                  .foregroundStyle(Color.white.opacity(0.90))
+                                  .lineLimit(1)
+                          }
+                          .padding(.horizontal, 8)
+                          .padding(.vertical, 3.5)
+                          .background(Color.black.opacity(0.28), in: Capsule())
+                      }
+                      .frame(height: 30)
 
-                              Section(header: Text(lang == .en ? "Ambient Scene EV" : "现场环境光场景预设")) {
-                                  Button {
-                                      feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-                                      showCameraEVMeterSheet = true
-                                  } label: {
-                                      Label(lang == .en ? "📷 Measure Live EV with Camera" : "📷 用手机镜头实测现场环境光 EV", systemImage: "camera.metering.center.weighted")
-                                  }
-
-                                  ForEach(ambientSceneOptions) { sc in
-                                      Button {
-                                          feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-                                          withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
-                                              ambientEV100 = sc.value
-                                          }
-                                      } label: {
-                                          HStack {
-                                              Text(sc.title(for: lang))
-                                              if abs(ambientEV100 - sc.value) < 0.6 {
-                                                  Image(systemName: "checkmark")
-                                              }
-                                          }
-                                      }
-                                  }
+                      // Centered Symmetrical Dual-Pill Control Row: [1. 主光联动 (Centered Custom Glass Menu)] + [2. 📷 手机实时测环境光 (Standalone Button)]
+                      HStack(spacing: 8) {
+                          Button {
+                              feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+                              withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
+                                  showFlashRoleCenteredMenu = true
                               }
                           } label: {
-                              HStack(spacing: 4) {
-                                  Circle()
-                                      .fill(exposureResult.statusColor)
-                                      .frame(width: 6.5, height: 6.5)
-                                  Text(ambientBalanceBadgeText)
-                                      .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                      .foregroundStyle(Color.white.opacity(0.92))
+                              HStack(spacing: 5) {
+                                  Spacer(minLength: 0)
+                                  Text(flashRole.shortTag(for: lang))
+                                      .font(.system(size: 11, weight: .bold))
+                                      .foregroundStyle(Color.white)
                                       .lineLimit(1)
-                                  Image(systemName: "chevron.down")
-                                      .font(.system(size: 8, weight: .bold))
+                                  Image(systemName: "chevron.down.circle.fill")
+                                      .font(.system(size: 10, weight: .bold))
                                       .foregroundStyle(theme.accent)
+                                  Spacer(minLength: 0)
                               }
+                              .padding(.vertical, 6)
                               .padding(.horizontal, 8)
-                              .padding(.vertical, 4)
-                              .background(Color.black.opacity(0.32), in: Capsule())
-                              .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 0.8))
+                              .background(Color.white.opacity(0.11), in: Capsule())
+                              .overlay(Capsule().stroke(theme.accent.opacity(0.45), lineWidth: 0.9))
+                          }
+
+                          Button {
+                              feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+                              showCameraEVMeterSheet = true
+                          } label: {
+                              HStack(spacing: 5) {
+                                  Spacer(minLength: 0)
+                                  Image(systemName: cameraEVReader.isRunning ? "dot.radiowaves.left.and.right" : "camera.metering.center.weighted")
+                                      .font(.system(size: 10.5, weight: .bold))
+                                      .foregroundStyle(cameraEVReader.isRunning ? Color.green : theme.accent)
+                                  Text(lang == .en
+                                       ? String(format: "Live EV: %.1f", ambientEV100)
+                                       : String(format: "实时测光 EV %.1f", ambientEV100))
+                                      .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                      .foregroundStyle(Color.white)
+                                      .lineLimit(1)
+                                      .contentTransition(.numericText())
+                                  Spacer(minLength: 0)
+                              }
+                              .padding(.vertical, 6)
+                              .padding(.horizontal, 8)
+                              .background(cameraEVReader.isRunning ? Color.green.opacity(0.20) : Color.white.opacity(0.11), in: Capsule())
+                              .overlay(Capsule().stroke(cameraEVReader.isRunning ? Color.green.opacity(0.65) : Color.cyan.opacity(0.45), lineWidth: 0.9))
                           }
                       }
-                      .frame(height: 32)
 
                       HStack(spacing: 5) {
                           if feedback.isListening || !feedback.voiceStatusHint.isEmpty {
@@ -3179,26 +3302,13 @@ jobs:
                               .font(.system(size: 12, weight: .semibold))
                               .foregroundStyle(Color.white)
                           Spacer()
-                          Menu {
-                              ForEach(FlashRoleMode.allCases) { role in
-                                  Button {
-                                      feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-                                      withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                          flashRoleRaw = role.rawValue
-                                          if lockPower { solveForLockedPower(changed: .flashPower) }
-                                          syncWidgetDefaults()
-                                      }
-                                  } label: {
-                                      HStack {
-                                          Text(role.title(for: lang))
-                                          if flashRoleRaw == role.rawValue {
-                                              Image(systemName: "checkmark")
-                                          }
-                                      }
-                                  }
+                          Button {
+                              feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+                              withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
+                                  showFlashRoleCenteredMenu = true
                               }
                           } label: {
-                              dropdownCapsuleLabel(text: flashRole.title(for: lang))
+                              dropdownCapsuleLabel(text: flashRole.shortTag(for: lang))
                           }
                       }
 
@@ -3884,6 +3994,136 @@ jobs:
                   .overlay(Capsule().stroke(theme.accent.opacity(0.4), lineWidth: 0.8))
               }
 
+              // MARK: - Custom Centered Liquid-Glass Popover for Flash Role & Scene EV (Coordinated 12pt Font & Centered Layout)
+              private var flashRoleCenteredPopoverOverlay: some View {
+                  ZStack {
+                      Color.black.opacity(0.52)
+                          .ignoresSafeArea()
+                          .onTapGesture {
+                              withAnimation(.spring(response: 0.28, dampingFraction: 0.80)) {
+                                  showFlashRoleCenteredMenu = false
+                              }
+                          }
+
+                      VStack(spacing: 10) {
+                          VStack(spacing: 3) {
+                              Text(lang == .en ? "⚡ Flash & Ambient Role" : "⚡ 主光联动与补光策略")
+                                  .font(.system(size: 14, weight: .black, design: .rounded))
+                                  .foregroundStyle(Color.white)
+                                  .multilineTextAlignment(.center)
+                              Text(lang == .en ? "Select how flash output balances with ambient light" : "选择闪光灯与现场环境光的能量配比方式")
+                                  .font(.system(size: 10.5, weight: .medium))
+                                  .foregroundStyle(Color.white.opacity(0.68))
+                                  .multilineTextAlignment(.center)
+                          }
+                          .padding(.top, 2)
+
+                          VStack(spacing: 7) {
+                              ForEach(FlashRoleMode.allCases) { role in
+                                  let isSel = (flashRoleRaw == role.rawValue)
+                                  Button {
+                                      feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true)
+                                      withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+                                          flashRoleRaw = role.rawValue
+                                          if lockPower { solveForLockedPower(changed: .flashPower) }
+                                          syncWidgetDefaults()
+                                          showFlashRoleCenteredMenu = false
+                                      }
+                                  } label: {
+                                      VStack(spacing: 2.5) {
+                                          HStack(spacing: 6) {
+                                              Spacer(minLength: 0)
+                                              Text(role.title(for: lang))
+                                                  .font(.system(size: 12, weight: .bold))
+                                                  .foregroundStyle(isSel ? Color.black : Color.white)
+                                              if isSel {
+                                                  Image(systemName: "checkmark.circle.fill")
+                                                      .font(.system(size: 12, weight: .bold))
+                                                      .foregroundStyle(Color.black)
+                                              }
+                                              Spacer(minLength: 0)
+                                          }
+                                          Text(role.subtitle(for: lang))
+                                              .font(.system(size: 9.5, weight: .medium))
+                                              .foregroundStyle(isSel ? Color.black.opacity(0.78) : Color.white.opacity(0.62))
+                                              .multilineTextAlignment(.center)
+                                              .lineLimit(2)
+                                      }
+                                      .frame(maxWidth: .infinity)
+                                      .padding(.horizontal, 12)
+                                      .padding(.vertical, 8.5)
+                                      .background(isSel ? theme.accent : Color.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                                      .overlay(
+                                          RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                              .stroke(isSel ? Color.white.opacity(0.6) : Color.white.opacity(0.14), lineWidth: 1)
+                                      )
+                                  }
+                                  .buttonStyle(.plain)
+                              }
+                          }
+
+                          Divider().background(Color.white.opacity(0.18))
+
+                          VStack(spacing: 6) {
+                              Text(lang == .en ? "Quick Scene Ambient EV Preset" : "快速选择现场环境光预设 (或点相机实测)")
+                                  .font(.system(size: 10, weight: .bold))
+                                  .foregroundStyle(Color.white.opacity(0.72))
+                                  .multilineTextAlignment(.center)
+
+                              LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                                  ForEach(ambientSceneOptions) { sc in
+                                      let active = abs(ambientEV100 - sc.value) < 0.6
+                                      Button {
+                                          feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+                                          withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+                                              ambientEV100 = sc.value
+                                          }
+                                      } label: {
+                                          Text("EV \(Int(sc.value))")
+                                              .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                                              .foregroundStyle(active ? Color.black : Color.white)
+                                              .frame(maxWidth: .infinity)
+                                              .padding(.vertical, 6)
+                                              .background(active ? theme.accent : Color.white.opacity(0.10), in: Capsule())
+                                      }
+                                      .buttonStyle(.plain)
+                                  }
+                              }
+                          }
+
+                          Button {
+                              feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+                              withAnimation(.spring(response: 0.26, dampingFraction: 0.80)) {
+                                  showFlashRoleCenteredMenu = false
+                              }
+                          } label: {
+                              Text(lang == .en ? "Done" : "完成")
+                                  .font(.system(size: 12, weight: .bold))
+                                  .foregroundStyle(Color.white.opacity(0.85))
+                                  .frame(maxWidth: .infinity)
+                                  .padding(.vertical, 7.5)
+                                  .background(Color.white.opacity(0.12), in: Capsule())
+                          }
+                      }
+                      .padding(16)
+                      .frame(maxWidth: 326)
+                      .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                      .overlay(
+                          RoundedRectangle(cornerRadius: 24, style: .continuous)
+                              .stroke(
+                                  LinearGradient(
+                                      colors: [Color.white.opacity(0.65), theme.accent.opacity(0.45), Color.white.opacity(0.20)],
+                                      startPoint: .topLeading,
+                                      endPoint: .bottomTrailing
+                                  ),
+                                  lineWidth: 1.5
+                              )
+                      )
+                      .shadow(color: Color.black.opacity(0.55), radius: 24, x: 0, y: 12)
+                      .padding(.horizontal, 24)
+                  }
+              }
+
               // MARK: - Pure Crystal 3D Liquid-Glass Bottom Bar (Zero Pink Reflection in Top-Left!)
               private var appleMusicLiquidGlassBottomBar: some View {
                   ZStack {
@@ -4222,14 +4462,15 @@ jobs:
               }
           }
 
-          // MARK: - Enhancement C: iPhone Rear Camera Live Ambient EV100 Meter Sheet
+          // MARK: - Enhancement C (v8.6): True 30fps Live Camera Viewfinder & Real-Time Ambient EV100 Meter Sheet
           struct CameraAmbientMeterSheet: View {
               @Binding var ambientEV100: Double
               let lang: AppLanguage
               let theme: AppTheme
 
               @Environment(\.dismiss) private var dismiss
-              @StateObject private var reader = CameraAmbientEVReader()
+              @ObservedObject private var reader = CameraAmbientEVReader.shared
+              @State private var keepRunningInBackground: Bool = false
 
               private func sceneHint(for ev: Double) -> String {
                   if ev < 5.5 { return lang == .en ? "Night Street / Neon (~EV 5)" : "🌃 暗夜街拍 / 霓虹灯 (~EV 5)" }
@@ -4247,14 +4488,21 @@ jobs:
                       LinearGradient(colors: theme.backgroundGradient, startPoint: .topLeading, endPoint: .bottomTrailing)
                           .ignoresSafeArea()
 
-                      VStack(spacing: 14) {
+                      VStack(spacing: 11) {
                           HStack {
-                              Label(lang == .en ? "Live Camera Ambient EV Meter" : "📷 手机镜头实时环境光测光", systemImage: "camera.metering.center.weighted")
-                                  .font(.system(size: 15, weight: .black))
-                                  .foregroundStyle(Color.white)
+                              HStack(spacing: 6) {
+                                  Circle()
+                                      .fill(reader.isRunning ? Color.green : Color.orange)
+                                      .frame(width: 8, height: 8)
+                                  Text(lang == .en ? "Live Camera EV100 Meter" : "📷 手机镜头实时连续环境光测光")
+                                      .font(.system(size: 14, weight: .black))
+                                      .foregroundStyle(Color.white)
+                              }
                               Spacer()
                               Button {
-                                  reader.stopReading()
+                                  if !keepRunningInBackground {
+                                      reader.stopReading()
+                                  }
                                   dismiss()
                               } label: {
                                   Image(systemName: "xmark.circle.fill")
@@ -4263,53 +4511,127 @@ jobs:
                               }
                           }
 
-                          VStack(spacing: 6) {
-                              Text(String(format: "EV %.1f", reader.liveEV100))
-                                  .font(.system(size: 40, weight: .black, design: .rounded))
-                                  .foregroundStyle(theme.accent)
-                                  .contentTransition(.numericText())
+                          // Live Camera Viewfinder with 18% Gray Center-Weighted Target Reticle & Real-Time EV Overlay
+                          ZStack {
+                              CameraPreviewLayerView(session: reader.session)
+                                  .frame(height: 155)
+                                  .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                  .overlay(
+                                      RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                          .stroke(theme.accent.opacity(0.55), lineWidth: 1.3)
+                                  )
+                                  .onTapGesture {
+                                      reader.recenterExposurePoint()
+                                  }
 
-                              Text(sceneHint(for: reader.liveEV100))
-                                  .font(.system(size: 13, weight: .bold))
-                                  .foregroundStyle(Color.white)
+                              // Center-Weighted Metering Reticle
+                              ZStack {
+                                  Circle()
+                                      .stroke(Color.white.opacity(0.75), style: StrokeStyle(lineWidth: 1.2, dash: [4, 4]))
+                                      .frame(width: 68, height: 68)
+                                  Circle()
+                                      .stroke(theme.accent, lineWidth: 1.5)
+                                      .frame(width: 18, height: 18)
+                              }
 
-                              Text(String(format: "iPhone Sensor: f/%.1f · 1/%ds · ISO %.0f", reader.cameraAperture, reader.cameraShutterDenom, reader.cameraISO))
-                                  .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
-                                  .foregroundStyle(Color.white.opacity(0.62))
+                              VStack {
+                                  HStack {
+                                      Text(lang == .en ? "18% Gray Center Spot" : "中央重点反射测光区")
+                                          .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                          .foregroundStyle(Color.white)
+                                          .padding(.horizontal, 8)
+                                          .padding(.vertical, 3.5)
+                                          .background(Color.black.opacity(0.55), in: Capsule())
+                                      Spacer()
+                                      Text(String(format: "f/%.1f · 1/%ds · ISO %.0f", reader.cameraAperture, reader.cameraShutterDenom, reader.cameraISO))
+                                          .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                          .foregroundStyle(Color.cyan)
+                                          .padding(.horizontal, 8)
+                                          .padding(.vertical, 3.5)
+                                          .background(Color.black.opacity(0.62), in: Capsule())
+                                  }
+                                  .padding(8)
+                                  Spacer()
+                                  HStack {
+                                      Text(String(format: "EV %.1f", reader.liveEV100))
+                                          .font(.system(size: 26, weight: .black, design: .rounded))
+                                          .foregroundStyle(theme.accent)
+                                          .contentTransition(.numericText())
+                                      Spacer()
+                                      Text(sceneHint(for: reader.liveEV100))
+                                          .font(.system(size: 11, weight: .bold))
+                                          .foregroundStyle(Color.white)
+                                  }
+                                  .padding(.horizontal, 12)
+                                  .padding(.vertical, 7)
+                                  .background(Color.black.opacity(0.65))
+                              }
+                              .frame(height: 155)
+                              .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                           }
-                          .frame(maxWidth: .infinity)
-                          .padding(.vertical, 16)
-                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                          .overlay(RoundedRectangle(cornerRadius: 20).stroke(theme.accent.opacity(0.45), lineWidth: 1.2))
 
-                          Text(reader.statusText)
-                              .font(.system(size: 11, weight: .medium))
-                              .foregroundStyle(Color.white.opacity(0.75))
-                              .multilineTextAlignment(.center)
+                          // Reflectance Calibration Trim (-1.0 EV to +1.0 EV for White/Black Subject Compensation)
+                          HStack(spacing: 8) {
+                              Text(lang == .en ? "Calibration Trim" : "反射率校准偏移")
+                                  .font(.system(size: 11, weight: .semibold))
+                                  .foregroundStyle(Color.white.opacity(0.85))
+                              Slider(value: $reader.calibrationTrimEV, in: -1.0...1.0, step: 0.1)
+                                  .tint(theme.accent)
+                              Button {
+                                  reader.calibrationTrimEV = 0.0
+                              } label: {
+                                  Text(String(format: "%+.1f EV", reader.calibrationTrimEV))
+                                      .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                                      .foregroundStyle(abs(reader.calibrationTrimEV) < 0.05 ? Color.white : Color.black)
+                                      .padding(.horizontal, 7)
+                                      .padding(.vertical, 4)
+                                      .background(abs(reader.calibrationTrimEV) < 0.05 ? Color.white.opacity(0.14) : theme.accent, in: Capsule())
+                              }
+                          }
+                          .padding(.horizontal, 12)
+                          .padding(.vertical, 7)
+                          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 13))
+
+                          Toggle(isOn: $keepRunningInBackground) {
+                              Text(lang == .en ? "Keep Live EV running on Meter Page" : "返回测光页后保持后台连续实时测光")
+                                  .font(.system(size: 11, weight: .semibold))
+                                  .foregroundStyle(Color.white.opacity(0.9))
+                          }
+                          .tint( Color.green )
+                          .padding(.horizontal, 4)
 
                           Button {
-                              ambientEV100 = round(reader.liveEV100)
-                              reader.stopReading()
+                              ambientEV100 = reader.liveEV100
+                              if !keepRunningInBackground {
+                                  reader.stopReading()
+                              }
                               dismiss()
                           } label: {
                               HStack {
                                   Image(systemName: "checkmark.circle.fill")
-                                  Text(lang == .en ? String(format: "Apply Live EV %.0f", round(reader.liveEV100)) : String(format: "采用实测环境光 (EV %.0f)", round(reader.liveEV100)))
-                                      .font(.system(size: 15, weight: .black))
+                                  Text(lang == .en
+                                       ? String(format: "Lock & Apply EV %.1f", reader.liveEV100)
+                                       : String(format: "采用当前实时环境光 (EV %.1f)", reader.liveEV100))
+                                      .font(.system(size: 14, weight: .black))
                               }
                               .foregroundStyle(Color.black)
                               .frame(maxWidth: .infinity)
-                              .padding(.vertical, 13)
-                              .background(theme.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                              .padding(.vertical, 12)
+                              .background(theme.accent, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
                           }
                       }
-                      .padding(20)
+                      .padding(16)
                   }
                   .onAppear {
-                      reader.startReading(lang: lang)
+                      keepRunningInBackground = reader.isRunning
+                      reader.startReading(lang: lang) { newEV in
+                          ambientEV100 = newEV
+                      }
                   }
                   .onDisappear {
-                      reader.stopReading()
+                      if !keepRunningInBackground {
+                          reader.stopReading()
+                      }
                   }
               }
           }
@@ -4377,7 +4699,8 @@ jobs:
                                   }
                                   hasCompletedOnboarding = true
                                   let suite = UserDefaults(suiteName: "group.com.lumifilm.flashmeter")
-                                  suite?.set(filmISO, forKey: "lf_iso")
+               
+                   suite?.set(filmISO, forKey: "lf_iso")
                                   suite?.set(flashGN, forKey: "lf_gn")
                                   suite?.set(aperture, forKey: "lf_aperture")
                                   suite?.set(maxLensAperture, forKey: "lf_max_aperture")
@@ -4676,13 +4999,13 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string lumifilm" "$APP_PATH/Info.plist"
 
           # Ensure Main App Info.plist has valid non-empty Bundle Version strings (fixes Sideloadly IXErrorDomain Code=17)
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.5.0" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.5.0" "$APP_PATH/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 85" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 85" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.6.0" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.6.0" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 86" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 86" "$APP_PATH/Info.plist"
 
           # Ensure Embedded Widget Extension Info.plist also has valid non-empty Bundle Version strings
           if [ -d "$APP_PATH/PlugIns/LumiFilmWidget.appex" ]; then
-            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.5.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.5.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
-            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 85" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 85" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.6.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.6.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 86" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 86" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
           fi
 
           mkdir -p Payload
