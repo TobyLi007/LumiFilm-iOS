@@ -2081,7 +2081,7 @@ jobs:
             setExposureCompClean(0.0)
            }
            matchedAny = true
-          } else if let evPlusRegex = try? NSRegularExpression(pattern: "(?:加|正|过曝|plus\s*)(\d+(?:\.\d+)?)\s*(?:档|ev)?"),
+          } else if let evPlusRegex = try? NSRegularExpression(pattern: "(?:加|正|过曝|plus\\s*)(\\d+(?:\\.\\d+)?)\\s*(?:档|ev)?"),
           let match = evPlusRegex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
           let r = Range(match.range(at: 1), in: text),
           let val = Double(text[r]), val <= 2.0 {
@@ -2089,7 +2089,7 @@ jobs:
             setExposureCompClean(val)
            }
            matchedAny = true
-          } else if let evMinusRegex = try? NSRegularExpression(pattern: "(?:减|负|欠曝|minus\s*)(\d+(?:\.\d+)?)\s*(?:档|ev)?"),
+          } else if let evMinusRegex = try? NSRegularExpression(pattern: "(?:减|负|欠曝|minus\\s*)(\\d+(?:\\.\\d+)?)\\s*(?:档|ev)?"),
           let match = evMinusRegex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
           let r = Range(match.range(at: 1), in: text),
           let val = Double(text[r]), val <= 2.0 {
