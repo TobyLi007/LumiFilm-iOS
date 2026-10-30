@@ -240,58 +240,58 @@ jobs:
         cat << 'EOF' > LumiFilmBuild/project.yml
         name: LumiFilm
         options:
-        bundleIdPrefix: com.lumifilm
-        deploymentTarget:
-        iOS: "17.0"
+          bundleIdPrefix: com.lumifilm
+          deploymentTarget:
+            iOS: "17.0"
         targets:
-        LumiFilm:
-        type: application
-        platform: iOS
-        deploymentTarget: "17.0"
-        sources:
-        - path: LumiFilm
-        dependencies:
-        - target: LumiFilmWidget
-        embed: true
-        settings:
-        base:
-        SWIFT_VERSION: "5.0"
-        SWIFT_STRICT_CONCURRENCY: minimal
-        PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter
-        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
-        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
-        INFOPLIST_KEY_CFBundleDisplayName: LumiFilm
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "LumiFilm 使用麦克风接收您的语音指令（如：光圈f3、快门200、距离2.5米），直接调节胶片闪光参数。"
-        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "LumiFilm 使用语音识别将您说出的曝光参数实时转换为转盘与状态栏数值。"
-        INFOPLIST_KEY_NSCameraUsageDescription: "LumiFilm 使用摄像头传感器实时测量现场环境光亮度 (EV100)，帮助您精准控制闪光与环境光比。"
-        MARKETING_VERSION: "9.1.0"
-        CURRENT_PROJECT_VERSION: "91"
-        GENERATE_INFOPLIST_FILE: YES
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        LumiFilmWidget:
-        type: app-extension
-        platform: iOS
-        deploymentTarget: "17.0"
-        sources:
-        - path: LumiFilmWidget
-        settings:
-        base:
-        SWIFT_VERSION: "5.0"
-        SWIFT_STRICT_CONCURRENCY: minimal
-        PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter.widget
-        INFOPLIST_KEY_CFBundleDisplayName: LumiFilmWidget
-        MARKETING_VERSION: "9.1.0"
-        CURRENT_PROJECT_VERSION: "91"
-        GENERATE_INFOPLIST_FILE: YES
-        info:
-        path: LumiFilmWidget/Info.plist
-        properties:
-        CFBundleShortVersionString: "9.1.0"
-        CFBundleVersion: "91"
-        NSExtension:
-        NSExtensionPointIdentifier: com.apple.widgetkit-extension
+          LumiFilm:
+            type: application
+            platform: iOS
+            deploymentTarget: "17.0"
+            sources:
+              - path: LumiFilm
+            dependencies:
+              - target: LumiFilmWidget
+                embed: true
+            settings:
+              base:
+                SWIFT_VERSION: "5.0"
+                SWIFT_STRICT_CONCURRENCY: minimal
+                PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter
+                INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+                INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+                INFOPLIST_KEY_UILaunchScreen_Generation: YES
+                INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+                INFOPLIST_KEY_CFBundleDisplayName: LumiFilm
+                INFOPLIST_KEY_NSMicrophoneUsageDescription: "LumiFilm 使用麦克风接收您的语音指令（如：光圈f4、快门125、距离2米），直接调节胶片闪光参数。"
+                INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "LumiFilm 使用语音识别将您说出的曝光参数实时转换为转盘与状态栏数值。"
+                INFOPLIST_KEY_NSCameraUsageDescription: "LumiFilm 使用摄像头传感器实时测量现场环境光亮度 (EV100)，帮助您精准控制闪光与环境光比。"
+                MARKETING_VERSION: "9.1.0"
+                CURRENT_PROJECT_VERSION: "91"
+                GENERATE_INFOPLIST_FILE: YES
+                ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+          LumiFilmWidget:
+            type: app-extension
+            platform: iOS
+            deploymentTarget: "17.0"
+            sources:
+              - path: LumiFilmWidget
+            settings:
+              base:
+                SWIFT_VERSION: "5.0"
+                SWIFT_STRICT_CONCURRENCY: minimal
+                PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter.widget
+                INFOPLIST_KEY_CFBundleDisplayName: LumiFilmWidget
+                MARKETING_VERSION: "9.1.0"
+                CURRENT_PROJECT_VERSION: "91"
+                GENERATE_INFOPLIST_FILE: YES
+            info:
+              path: LumiFilmWidget/Info.plist
+              properties:
+                CFBundleShortVersionString: "9.1.0"
+                CFBundleVersion: "91"
+                NSExtension:
+                  NSExtensionPointIdentifier: com.apple.widgetkit-extension
         EOF
 
         # 4. Create LumiFilmWidget.swift (v9.1 - Multi-Channel App/Widget Sync & Standard Photography Scales)
