@@ -1,4 +1,4 @@
-name: Build Unsigned LumiFilm iOS App (v8.8 - Clean Redesigned Small/Medium Widgets & New Large 4x4 Interactive Flash Widget)
+name: Build Unsigned LumiFilm iOS App (v8.9 - Camera Mechanical Keycap Widgets, Custom Theme Sync & Fixed 4x4 Large Console)
 
 on:
   workflow_dispatch:
@@ -248,8 +248,8 @@ jobs:
                 INFOPLIST_KEY_NSMicrophoneUsageDescription: "LumiFilm 使用麦克风接收您的语音指令（如：光圈f3、快门200、距离2.5米），直接调节胶片闪光参数。"
                 INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "LumiFilm 使用语音识别将您说出的曝光参数实时转换为转盘与状态栏数值。"
                 INFOPLIST_KEY_NSCameraUsageDescription: "LumiFilm 使用摄像头传感器实时测量现场环境光亮度 (EV100)，帮助您精准控制闪光与环境光比。"
-                MARKETING_VERSION: "8.8.0"
-                CURRENT_PROJECT_VERSION: "88"
+                MARKETING_VERSION: "8.9.0"
+                CURRENT_PROJECT_VERSION: "89"
                 GENERATE_INFOPLIST_FILE: YES
                 ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
           LumiFilmWidget:
@@ -264,23 +264,88 @@ jobs:
                 SWIFT_STRICT_CONCURRENCY: minimal
                 PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter.widget
                 INFOPLIST_KEY_CFBundleDisplayName: LumiFilmWidget
-                MARKETING_VERSION: "8.8.0"
-                CURRENT_PROJECT_VERSION: "88"
+                MARKETING_VERSION: "8.9.0"
+                CURRENT_PROJECT_VERSION: "89"
                 GENERATE_INFOPLIST_FILE: YES
             info:
               path: LumiFilmWidget/Info.plist
               properties:
-                CFBundleShortVersionString: "8.8.0"
-                CFBundleVersion: "88"
+                CFBundleShortVersionString: "8.9.0"
+                CFBundleVersion: "89"
                 NSExtension:
                   NSExtensionPointIdentifier: com.apple.widgetkit-extension
         EOF
 
-        # 4. Create LumiFilmWidget.swift (v8.3 - Home Screen & Lock Screen Flash Power Output Widget + Voice Trigger & Interactive Controls)
+        # 4. Create LumiFilmWidget.swift (v8.9 - Camera Keycap Style Small/Medium Widgets & Fixed Large 4x4 Console with Theme Sync)
         cat << 'EOF' > LumiFilmBuild/LumiFilmWidget/LumiFilmWidget.swift
         import WidgetKit
         import SwiftUI
         import AppIntents
+        enum WidgetTheme: Int {
+         case instagramGlow = 0
+         case threadsMinimal = 1
+         case leicaBrushedBrass = 2
+         var badgeTitle: String {
+          switch self {
+          case .instagramGlow: return "流光 Neon"
+          case .threadsMinimal: return "曜石黑"
+          case .leicaBrushedBrass: return "黑漆露铜"
+          }
+         }
+         var accent: Color {
+          switch self {
+          case .instagramGlow: return Color(red: 1.0, green: 0.38, blue: 0.58)
+          case .threadsMinimal: return Color(red: 0.96, green: 0.96, blue: 0.98)
+          case .leicaBrushedBrass: return Color(red: 0.90, green: 0.68, blue: 0.32)
+          }
+         }
+         var secondaryAccent: Color {
+          switch self {
+          case .instagramGlow: return Color(red: 1.0, green: 0.68, blue: 0.24)
+          case .threadsMinimal: return Color(red: 0.58, green: 0.62, blue: 0.70)
+          case .leicaBrushedBrass: return Color(red: 0.78, green: 0.48, blue: 0.22)
+          }
+         }
+         var bodyGradient: [Color] {
+          switch self {
+          case .instagramGlow:
+           return [
+            Color(red: 0.16, green: 0.05, blue: 0.25),
+            Color(red: 0.36, green: 0.08, blue: 0.25),
+            Color(red: 0.46, green: 0.18, blue: 0.10)
+           ]
+          case .threadsMinimal:
+           return [
+            Color(red: 0.05, green: 0.05, blue: 0.06),
+            Color(red: 0.11, green: 0.11, blue: 0.13),
+            Color(red: 0.06, green: 0.06, blue: 0.07)
+           ]
+          case .leicaBrushedBrass:
+           return [
+            Color(red: 0.08, green: 0.07, blue: 0.06),
+            Color(red: 0.17, green: 0.13, blue: 0.08),
+            Color(red: 0.24, green: 0.17, blue: 0.10)
+           ]
+          }
+         }
+         var lcdBackground: Color {
+          switch self {
+          case .instagramGlow: return Color(red: 0.08, green: 0.03, blue: 0.14).opacity(0.88)
+          case .threadsMinimal: return Color(red: 0.02, green: 0.02, blue: 0.03).opacity(0.92)
+          case .leicaBrushedBrass: return Color(red: 0.06, green: 0.05, blue: 0.04).opacity(0.92)
+          }
+         }
+         var keycapSurface: [Color] {
+          switch self {
+          case .instagramGlow:
+           return [Color(red: 0.28, green: 0.10, blue: 0.36), Color(red: 0.15, green: 0.05, blue: 0.22)]
+          case .threadsMinimal:
+           return [Color(red: 0.20, green: 0.20, blue: 0.23), Color(red: 0.10, green: 0.10, blue: 0.12)]
+          case .leicaBrushedBrass:
+           return [Color(red: 0.22, green: 0.18, blue: 0.14), Color(red: 0.11, green: 0.09, blue: 0.07)]
+          }
+         }
+        }
         struct WidgetSharedStore {
          static let suiteName = "group.com.lumifilm.flashmeter"
          static func double(forKey key: String, default defVal: Double) -> Double {
@@ -303,6 +368,9 @@ jobs:
           4.0, 4.5, 5.0, 5.6, 6.3, 7.1, 8.0, 9.0, 10.0, 11.0, 13.0, 14.0,
           16.0, 18.0, 20.0, 22.0, 25.0, 29.0, 32.0
          ]
+         static let shutterSteps: [Int] = [
+          15, 30, 60, 90, 100, 125, 160, 200, 250, 320, 400, 500, 800, 1000, 2000, 4000
+         ]
          static let distanceSteps: [Double] = [
           0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0,
           2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 15.0
@@ -310,30 +378,45 @@ jobs:
          static let isoSteps: [Double] = [
           50, 64, 80, 100, 125, 160, 200, 250, 320, 400, 500, 640, 800, 1600, 3200
          ]
-         static func powerComponents(gnAt100: Double, iso: Double, distance: Double, aperture: Double, lossEV: Double) -> (mainFraction: String, trimBadge: String?, statusNote: String, isWarning: Bool) {
+         static func powerComponents(gnAt100: Double, iso: Double, distance: Double, aperture: Double, shutter: Int, maxSync: Int, lossEV: Double) -> (mainFraction: String, trimBadge: String?, statusNote: String, isWarning: Bool) {
           let isoFactor = sqrt(max(iso, 25.0) / 100.0)
           let closeUpLoss = distance < 1.0 ? (0.35 * (1.0 - distance)) : 0.0
-          let effectiveGN = gnAt100 * isoFactor * pow(2.0, -(lossEV + closeUpLoss) / 2.0)
+          let hssStops = shutter > maxSync ? log2(Double(shutter) / Double(max(maxSync, 30))) : 0.0
+          let hssLoss = hssStops > 0 ? (1.5 + 1.0 * hssStops) : 0.0
+          let effectiveGN = gnAt100 * isoFactor * pow(2.0, -(lossEV + closeUpLoss + hssLoss) / 2.0)
           let fullPowerAperture = effectiveGN / max(distance, 0.3)
           let ratio = aperture / max(fullPowerAperture, 0.1)
           let power = ratio * ratio
-          if power > 1.05 { return ("OVER", ">1/1", "需开大光圈或靠近", true) }
-          if power < (1.0 / 256.0) { return ("LOW", "<1/128", "需收小光圈或后退", true) }
+          if power > 1.05 { return ("OVER", ">1/1", "功率不足·请开大光圈或靠近", true) }
+          if power < (1.0 / 256.0) { return ("LOW", "<1/128", "功率过强·请收小光圈或后退", true) }
           let stops = round(log2(1.0 / max(power, 0.001)) * 3.0) / 3.0
           let whole = max(0, min(7, Int(round(stops))))
           let trimEV = Double(whole) - stops
           let denom = 1 << whole
           let fracStr = denom == 1 ? "1/1" : "1/\(denom)"
+          let syncTag = shutter > maxSync ? "⚡HSS高速光损" : "精准同步"
           if abs(trimEV) < 0.14 {
-           return (fracStr, nil, "精准整档输出", false)
+           return (fracStr, nil, "整档输出 · \(syncTag)", shutter > maxSync)
           }
-          return (fracStr, String(format: "%+.1fEV", trimEV), "1/3档微调输出", false)
+          return (fracStr, String(format: "%+.1fEV", trimEV), "1/3档微调 · \(syncTag)", shutter > maxSync)
          }
          static func formatFStop(_ val: Double) -> String {
           if abs(val - round(val)) < 0.05 && val >= 4.0 {
            return String(format: "f/%.0f", round(val))
           }
           return String(format: "f/%.1f", val)
+         }
+        }
+        @available(iOS 17.0, *)
+        struct CycleWidgetThemeIntent: AppIntent {
+         static var title: LocalizedStringResource = "Switch Camera Style"
+         init() {}
+         func perform() async throws -> some IntentResult {
+          let cur = Int(round(WidgetSharedStore.double(forKey: "lf_theme", default: 2.0)))
+          let next = (cur + 1) % 3
+          WidgetSharedStore.setDouble(Double(next), forKey: "lf_theme")
+          WidgetCenter.shared.reloadAllTimelines()
+          return .result()
          }
         }
         @available(iOS 17.0, *)
@@ -349,6 +432,23 @@ jobs:
           if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
            let nextIdx = max(0, min(steps.count - 1, idx + (delta > 0 ? 1 : -1)))
            WidgetSharedStore.setDouble(steps[nextIdx], forKey: "lf_aperture")
+          }
+          WidgetCenter.shared.reloadAllTimelines()
+          return .result()
+         }
+        }
+        @available(iOS 17.0, *)
+        struct AdjustShutterIntent: AppIntent {
+         static var title: LocalizedStringResource = "Adjust Shutter Speed"
+         @Parameter(title: "Delta") var delta: Double
+         init() { self.delta = 0 }
+         init(delta: Double) { self.delta = delta }
+         func perform() async throws -> some IntentResult {
+          let cur = Int(round(WidgetSharedStore.double(forKey: "lf_shutter", default: 125.0)))
+          let steps = FlashCalculator.shutterSteps
+          if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
+           let nextIdx = max(0, min(steps.count - 1, idx + (delta > 0 ? 1 : -1)))
+           WidgetSharedStore.setDouble(Double(steps[nextIdx]), forKey: "lf_shutter")
           }
           WidgetCenter.shared.reloadAllTimelines()
           return .result()
@@ -372,33 +472,17 @@ jobs:
          }
         }
         @available(iOS 17.0, *)
-        struct SetPresetDistanceIntent: AppIntent {
-         static var title: LocalizedStringResource = "Set Preset Distance"
-         @Parameter(title: "TargetMeters") var targetMeters: Double
-         init() { self.targetMeters = 2.0 }
-         init(targetMeters: Double) { self.targetMeters = targetMeters }
-         func perform() async throws -> some IntentResult {
-          WidgetSharedStore.setDouble(targetMeters, forKey: "lf_distance")
-          WidgetCenter.shared.reloadAllTimelines()
-          return .result()
-         }
-        }
-        @available(iOS 17.0, *)
         struct AdjustEVCompIntent: AppIntent {
          static var title: LocalizedStringResource = "Adjust EV Comp"
          @Parameter(title: "Delta") var delta: Double
          init() { self.delta = 0 }
          init(delta: Double) { self.delta = delta }
          func perform() async throws -> some IntentResult {
-          if abs(delta) > 90 {
-           WidgetSharedStore.setDouble(0.0, forKey: "lf_exp_comp_ev")
-          } else {
-           let cur = WidgetSharedStore.double(forKey: "lf_exp_comp_ev", default: 0.0)
-           let clamped = max(-2.0, min(2.0, cur + delta))
-           let snapped = round(clamped * 5.0) / 5.0
-           let clean = abs(snapped) < 0.05 ? 0.0 : snapped
-           WidgetSharedStore.setDouble(clean, forKey: "lf_exp_comp_ev")
-          }
+          let cur = WidgetSharedStore.double(forKey: "lf_exp_comp_ev", default: 0.0)
+          let clamped = max(-2.0, min(2.0, cur + delta))
+          let snapped = round(clamped * 5.0) / 5.0
+          let clean = abs(snapped) < 0.05 ? 0.0 : snapped
+          WidgetSharedStore.setDouble(clean, forKey: "lf_exp_comp_ev")
           WidgetCenter.shared.reloadAllTimelines()
           return .result()
          }
@@ -426,31 +510,40 @@ jobs:
          let gn: Double
          let distance: Double
          let aperture: Double
+         let shutterDenom: Int
+         let maxSyncSpeed: Int
          let evComp: Double
+         let themeRaw: Int
          let mainPower: String
          let trimBadge: String?
          let noteText: String
          let isWarning: Bool
+         var theme: WidgetTheme {
+          WidgetTheme(rawValue: themeRaw) ?? .leicaBrushedBrass
+         }
          var powerFullText: String {
           if let trim = trimBadge { return "\(mainPower) \(trim)" }
           return mainPower
          }
+         private var querySuffix: String {
+          String(format: "ap=%.1f&dist=%.1f&ev=%.1f&iso=%.0f&gn=%.0f&shutter=%d&theme=%d", aperture, distance, evComp, iso, gn, shutterDenom, themeRaw)
+         }
          var voiceDeepLinkURL: URL {
-          let s = String(format: "lumifilm://voice?ap=%.1f&dist=%.1f&ev=%.1f&iso=%.0f&gn=%.0f", aperture, distance, evComp, iso, gn)
-          return URL(string: s) ?? URL(string: "lumifilm://voice")!
+          URL(string: "lumifilm://voice?\(querySuffix)") ?? URL(string: "lumifilm://voice")!
          }
          var speakDeepLinkURL: URL {
-          let s = String(format: "lumifilm://speak?ap=%.1f&dist=%.1f&ev=%.1f&iso=%.0f&gn=%.0f", aperture, distance, evComp, iso, gn)
-          return URL(string: s) ?? URL(string: "lumifilm://speak")!
+          URL(string: "lumifilm://speak?\(querySuffix)") ?? URL(string: "lumifilm://speak")!
+         }
+         var onboardingDeepLinkURL: URL {
+          URL(string: "lumifilm://onboarding?\(querySuffix)") ?? URL(string: "lumifilm://onboarding")!
          }
          var meterDeepLinkURL: URL {
-          let s = String(format: "lumifilm://meter?ap=%.1f&dist=%.1f&ev=%.1f&iso=%.0f&gn=%.0f", aperture, distance, evComp, iso, gn)
-          return URL(string: s) ?? URL(string: "lumifilm://meter")!
+          URL(string: "lumifilm://meter?\(querySuffix)") ?? URL(string: "lumifilm://meter")!
          }
         }
         struct LumiFilmProvider: TimelineProvider {
          func placeholder(in context: Context) -> LumiFilmEntry {
-          LumiFilmEntry(date: Date(), iso: 400, gn: 36, distance: 2.0, aperture: 4.0, evComp: 0.0, mainPower: "1/8", trimBadge: "+0.3EV", noteText: "1/3档微调输出", isWarning: false)
+          LumiFilmEntry(date: Date(), iso: 400, gn: 36, distance: 2.0, aperture: 4.0, shutterDenom: 125, maxSyncSpeed: 125, evComp: 0.0, themeRaw: 2, mainPower: "1/16", trimBadge: "+0.3EV", noteText: "1/3档微调 · 精准同步", isWarning: false)
          }
          func getSnapshot(in context: Context, completion: @escaping (LumiFilmEntry) -> Void) {
           completion(loadEntry())
@@ -464,383 +557,374 @@ jobs:
           let gn = WidgetSharedStore.double(forKey: "lf_gn", default: 36.0)
           let dist = WidgetSharedStore.double(forKey: "lf_distance", default: 2.0)
           let ap = WidgetSharedStore.double(forKey: "lf_aperture", default: 4.0)
+          let shutter = max(2, Int(round(WidgetSharedStore.double(forKey: "lf_shutter", default: 125.0))))
+          let maxSync = max(30, Int(round(WidgetSharedStore.double(forKey: "lf_sync_speed", default: 125.0))))
           let evComp = WidgetSharedStore.double(forKey: "lf_exp_comp_ev", default: 0.0)
+          let themeRaw = Int(round(WidgetSharedStore.double(forKey: "lf_theme", default: 2.0)))
           let modLoss = WidgetSharedStore.double(forKey: "lf_modifier_loss", default: 0.0)
           let bounceLoss = WidgetSharedStore.double(forKey: "lf_bounce_loss", default: 0.0)
           let filterLoss = WidgetSharedStore.double(forKey: "lf_filter_loss_ev", default: 0.0)
           let totalLoss = modLoss + bounceLoss + filterLoss + evComp
-          let res = FlashCalculator.powerComponents(gnAt100: gn, iso: iso, distance: dist, aperture: ap, lossEV: totalLoss)
-          return LumiFilmEntry(date: Date(), iso: iso, gn: gn, distance: dist, aperture: ap, evComp: evComp, mainPower: res.0, trimBadge: res.1, noteText: res.2, isWarning: res.3)
+          let res = FlashCalculator.powerComponents(gnAt100: gn, iso: iso, distance: dist, aperture: ap, shutter: shutter, maxSync: maxSync, lossEV: totalLoss)
+          return LumiFilmEntry(date: Date(), iso: iso, gn: gn, distance: dist, aperture: ap, shutterDenom: shutter, maxSyncSpeed: maxSync, evComp: evComp, themeRaw: themeRaw, mainPower: res.0, trimBadge: res.1, noteText: res.2, isWarning: res.3)
          }
         }
         struct LumiFilmWidgetEntryView: View {
          var entry: LumiFilmProvider.Entry
+         var forceLarge: Bool = false
          @Environment(\.widgetFamily) private var family
-         private let accentOrange = Color(red: 0.96, green: 0.58, blue: 0.20)
+         private var t: WidgetTheme { entry.theme }
          var body: some View {
           Group {
-           switch family {
-           case .systemMedium:
-            mediumWidgetView
-           case .systemLarge:
+           if forceLarge || family == .systemLarge {
             largeWidgetView
-           case .accessoryRectangular:
+           } else if family == .systemMedium {
+            mediumWidgetView
+           } else if family == .accessoryRectangular {
             lockScreenRectangularView
-           default:
+           } else {
             smallWidgetView
            }
           }
           .widgetURL(entry.meterDeepLinkURL)
           .containerBackground(for: .widget) {
-           LinearGradient(
-            colors: [
-             Color(red: 0.08, green: 0.08, blue: 0.10),
-             Color(red: 0.13, green: 0.11, blue: 0.10),
-             Color(red: 0.19, green: 0.13, blue: 0.09)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-           )
+           ZStack {
+            LinearGradient(colors: t.bodyGradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+             .strokeBorder(
+              LinearGradient(colors: [t.accent.opacity(0.42), Color.white.opacity(0.08), t.secondaryAccent.opacity(0.28)], startPoint: .topLeading, endPoint: .bottomTrailing),
+              lineWidth: 1.2
+             )
+             .padding(2)
+           }
           }
          }
-         private func powerHeroDisplay(mainFontSize: CGFloat, badgeFontSize: CGFloat) -> some View {
-          HStack(alignment: .firstTextBaseline, spacing: 6) {
+         private func powerLCDReadout(mainSize: CGFloat, badgeSize: CGFloat) -> some View {
+          HStack(alignment: .firstTextBaseline, spacing: 5) {
            Text(entry.mainPower)
-            .font(.system(size: mainFontSize, weight: .black, design: .rounded))
-            .foregroundStyle(entry.isWarning ? Color.red : Color.white)
+            .font(.system(size: mainSize, weight: .black, design: .rounded))
+            .foregroundStyle(entry.isWarning ? Color.orange : Color.white)
             .minimumScaleFactor(0.6)
             .lineLimit(1)
            if let trim = entry.trimBadge {
             Text(trim)
-             .font(.system(size: badgeFontSize, weight: .heavy, design: .monospaced))
+             .font(.system(size: badgeSize, weight: .heavy, design: .monospaced))
              .foregroundStyle(Color.black)
              .padding(.horizontal, 6)
-             .padding(.vertical, 2.5)
-             .background(accentOrange, in: Capsule())
+             .padding(.vertical, 2)
+             .background(t.accent, in: Capsule())
            } else {
             Text("整档")
-             .font(.system(size: badgeFontSize - 1, weight: .bold, design: .rounded))
-             .foregroundStyle(Color.green)
-             .padding(.horizontal, 6)
+             .font(.system(size: badgeSize - 0.5, weight: .bold, design: .rounded))
+             .foregroundStyle(t.accent)
+             .padding(.horizontal, 5.5)
              .padding(.vertical, 2)
-             .background(Color.green.opacity(0.16), in: Capsule())
+             .background(t.accent.opacity(0.18), in: Capsule())
+             .overlay(Capsule().stroke(t.accent.opacity(0.45), lineWidth: 0.7))
            }
           }
          }
-         private var smallWidgetView: some View {
-          VStack(alignment: .leading, spacing: 6) {
-           HStack(spacing: 4) {
-            Image(systemName: "bolt.circle.fill")
-             .font(.system(size: 12, weight: .bold))
-             .foregroundStyle(accentOrange)
-            Text("ISO \(Int(entry.iso)) · GN\(Int(entry.gn))")
-             .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-             .foregroundStyle(Color.white.opacity(0.72))
-             .lineLimit(1)
-            Spacer(minLength: 0)
-            Link(destination: entry.voiceDeepLinkURL) {
-             Image(systemName: "mic.fill")
-              .font(.system(size: 10, weight: .bold))
+         private func cameraShutterPrimaryButton(url: URL, icon: String, title: String, height: CGFloat) -> some View {
+          Link(destination: url) {
+           HStack(spacing: 5) {
+            ZStack {
+             Circle()
+              .fill(Color.black.opacity(0.26))
+              .frame(width: height - 10, height: height - 10)
+             Image(systemName: icon)
+              .font(.system(size: height * 0.36, weight: .black))
               .foregroundStyle(Color.black)
-              .frame(width: 22, height: 22)
-              .background(accentOrange, in: Circle())
+            }
+            Text(title)
+             .font(.system(size: height * 0.35, weight: .black, design: .rounded))
+             .foregroundStyle(Color.black)
+             .lineLimit(1)
+           }
+           .frame(maxWidth: .infinity)
+           .frame(height: height)
+           .background(
+            LinearGradient(colors: [t.accent, t.secondaryAccent], startPoint: .topLeading, endPoint: .bottomTrailing),
+            in: Capsule()
+           )
+           .overlay(
+            Capsule()
+             .strokeBorder(Color.white.opacity(0.65), lineWidth: 1.1)
+           )
+           .shadow(color: t.accent.opacity(0.35), radius: 3, x: 0, y: 2)
+          }
+         }
+         private func cameraKeycapSecondaryButton(url: URL, icon: String, title: String, height: CGFloat) -> some View {
+          Link(destination: url) {
+           HStack(spacing: 4) {
+            Circle()
+             .fill(t.accent)
+             .frame(width: 5, height: 5)
+            Image(systemName: icon)
+             .font(.system(size: height * 0.34, weight: .bold))
+             .foregroundStyle(t.accent)
+            Text(title)
+             .font(.system(size: height * 0.34, weight: .bold, design: .rounded))
+             .foregroundStyle(Color.white)
+             .lineLimit(1)
+             .minimumScaleFactor(0.75)
+           }
+           .frame(maxWidth: .infinity)
+           .frame(height: height)
+           .background(
+            LinearGradient(colors: t.keycapSurface, startPoint: .top, endPoint: .bottom),
+            in: RoundedRectangle(cornerRadius: height * 0.38, style: .continuous)
+           )
+           .overlay(
+            RoundedRectangle(cornerRadius: height * 0.38, style: .continuous)
+             .strokeBorder(
+              LinearGradient(colors: [t.accent.opacity(0.72), Color.white.opacity(0.18), t.secondaryAccent.opacity(0.45)], startPoint: .topLeading, endPoint: .bottomTrailing),
+              lineWidth: 1.1
+             )
+           )
+          }
+         }
+         @ViewBuilder
+         private var themeCyclePill: some View {
+          if #available(iOSApplicationExtension 17.0, *) {
+           Button(intent: CycleWidgetThemeIntent()) {
+            HStack(spacing: 3) {
+             Circle()
+              .fill(t.accent)
+              .frame(width: 5.5, height: 5.5)
+             Text(t.badgeTitle)
+              .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+              .foregroundStyle(Color.white.opacity(0.85))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2.5)
+            .background(Color.white.opacity(0.10), in: Capsule())
+            .overlay(Capsule().stroke(t.accent.opacity(0.45), lineWidth: 0.7))
+           }
+           .buttonStyle(.plain)
+          }
+         }
+         private var smallWidgetView: some View {
+          VStack(spacing: 6) {
+           VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+             Text("输出功率")
+              .font(.system(size: 9, weight: .bold, design: .monospaced))
+              .foregroundStyle(t.accent)
+             Spacer(minLength: 0)
+             themeCyclePill
+            }
+            Link(destination: entry.meterDeepLinkURL) {
+             powerLCDReadout(mainSize: 28, badgeSize: 9.5)
             }
            }
-           Spacer(minLength: 0)
-           Link(destination: entry.meterDeepLinkURL) {
-            powerHeroDisplay(mainFontSize: 30, badgeFontSize: 10)
-           }
-           Spacer(minLength: 0)
-           if #available(iOSApplicationExtension 17.0, *) {
-            VStack(spacing: 5) {
-             HStack(spacing: 0) {
-              Button(intent: AdjustApertureIntent(delta: -1)) {
-               Text("−")
-                .font(.system(size: 13, weight: .black, design: .monospaced))
-                .frame(width: 28, height: 25)
-                .background(Color.white.opacity(0.12))
-              }
-              .buttonStyle(.plain)
-              Spacer(minLength: 0)
-              Text(FlashCalculator.formatFStop(entry.aperture))
-               .font(.system(size: 11.5, weight: .black, design: .monospaced))
-               .foregroundStyle(accentOrange)
-              Spacer(minLength: 0)
-              Button(intent: AdjustApertureIntent(delta: 1)) {
-               Text("+")
-                .font(.system(size: 13, weight: .black, design: .monospaced))
-                .frame(width: 28, height: 25)
-                .background(Color.white.opacity(0.12))
-              }
-              .buttonStyle(.plain)
-             }
-             .background(Color.white.opacity(0.07), in: Capsule())
-             .clipShape(Capsule())
-             HStack(spacing: 0) {
-              Button(intent: AdjustDistanceIntent(delta: -1)) {
-               Text("−")
-                .font(.system(size: 13, weight: .black, design: .monospaced))
-                .frame(width: 28, height: 25)
-                .background(Color.white.opacity(0.12))
-              }
-              .buttonStyle(.plain)
-              Spacer(minLength: 0)
-              Text(String(format: "%.1fm", entry.distance))
-               .font(.system(size: 11.5, weight: .black, design: .monospaced))
-               .foregroundStyle(Color.cyan)
-              Spacer(minLength: 0)
-              Button(intent: AdjustDistanceIntent(delta: 1)) {
-               Text("+")
-                .font(.system(size: 13, weight: .black, design: .monospaced))
-                .frame(width: 28, height: 25)
-                .background(Color.white.opacity(0.12))
-              }
-              .buttonStyle(.plain)
-             }
-             .background(Color.white.opacity(0.07), in: Capsule())
-             .clipShape(Capsule())
-            }
+           .padding(.horizontal, 8)
+           .padding(.vertical, 6)
+           .frame(maxWidth: .infinity, alignment: .leading)
+           .background(t.lcdBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+           .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+             .strokeBorder(t.accent.opacity(0.50), lineWidth: 1.0)
+           )
+           cameraShutterPrimaryButton(url: entry.voiceDeepLinkURL, icon: "mic.fill", title: "语音输入", height: 29)
+           HStack(spacing: 5) {
+            cameraKeycapSecondaryButton(url: entry.speakDeepLinkURL, icon: "speaker.wave.2.fill", title: "播报", height: 26)
+            cameraKeycapSecondaryButton(url: entry.onboardingDeepLinkURL, icon: "slider.horizontal.3", title: "首次指引", height: 26)
            }
           }
           .foregroundStyle(Color.white)
          }
          private var mediumWidgetView: some View {
-          HStack(spacing: 14) {
+          HStack(spacing: 12) {
            VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 5) {
              Image(systemName: "bolt.circle.fill")
-              .font(.system(size: 13, weight: .bold))
-              .foregroundStyle(accentOrange)
-             Text("ISO \(Int(entry.iso)) · GN \(Int(entry.gn))")
-              .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-              .foregroundStyle(Color.white.opacity(0.75))
+              .font(.system(size: 12, weight: .bold))
+              .foregroundStyle(t.accent)
+             Text("闪光输出功率")
+              .font(.system(size: 10, weight: .heavy, design: .monospaced))
+              .foregroundStyle(t.accent)
+             Spacer(minLength: 0)
+             themeCyclePill
             }
             Spacer(minLength: 0)
             Link(destination: entry.meterDeepLinkURL) {
-             VStack(alignment: .leading, spacing: 2) {
-              powerHeroDisplay(mainFontSize: 36, badgeFontSize: 11)
+             VStack(alignment: .leading, spacing: 3) {
+              powerLCDReadout(mainSize: 38, badgeSize: 11)
               Text(entry.noteText)
-               .font(.system(size: 10, weight: .semibold))
-               .foregroundStyle(Color.white.opacity(0.55))
+               .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+               .foregroundStyle(Color.white.opacity(0.68))
+               .lineLimit(1)
              }
             }
             Spacer(minLength: 0)
-            HStack(spacing: 8) {
-             Link(destination: entry.voiceDeepLinkURL) {
-              HStack(spacing: 4) {
-               Image(systemName: "mic.fill")
-                .font(.system(size: 10.5, weight: .bold))
-               Text("语音调参")
-                .font(.system(size: 11, weight: .heavy))
-              }
-              .foregroundStyle(Color.black)
-              .padding(.horizontal, 12)
-              .padding(.vertical, 6.5)
-              .background(accentOrange, in: Capsule())
-             }
-             Link(destination: entry.speakDeepLinkURL) {
-              HStack(spacing: 4) {
-               Image(systemName: "speaker.wave.2.fill")
-                .font(.system(size: 10, weight: .bold))
-               Text("播报")
-                .font(.system(size: 11, weight: .bold))
-              }
-              .foregroundStyle(Color.white)
-              .padding(.horizontal, 11)
-              .padding(.vertical, 6.5)
-              .background(Color.white.opacity(0.14), in: Capsule())
-             }
+            HStack(spacing: 6) {
+             Circle()
+              .fill(Color.green)
+              .frame(width: 5.5, height: 5.5)
+             Text("READY · 相机机械按键台")
+              .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+              .foregroundStyle(Color.white.opacity(0.52))
+              .lineLimit(1)
             }
            }
-           .frame(maxWidth: .infinity, alignment: .leading)
-           if #available(iOSApplicationExtension 17.0, *) {
-            VStack(spacing: 7) {
-             unifiedCapsuleStepper(
-              label: "光圈",
-              valueText: FlashCalculator.formatFStop(entry.aperture),
-              valueColor: accentOrange,
-              minusIntent: AdjustApertureIntent(delta: -1),
-              plusIntent: AdjustApertureIntent(delta: 1)
+           .padding(.horizontal, 11)
+           .padding(.vertical, 10)
+           .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+           .background(t.lcdBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+           .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+             .strokeBorder(
+              LinearGradient(colors: [t.accent.opacity(0.65), Color.white.opacity(0.15), t.secondaryAccent.opacity(0.45)], startPoint: .topLeading, endPoint: .bottomTrailing),
+              lineWidth: 1.2
              )
-             unifiedCapsuleStepper(
-              label: "距离",
-              valueText: String(format: "%.1fm", entry.distance),
-              valueColor: Color.cyan,
-              minusIntent: AdjustDistanceIntent(delta: -1),
-              plusIntent: AdjustDistanceIntent(delta: 1)
-             )
-             unifiedCapsuleStepper(
-              label: "补偿",
-              valueText: abs(entry.evComp) < 0.05 ? "0.0EV" : String(format: "%+.1fEV", entry.evComp),
-              valueColor: Color.green,
-              minusIntent: AdjustEVCompIntent(delta: -0.2),
-              plusIntent: AdjustEVCompIntent(delta: 0.2)
-             )
-            }
-            .frame(width: 146)
+           )
+           VStack(spacing: 7) {
+            cameraShutterPrimaryButton(url: entry.voiceDeepLinkURL, icon: "mic.fill", title: "语音输入", height: 34)
+            cameraKeycapSecondaryButton(url: entry.speakDeepLinkURL, icon: "speaker.wave.2.fill", title: "播报输出功率", height: 32)
+            cameraKeycapSecondaryButton(url: entry.onboardingDeepLinkURL, icon: "sparkles", title: "首次导入指引", height: 32)
            }
+           .frame(width: 138)
           }
           .foregroundStyle(Color.white)
          }
-         @available(iOSApplicationExtension 17.0, *)
-         private func unifiedCapsuleStepper<I: AppIntent>(label: String, valueText: String, valueColor: Color, minusIntent: I, plusIntent: I) -> some View {
-          HStack(spacing: 0) {
-           Button(intent: minusIntent) {
-            Image(systemName: "minus")
-             .font(.system(size: 10, weight: .black))
-             .foregroundStyle(Color.white.opacity(0.9))
-             .frame(width: 30, height: 30)
-             .background(Color.white.opacity(0.12))
-           }
-           .buttonStyle(.plain)
-           Spacer(minLength: 2)
-           HStack(spacing: 4) {
-            Text(label)
-             .font(.system(size: 9.5, weight: .semibold))
-             .foregroundStyle(Color.white.opacity(0.60))
-            Text(valueText)
-             .font(.system(size: 11.5, weight: .black, design: .monospaced))
-             .foregroundStyle(valueColor)
-             .lineLimit(1)
-           }
-           Spacer(minLength: 2)
-           Button(intent: plusIntent) {
-            Image(systemName: "plus")
-             .font(.system(size: 10, weight: .black))
-             .foregroundStyle(Color.white.opacity(0.9))
-             .frame(width: 30, height: 30)
-             .background(Color.white.opacity(0.12))
-           }
-           .buttonStyle(.plain)
-          }
-          .background(Color.white.opacity(0.08), in: Capsule())
-          .clipShape(Capsule())
-          .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 0.8))
-         }
          private var largeWidgetView: some View {
-          VStack(spacing: 10) {
-           HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
-             HStack(spacing: 5) {
-              Image(systemName: "bolt.circle.fill")
-               .font(.system(size: 14, weight: .bold))
-               .foregroundStyle(accentOrange)
-              Text("LUMIFILM · 闪光输出功率")
-               .font(.system(size: 10.5, weight: .black, design: .monospaced))
-               .foregroundStyle(Color.white.opacity(0.75))
-             }
-             Link(destination: entry.meterDeepLinkURL) {
-              powerHeroDisplay(mainFontSize: 44, badgeFontSize: 12.5)
-             }
-             Text("ISO \(Int(entry.iso)) · GN \(Int(entry.gn)) · \(entry.noteText)")
-              .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
-              .foregroundStyle(Color.white.opacity(0.58))
+          VStack(spacing: 8) {
+           VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+             Image(systemName: "camera.aperture")
+              .font(.system(size: 12, weight: .bold))
+              .foregroundStyle(t.accent)
+             Text("LUMIFILM 机顶测光屏 · 输出功率")
+              .font(.system(size: 10, weight: .black, design: .monospaced))
+              .foregroundStyle(t.accent)
+             Spacer(minLength: 0)
+             themeCyclePill
             }
-            Spacer(minLength: 6)
-            VStack(spacing: 7) {
-             Link(destination: entry.voiceDeepLinkURL) {
-              HStack(spacing: 5) {
-               Image(systemName: "mic.fill")
-                .font(.system(size: 11, weight: .bold))
-               Text("语音调参")
-                .font(.system(size: 12, weight: .heavy))
-              }
-              .foregroundStyle(Color.black)
-              .frame(width: 104)
-              .padding(.vertical, 8.5)
-              .background(accentOrange, in: Capsule())
+            HStack(alignment: .lastTextBaseline) {
+             Link(destination: entry.meterDeepLinkURL) {
+              powerLCDReadout(mainSize: 40, badgeSize: 12)
              }
-             Link(destination: entry.speakDeepLinkURL) {
-              HStack(spacing: 5) {
-               Image(systemName: "speaker.wave.2.fill")
-                .font(.system(size: 11, weight: .bold))
-               Text("语音播报")
-                .font(.system(size: 12, weight: .bold))
-              }
-              .foregroundStyle(Color.white)
-              .frame(width: 104)
-              .padding(.vertical, 8)
-              .background(Color.white.opacity(0.14), in: Capsule())
-              .overlay(Capsule().stroke(Color.white.opacity(0.20), lineWidth: 0.8))
+             Spacer(minLength: 6)
+             VStack(alignment: .trailing, spacing: 2) {
+              Text(entry.noteText)
+               .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+               .foregroundStyle(entry.isWarning ? Color.orange : t.accent)
+              Text("同步上限 ≤1/\(entry.maxSyncSpeed)s · GN\(Int(entry.gn))")
+               .font(.system(size: 9, weight: .semibold, design: .monospaced))
+               .foregroundStyle(Color.white.opacity(0.62))
              }
+            }
+            HStack(spacing: 8) {
+             Text("当前曝光组合:")
+              .font(.system(size: 9, weight: .semibold))
+              .foregroundStyle(Color.white.opacity(0.55))
+             Text("\(FlashCalculator.formatFStop(entry.aperture)) · 1/\(entry.shutterDenom)s · \(String(format: "%.1fm", entry.distance)) · ISO \(Int(entry.iso))")
+              .font(.system(size: 10, weight: .heavy, design: .monospaced))
+              .foregroundStyle(Color.white.opacity(0.92))
+              .lineLimit(1)
             }
            }
            .padding(.horizontal, 12)
-           .padding(.vertical, 10)
-           .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-           .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.14), lineWidth: 1))
+           .padding(.vertical, 9)
+           .background(t.lcdBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+           .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+             .strokeBorder(t.accent.opacity(0.58), lineWidth: 1.2)
+           )
            if #available(iOSApplicationExtension 17.0, *) {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-             largeParameterTile(
-              title: "光圈 APERTURE",
-              valueText: FlashCalculator.formatFStop(entry.aperture),
-              valueColor: accentOrange,
-              minusIntent: AdjustApertureIntent(delta: -1),
-              plusIntent: AdjustApertureIntent(delta: 1)
-             )
-             largeParameterTile(
-              title: "距离 DISTANCE",
-              valueText: String(format: "%.1f m", entry.distance),
-              valueColor: Color.cyan,
-              minusIntent: AdjustDistanceIntent(delta: -1),
-              plusIntent: AdjustDistanceIntent(delta: 1)
-             )
-             largeParameterTile(
-              title: "曝光补偿 EV COMP",
-              valueText: abs(entry.evComp) < 0.05 ? "0.0 EV" : String(format: "%+.1f EV", entry.evComp),
-              valueColor: Color.green,
-              minusIntent: AdjustEVCompIntent(delta: -0.2),
-              plusIntent: AdjustEVCompIntent(delta: 0.2)
-             )
-             largeParameterTile(
-              title: "感光度 FILM ISO",
-              valueText: "ISO \(Int(entry.iso))",
-              valueColor: Color.yellow,
-              minusIntent: AdjustISOIntent(delta: -1),
-              plusIntent: AdjustISOIntent(delta: 1)
-             )
-            }
-            HStack(spacing: 6) {
-             Text("速选距离")
-              .font(.system(size: 9.5, weight: .bold))
-              .foregroundStyle(Color.white.opacity(0.55))
-             ForEach([0.7, 1.2, 2.0, 3.0, 5.0], id: \.self) { d in
-              let isCur = abs(entry.distance - d) < 0.08
-              Button(intent: SetPresetDistanceIntent(targetMeters: d)) {
-               Text(String(format: "%.1fm", d))
-                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-                .foregroundStyle(isCur ? Color.black : Color.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
-                .background(isCur ? Color.cyan : Color.white.opacity(0.10), in: Capsule())
+            VStack(spacing: 7) {
+             HStack(spacing: 7) {
+              cameraDialCard(
+               title: "光圈 APERTURE",
+               valueText: FlashCalculator.formatFStop(entry.aperture),
+               valueColor: t.accent,
+               minusIntent: AdjustApertureIntent(delta: -1),
+               plusIntent: AdjustApertureIntent(delta: 1)
+              )
+              cameraDialCard(
+               title: "快门速度 SHUTTER",
+               valueText: "1/\(entry.shutterDenom)s",
+               valueColor: entry.shutterDenom > entry.maxSyncSpeed ? Color.orange : Color.white,
+               minusIntent: AdjustShutterIntent(delta: -1),
+               plusIntent: AdjustShutterIntent(delta: 1)
+              )
+             }
+             HStack(spacing: 7) {
+              cameraDialCard(
+               title: "拍摄距离 DISTANCE",
+               valueText: String(format: "%.1f m", entry.distance),
+               valueColor: Color.cyan,
+               minusIntent: AdjustDistanceIntent(delta: -1),
+               plusIntent: AdjustDistanceIntent(delta: 1)
+              )
+              cameraDialCard(
+               title: "曝光补偿 EV COMP",
+               valueText: abs(entry.evComp) < 0.05 ? "0.0 EV" : String(format: "%+.1f EV", entry.evComp),
+               valueColor: Color.green,
+               minusIntent: AdjustEVCompIntent(delta: -0.2),
+               plusIntent: AdjustEVCompIntent(delta: 0.2)
+              )
+             }
+             HStack(spacing: 8) {
+              Text("胶卷感光度 ISO")
+               .font(.system(size: 10, weight: .bold, design: .monospaced))
+               .foregroundStyle(Color.white.opacity(0.75))
+              Spacer(minLength: 4)
+              Button(intent: AdjustISOIntent(delta: -1)) {
+               Image(systemName: "minus")
+                .font(.system(size: 10, weight: .black))
+                .foregroundStyle(Color.white)
+                .frame(width: 28, height: 26)
+                .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+              }
+              .buttonStyle(.plain)
+              Text("ISO \(Int(entry.iso))")
+               .font(.system(size: 12.5, weight: .black, design: .monospaced))
+               .foregroundStyle(t.accent)
+               .frame(minWidth: 68)
+              Button(intent: AdjustISOIntent(delta: 1)) {
+               Image(systemName: "plus")
+                .font(.system(size: 10, weight: .black))
+                .foregroundStyle(Color.white)
+                .frame(width: 28, height: 26)
+                .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
               }
               .buttonStyle(.plain)
              }
+             .padding(.horizontal, 11)
+             .padding(.vertical, 5)
+             .background( LinearGradient(colors: t.keycapSurface, startPoint: .top, endPoint: .bottom), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(t.accent.opacity(0.35), lineWidth: 0.9))
             }
-            .padding(.top, 2)
+           }
+           HStack(spacing: 7) {
+            cameraShutterPrimaryButton(url: entry.voiceDeepLinkURL, icon: "mic.fill", title: "语音输入", height: 32)
+            cameraKeycapSecondaryButton(url: entry.speakDeepLinkURL, icon: "speaker.wave.2.fill", title: "播报功率", height: 32)
+            cameraKeycapSecondaryButton(url: entry.onboardingDeepLinkURL, icon: "sparkles", title: "首次指引", height: 32)
            }
           }
           .foregroundStyle(Color.white)
          }
          @available(iOSApplicationExtension 17.0, *)
-         private func largeParameterTile<I: AppIntent>(title: String, valueText: String, valueColor: Color, minusIntent: I, plusIntent: I) -> some View {
-          VStack(alignment: .leading, spacing: 6) {
+         private func cameraDialCard<I: AppIntent>(title: String, valueText: String, valueColor: Color, minusIntent: I, plusIntent: I) -> some View {
+          VStack(alignment: .leading, spacing: 5) {
            Text(title)
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
-            .foregroundStyle(Color.white.opacity(0.58))
+            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+            .foregroundStyle(Color.white.opacity(0.62))
             .lineLimit(1)
            HStack(spacing: 0) {
             Button(intent: minusIntent) {
              Image(systemName: "minus")
               .font(.system(size: 11, weight: .black))
               .foregroundStyle(Color.white)
-              .frame(width: 32, height: 32)
-              .background(Color.white.opacity(0.14), in: Circle())
+              .frame(width: 31, height: 30)
+              .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+              .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).stroke(t.accent.opacity(0.40), lineWidth: 0.7))
             }
             .buttonStyle(.plain)
             Spacer(minLength: 2)
             Text(valueText)
-             .font(.system(size: 15, weight: .black, design: .rounded))
+             .font(.system(size: 14.5, weight: .black, design: .monospaced))
              .foregroundStyle(valueColor)
              .lineLimit(1)
              .minimumScaleFactor(0.75)
@@ -849,16 +933,24 @@ jobs:
              Image(systemName: "plus")
               .font(.system(size: 11, weight: .black))
               .foregroundStyle(Color.white)
-              .frame(width: 32, height: 32)
-              .background(Color.white.opacity(0.14), in: Circle())
+              .frame(width: 31, height: 30)
+              .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+              .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).stroke(t.accent.opacity(0.40), lineWidth: 0.7))
             }
             .buttonStyle(.plain)
            }
           }
-          .padding(.horizontal, 10)
-          .padding(.vertical, 8)
-          .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-          .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(Color.white.opacity(0.14), lineWidth: 0.8))
+          .padding(.horizontal, 9)
+          .padding(.vertical, 7)
+          .frame(maxWidth: .infinity)
+          .background(
+           LinearGradient(colors: t.keycapSurface, startPoint: .top, endPoint: .bottom),
+           in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+          )
+          .overlay(
+           RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .strokeBorder(t.accent.opacity(0.42), lineWidth: 1.0)
+          )
          }
          private var lockScreenRectangularView: some View {
           VStack(alignment: .leading, spacing: 2) {
@@ -867,22 +959,39 @@ jobs:
             Text("FLASH: \(entry.powerFullText)")
              .font(.system(size: 13, weight: .black, design: .rounded))
            }
-           Text(String(format: "f/%.1f · %.1fm · ISO %.0f · GN%.0f", entry.aperture, entry.distance, entry.iso, entry.gn))
+           Text(String(format: "f/%.1f · 1/%ds · %.1fm · ISO %.0f", entry.aperture, entry.shutterDenom, entry.distance, entry.iso))
             .font(.system(size: 10, weight: .semibold, design: .monospaced))
             .opacity(0.85)
           }
          }
         }
-        @main
         struct LumiFilmWidget: Widget {
          let kind: String = "LumiFilmWidget"
          var body: some WidgetConfiguration {
           StaticConfiguration(kind: kind, provider: LumiFilmProvider()) { entry in
-           LumiFilmWidgetEntryView(entry: entry)
+           LumiFilmWidgetEntryView(entry: entry, forceLarge: false)
           }
-          .configurationDisplayName("LumiFilm 闪光测光工作台")
-          .description("提供小号、中号及全新大号 (4x4) 桌面闪光功率插件，简洁明了，支持直接在桌面调节光圈、距离、补偿与 ISO。")
+          .configurationDisplayName("LumiFilm 相机按键测光贴")
+          .description("匹配内置自定义相机主题风格。小号/中号提供纯粹的输出功率、语音输入、播报功率与首次指引相机按键；大号支持光圈与快门调整。")
           .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
+         }
+        }
+        struct LumiFilmLargeConsoleWidget: Widget {
+         let kind: String = "LumiFilmLargeConsoleWidget"
+         var body: some WidgetConfiguration {
+          StaticConfiguration(kind: kind, provider: LumiFilmProvider()) { entry in
+           LumiFilmWidgetEntryView(entry: entry, forceLarge: true)
+          }
+          .configurationDisplayName("LumiFilm 大号全功能测光台 (4x4)")
+          .description("专为大号桌面尺寸打造：机顶液晶屏显示完整曝光信息，支持直接在桌面调节光圈、快门速度、距离、曝光补偿与 ISO。")
+          .supportedFamilies([.systemLarge])
+         }
+        }
+        @main
+        struct LumiFilmWidgetBundle: WidgetBundle {
+         var body: some Widget {
+          LumiFilmWidget()
+          LumiFilmLargeConsoleWidget()
          }
         }
         EOF
@@ -2352,6 +2461,9 @@ jobs:
            ("lf_gn", flashGN),
            ("lf_distance", distance),
            ("lf_aperture", aperture),
+           ("lf_shutter", Double(shutterDenom)),
+           ("lf_sync_speed", Double(maxSyncSpeed)),
+           ("lf_theme", Double(themeRaw)),
            ("lf_max_aperture", maxLensAperture),
            ("lf_exp_comp_ev", exposureCompEV),
            ("lf_modifier_loss", modifierLossEV),
@@ -2395,11 +2507,13 @@ jobs:
            for item in items {
             if let val = Double(item.value ?? "") {
              switch item.name {
-              case "ap": aperture = max(maxLensAperture, min(22.0, val))
+              case "ap": aperture = max(maxLensAperture, min(32.0, val))
               case "dist": distance = max(0.5, min(15.0, val))
               case "ev": setExposureCompClean(val)
               case "iso": filmISO = val
               case "gn": flashGN = val
+              case "shutter": shutterDenom = max(2, min(8000, Int(round(val))))
+              case "theme": themeRaw = max(0, min(2, Int(round(val))))
               default: break
              }
             }
@@ -2414,6 +2528,10 @@ jobs:
            }
            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             speakCurrentExposureOnce()
+           }
+          } else if host.contains("onboarding") || host.contains("setup") || host.contains("guide") {
+           withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+            showOnboardingSheet = true
            }
           } else {
            withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
@@ -2558,6 +2676,19 @@ jobs:
            if lastEditedParameter == .shutter && lockPower {
             solveForLockedPower(changed: .shutter)
            }
+           syncWidgetDefaults()
+          }
+           .onChange(of: themeRaw) { _, _ in
+           syncWidgetDefaults()
+          }
+           .onChange(of: filmISO) { _, _ in
+           syncWidgetDefaults()
+          }
+           .onChange(of: flashGN) { _, _ in
+           syncWidgetDefaults()
+          }
+           .onChange(of: maxSyncSpeed) { _, _ in
+           syncWidgetDefaults()
           }
            .onChange(of: manualPowerIndex) { _, _ in
            if lockPower {
@@ -4872,6 +5003,8 @@ jobs:
               suite?.set(flashGN, forKey: "lf_gn")
               suite?.set(aperture, forKey: "lf_aperture")
               suite?.set(maxLensAperture, forKey: "lf_max_aperture")
+              suite?.set(Double(maxSyncSpeed), forKey: "lf_sync_speed")
+              suite?.set(Double(themeRaw), forKey: "lf_theme")
               WidgetCenter.shared.reloadAllTimelines()
               dismiss()
              } label: {
@@ -5149,13 +5282,13 @@ jobs:
         /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string lumifilm" "$APP_PATH/Info.plist"
 
         # Ensure Main App Info.plist has valid non-empty Bundle Version strings (fixes Sideloadly IXErrorDomain Code=17)
-        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.8.0" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.8.0" "$APP_PATH/Info.plist"
-        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 88" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 88" "$APP_PATH/Info.plist"
+        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.9.0" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.9.0" "$APP_PATH/Info.plist"
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 89" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 89" "$APP_PATH/Info.plist"
 
         # Ensure Embedded Widget Extension Info.plist also has valid non-empty Bundle Version strings
         if [ -d "$APP_PATH/PlugIns/LumiFilmWidget.appex" ]; then
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.8.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.8.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 88" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 88" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 8.9.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 8.9.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 89" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 89" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
         fi
 
         mkdir -p Payload
