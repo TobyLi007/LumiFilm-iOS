@@ -1,4 +1,4 @@
-name: Build Unsigned LumiFilm iOS App (v9.1 - Bidirectional Theme/Widget Sync, Curved Liquid Glass Bar & Standard Film Scales)
+name: Build Unsigned LumiFilm iOS App (v9.2 - Fixed Build, Kernel notifyd Theme Sync & Redesigned 2x2 Modifiers Page)
 
 on:
   workflow_dispatch:
@@ -266,8 +266,8 @@ jobs:
                 INFOPLIST_KEY_NSMicrophoneUsageDescription: "LumiFilm 使用麦克风接收您的语音指令（如：光圈f4、快门125、距离2米），直接调节胶片闪光参数。"
                 INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "LumiFilm 使用语音识别将您说出的曝光参数实时转换为转盘与状态栏数值。"
                 INFOPLIST_KEY_NSCameraUsageDescription: "LumiFilm 使用摄像头传感器实时测量现场环境光亮度 (EV100)，帮助您精准控制闪光与环境光比。"
-                MARKETING_VERSION: "9.1.0"
-                CURRENT_PROJECT_VERSION: "91"
+                MARKETING_VERSION: "9.2.0"
+                CURRENT_PROJECT_VERSION: "92"
                 GENERATE_INFOPLIST_FILE: YES
                 ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
           LumiFilmWidget:
@@ -282,813 +282,815 @@ jobs:
                 SWIFT_STRICT_CONCURRENCY: minimal
                 PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter.widget
                 INFOPLIST_KEY_CFBundleDisplayName: LumiFilmWidget
-                MARKETING_VERSION: "9.1.0"
-                CURRENT_PROJECT_VERSION: "91"
+                MARKETING_VERSION: "9.2.0"
+                CURRENT_PROJECT_VERSION: "92"
                 GENERATE_INFOPLIST_FILE: YES
             info:
               path: LumiFilmWidget/Info.plist
               properties:
-                CFBundleShortVersionString: "9.1.0"
-                CFBundleVersion: "91"
+                CFBundleShortVersionString: "9.2.0"
+                CFBundleVersion: "92"
                 NSExtension:
                   NSExtensionPointIdentifier: com.apple.widgetkit-extension
         EOF
 
-        # 4. Create LumiFilmWidget.swift (v9.1 - Multi-Channel App/Widget Sync & Standard Photography Scales)
+        # 4. Create LumiFilmWidget.swift (v9.2 - Kernel notifyd Sync, Identical Theme Gradients & Zero Build Errors)
         cat << 'EOF' > LumiFilmBuild/LumiFilmWidget/LumiFilmWidget.swift
         import WidgetKit
         import SwiftUI
         import AppIntents
-        import Security
-        import Security
-        import UIKit
+        @_silgen_name("notify_register_check")
+        private func lf_app_notify_register_check(_ name: UnsafePointer<CChar>, _ outToken: UnsafeMutablePointer<Int32>) -> UInt32
+        @_silgen_name("notify_set_state")
+        private func lf_app_notify_set_state(_ token: Int32, _ state64: UInt64) -> UInt32
+        @_silgen_name("notify_get_state")
+        private func lf_app_notify_get_state(_ token: Int32, _ state64: UnsafeMutablePointer<UInt64>) -> UInt32
+        @_silgen_name("notify_post")
+        private func lf_app_notify_post(_ name: UnsafePointer<CChar>) -> UInt32
+        @_silgen_name("notify_cancel")
+        private func lf_app_notify_cancel(_ token: Int32) -> UInt32
+        import Foundation
+        @_silgen_name("notify_register_check")
+        private func lf_notify_register_check(_ name: UnsafePointer<CChar>, _ outToken: UnsafeMutablePointer<Int32>) -> UInt32
+        @_silgen_name("notify_set_state")
+        private func lf_notify_set_state(_ token: Int32, _ state64: UInt64) -> UInt32
+        @_silgen_name("notify_get_state")
+        private func lf_notify_get_state(_ token: Int32, _ state64: UnsafeMutablePointer<UInt64>) -> UInt32
+        @_silgen_name("notify_post")
+        private func lf_notify_post(_ name: UnsafePointer<CChar>) -> UInt32
+        @_silgen_name("notify_cancel")
+        private func lf_notify_cancel(_ token: Int32) -> UInt32
         enum WidgetTheme: Int {
-        case sakuraMist = 0
-        case threadsMinimal = 1
-        case leicaBrushedBrass = 2
-        var nameText: String {
-        switch self {
-        case .sakuraMist: return "雾粉微光"
-        case .threadsMinimal: return "曜石纯黑"
-        case .leicaBrushedBrass: return "黑漆露铜"
-        }
-        }
-        var accent: Color {
-        switch self {
-        case .sakuraMist: return Color(red: 0.94, green: 0.79, blue: 0.82)
-        case .threadsMinimal: return Color(red: 0.95, green: 0.95, blue: 0.97)
-        case .leicaBrushedBrass: return Color(red: 0.90, green: 0.68, blue: 0.32)
-        }
-        }
-        var secondaryAccent: Color {
-        switch self {
-        case .sakuraMist: return Color(red: 0.86, green: 0.82, blue: 0.78)
-        case .threadsMinimal: return Color(red: 0.62, green: 0.66, blue: 0.72)
-        case .leicaBrushedBrass: return Color(red: 0.78, green: 0.50, blue: 0.24)
-        }
-        }
-        var bodyBg: Color {
-        switch self {
-        case .sakuraMist: return Color(red: 0.18, green: 0.16, blue: 0.20)
-        case .threadsMinimal: return Color(red: 0.07, green: 0.07, blue: 0.08)
-        case .leicaBrushedBrass: return Color(red: 0.11, green: 0.09, blue: 0.07)
-        }
-        }
-        var lcdBg: Color {
-        switch self {
-        case .sakuraMist: return Color(red: 0.12, green: 0.11, blue: 0.14)
-        case .threadsMinimal: return Color(red: 0.03, green: 0.03, blue: 0.04)
-        case .leicaBrushedBrass: return Color(red: 0.06, green: 0.05, blue: 0.04)
-        }
-        }
-        var cardBg: Color {
-        switch self {
-        case .sakuraMist: return Color(red: 0.23, green: 0.20, blue: 0.25)
-        case .threadsMinimal: return Color(red: 0.13, green: 0.13, blue: 0.15)
-        case .leicaBrushedBrass: return Color(red: 0.17, green: 0.14, blue: 0.11)
-        }
-        }
-        }
-        struct WidgetSharedStore {
-        static let pasteboardName = UIPasteboard.Name("com.lumifilm.shared.sync.v91")
-        static let keychainService = "com.lumifilm.shared.sync.v91"
-        static var candidateGroupIDs: [String] {
-        var list = ["group.com.lumifilm.flashmeter"]
-        if let bid = Bundle.main.bundleIdentifier {
-        var base = bid
-        if base.hasSuffix(".widget") { base = String(base.dropLast(7)) }
-        if base.hasSuffix(".LumiFilmWidget") { base = String(base.dropLast(15)) }
-        let dyn = "group.\(base)"
-        if !list.contains(dyn) { list.insert(dyn, at: 0) }
-        }
-        return list
-        }
-        private static func teamPrefix() -> String? {
-        let probeQuery: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrAccount as String: "lumifilm_team_probe",
-        kSecAttrService as String: "com.lumifilm.probe",
-        kSecReturnAttributes as String: true
-        ]
-        var item: CFTypeRef?
-        var status = SecItemCopyMatching(probeQuery as CFDictionary, &item)
-        if status == errSecItemNotFound {
-        var addQ = probeQuery
-        addQ[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        status = SecItemAdd(addQ as CFDictionary, &item)
-        }
-        if status == errSecSuccess, let dict = item as? [String: Any], let ag = dict[kSecAttrAccessGroup as String] as? String {
-        let parts = ag.split(separator: ".")
-        if let first = parts.first, !first.isEmpty {
-        return String(first) + "."
-        }
-        }
-        return nil
-        }
-        static func loadSharedDict() -> [String: Double] {
-        var bestDict: [String: Double] = [:]
-        var bestTS: Double = -1.0
-        func consider(_ candidate: [String: Double]?) {
-        guard let c = candidate, !c.isEmpty else { return }
-        let ts = c["lf_sync_ts"] ?? 0.0
-        if ts >= bestTS {
-        bestTS = ts
-        bestDict = c
-        }
-        }
-        if let prefix = teamPrefix() {
-        for ag in ["\(prefix)com.lumifilm.shared", "\(prefix)com.lumifilm.flashmeter"] {
-        let q: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrService as String: keychainService,
-        kSecAttrAccount as String: "state_json",
-        kSecAttrAccessGroup as String: ag,
-        kSecReturnData as String: true,
-        kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var ref: CFTypeRef?
-        if SecItemCopyMatching(q as CFDictionary, &ref) == errSecSuccess,
-        let data = ref as? Data,
-        let decoded = try? JSONDecoder().decode([String: Double].self, from: data) {
-        consider(decoded)
-        }
-        }
-        }
-        let qDef: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrService as String: keychainService,
-        kSecAttrAccount as String: "state_json",
-        kSecReturnData as String: true,
-        kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var refDef: CFTypeRef?
-        if SecItemCopyMatching(qDef as CFDictionary, &refDef) == errSecSuccess,
-        let data = refDef as? Data,
-        let decoded = try? JSONDecoder().decode([String: Double].self, from: data) {
-        consider(decoded)
-        }
-        for gid in candidateGroupIDs {
-        if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: gid)?.appendingPathComponent("lumifilm_sync.json"),
-        let data = try? Data(contentsOf: url),
-        let decoded = try? JSONDecoder().decode([String: Double].self, from: data) {
-        consider(decoded)
-        }
-        if let suite = UserDefaults(suiteName: gid),
-        let data = suite.data(forKey: "lf_state_blob_v91"),
-        let decoded = try? JSONDecoder().decode([String: Double].self, from: data) {
-        consider(decoded)
-        }
-        }
-        if let pb = UIPasteboard(name: pasteboardName, create: false),
-        let str = pb.string,
-        let data = str.data(using: .utf8),
-        let decoded = try? JSONDecoder().decode([String: Double].self, from: data) {
-        consider(decoded)
-        }
-        if let data = UserDefaults.standard.data(forKey: "lf_state_blob_v91"),
-        let decoded = try? JSONDecoder().decode([String: Double].self, from: data) {
-        consider(decoded)
-        }
-        return bestDict
-        }
-        static func saveSharedDict(_ dict: [String: Double]) {
-        var mutable = dict
-        mutable["lf_sync_ts"] = Date().timeIntervalSince1970
-        guard let data = try? JSONEncoder().encode(mutable),
-        let jsonStr = String(data: data, encoding: .utf8) else { return }
-        UserDefaults.standard.set(data, forKey: "lf_state_blob_v91")
-        for (k, v) in mutable {
-        UserDefaults.standard.set(v, forKey: k)
-        }
-        for gid in candidateGroupIDs {
-        if let suite = UserDefaults(suiteName: gid) {
-        suite.set(data, forKey: "lf_state_blob_v91")
-        for (k, v) in mutable { suite.set(v, forKey: k) }
-        }
-        if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: gid)?.appendingPathComponent("lumifilm_sync.json") {
-        try? data.write(to: url, options: .atomic)
-        }
-        }
-        if let prefix = teamPrefix() {
-        for ag in ["\(prefix)com.lumifilm.shared", "\(prefix)com.lumifilm.flashmeter"] {
-        let delQ: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrService as String: keychainService,
-        kSecAttrAccount as String: "state_json",
-        kSecAttrAccessGroup as String: ag
-        ]
-        SecItemDelete(delQ as CFDictionary)
-        var addQ = delQ
-        addQ[kSecValueData as String] = data
-        addQ[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(addQ as CFDictionary, nil)
-        }
-        }
-        let delDef: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrService as String: keychainService,
-        kSecAttrAccount as String: "state_json"
-        ]
-        SecItemDelete(delDef as CFDictionary)
-        var addDef = delDef
-        addDef[kSecValueData as String] = data
-        addDef[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(addDef as CFDictionary, nil)
-        if let pb = UIPasteboard(name: pasteboardName, create: true) {
-        pb.isPersistent = true
-        pb.string = jsonStr
-        }
-        }
-        static func double(forKey key: String, default defVal: Double) -> Double {
-        let dict = loadSharedDict()
-        if let v = dict[key] { return v }
-        for gid in candidateGroupIDs {
-        if let group = UserDefaults(suiteName: gid), group.object(forKey: key) != nil {
-        return group.double(forKey: key)
-        }
-        }
-        if UserDefaults.standard.object(forKey: key) != nil {
-        return UserDefaults.standard.double(forKey: key)
-        }
-        return defVal
-        }
-        static func setDouble(_ val: Double, forKey key: String) {
-        var dict = loadSharedDict()
-        if dict.isEmpty {
-        dict = [
-        "lf_iso": double(forKey: "lf_iso", default: 400.0),
-        "lf_gn": double(forKey: "lf_gn", default: 36.0),
-        "lf_distance": double(forKey: "lf_distance", default: 2.0),
-        "lf_aperture": double(forKey: "lf_aperture", default: 4.0),
-        "lf_shutter": double(forKey: "lf_shutter", default: 125.0),
-        "lf_sync_speed": double(forKey: "lf_sync_speed", default: 125.0),
-        "lf_theme": double(forKey: "lf_theme", default: 2.0),
-        "lf_max_aperture": double(forKey: "lf_max_aperture", default: 1.4),
-        "lf_exp_comp_ev": double(forKey: "lf_exp_comp_ev", default: 0.0)
-        ]
-        }
-        dict[key] = val
-        saveSharedDict(dict)
-        }
+         case sakuraMist = 0
+         case threadsMinimal = 1
+         case leicaBrushedBrass = 2
+         var nameText: String {
+          switch self {
+          case .sakuraMist: return "雾粉微光"
+          case .threadsMinimal: return "曜石纯黑"
+          case .leicaBrushedBrass: return "黑漆露铜"
+          }
+         }
+         var accent: Color {
+          switch self {
+          case .sakuraMist: return Color(red: 0.94, green: 0.79, blue: 0.82)
+          case .threadsMinimal: return Color(red: 0.96, green: 0.96, blue: 0.98)
+          case .leicaBrushedBrass: return Color(red: 0.90, green: 0.68, blue: 0.32)
+          }
+         }
+         var secondaryAccent: Color {
+          switch self {
+          case .sakuraMist: return Color(red: 0.86, green: 0.82, blue: 0.78)
+          case .threadsMinimal: return Color(red: 0.58, green: 0.62, blue: 0.70)
+          case .leicaBrushedBrass: return Color(red: 0.78, green: 0.48, blue: 0.22)
+          }
+         }
+         var backgroundGradient: [Color] {
+          switch self {
+          case .sakuraMist:
+           return [
+            Color(red: 0.17, green: 0.16, blue: 0.20),
+            Color(red: 0.24, green: 0.20, blue: 0.23),
+            Color(red: 0.22, green: 0.19, blue: 0.21),
+            Color(red: 0.14, green: 0.14, blue: 0.17)
+           ]
+          case .threadsMinimal:
+           return [
+            Color(red: 0.03, green: 0.03, blue: 0.04),
+            Color(red: 0.09, green: 0.09, blue: 0.11),
+            Color(red: 0.04, green: 0.04, blue: 0.05)
+           ]
+          case .leicaBrushedBrass:
+           return [
+            Color(red: 0.09, green: 0.08, blue: 0.07),
+            Color(red: 0.19, green: 0.14, blue: 0.09),
+            Color(red: 0.28, green: 0.20, blue: 0.11),
+            Color(red: 0.08, green: 0.07, blue: 0.06)
+           ]
+          }
+         }
+         var lcdBg: Color {
+          switch self {
+          case .sakuraMist: return Color(red: 0.12, green: 0.11, blue: 0.15).opacity(0.88)
+          case .threadsMinimal: return Color(red: 0.02, green: 0.02, blue: 0.03).opacity(0.90)
+          case .leicaBrushedBrass: return Color(red: 0.06, green: 0.05, blue: 0.04).opacity(0.90)
+          }
+         }
+         var cardBg: Color {
+          switch self {
+          case .sakuraMist: return Color(red: 0.25, green: 0.21, blue: 0.26).opacity(0.85)
+          case .threadsMinimal: return Color(red: 0.13, green: 0.13, blue: 0.15).opacity(0.88)
+          case .leicaBrushedBrass: return Color(red: 0.18, green: 0.14, blue: 0.10).opacity(0.88)
+          }
+         }
         }
         struct FlashCalculator {
-        static let apertureSteps: [Double] = [
-        1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6, 8.0, 11.0, 16.0, 22.0
-        ]
-        static let shutterSteps: [Int] = [
-        1, 2, 4, 8, 15, 30, 60, 90, 100, 125, 200, 250, 500, 1000, 2000, 4000
-        ]
-        static let distanceSteps: [Double] = [
-        0.5, 0.7, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0
-        ]
-        static let isoSteps: [Double] = [
-        50, 64, 100, 125, 160, 200, 250, 320, 400, 500, 800, 1600, 3200
-        ]
-        static let evCompSteps: [Double] = [
-        -2.0, -1.7, -1.3, -1.0, -0.7, -0.3, 0.0, 0.3, 0.7, 1.0, 1.3, 1.7, 2.0
-        ]
-        static func powerComponents(gnAt100: Double, iso: Double, distance: Double, aperture: Double, shutter: Int, maxSync: Int, lossEV: Double) -> (mainFraction: String, trimBadge: String?, statusNote: String, isWarning: Bool) {
-        let isoFactor = sqrt(max(iso, 25.0) / 100.0)
-        let closeUpLoss = distance < 1.0 ? (0.35 * (1.0 - distance)) : 0.0
-        let hssStops = shutter > maxSync ? log2(Double(shutter) / Double(max(maxSync, 30))) : 0.0
-        let hssLoss = hssStops > 0 ? (1.5 + 1.0 * hssStops) : 0.0
-        let effectiveGN = gnAt100 * isoFactor * pow(2.0, -(lossEV + closeUpLoss + hssLoss) / 2.0)
-        let fullPowerAperture = effectiveGN / max(distance, 0.3)
-        let ratio = aperture / max(fullPowerAperture, 0.1)
-        let power = ratio * ratio
-        if power > 1.05 { return ("OVER", ">1/1", "欠曝·请开大光圈或靠近", true) }
-        if power < (1.0 / 256.0) { return ("LOW", "<1/128", "过曝·请收小光圈或后退", true) }
-        let stops = round(log2(1.0 / max(power, 0.001)) * 3.0) / 3.0
-        let whole = max(0, min(7, Int(round(stops))))
-        let trimEV = Double(whole) - stops
-        let denom = 1 << whole
-        let fracStr = denom == 1 ? "1/1" : "1/\(denom)"
-        let syncTag = shutter > maxSync ? "HSS高速同步" : "安全同步"
-        if abs(trimEV) < 0.14 {
-        return (fracStr, nil, "整档输出 · \(syncTag)", shutter > maxSync)
+         static let apertureSteps: [Double] = [
+          1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6, 8.0, 11.0, 16.0, 22.0
+         ]
+         static let shutterSteps: [Int] = [
+          1, 2, 4, 8, 15, 30, 60, 90, 100, 125, 200, 250, 500, 1000, 2000, 4000
+         ]
+         static let distanceSteps: [Double] = [
+          0.5, 0.7, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0
+         ]
+         static let isoSteps: [Double] = [
+          50, 64, 100, 125, 160, 200, 250, 320, 400, 500, 800, 1600, 3200
+         ]
+         static let evCompSteps: [Double] = [
+          -2.0, -1.7, -1.3, -1.0, -0.7, -0.3, 0.0, 0.3, 0.7, 1.0, 1.3, 1.7, 2.0
+         ]
+         static let maxAperturePresets: [Double] = [1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6]
+         static let syncPresets: [Int] = [30, 50, 60, 90, 100, 125, 200, 250, 500]
+         static func nearestIndex<T: BinaryFloatingPoint>(in arr: [T], to val: T) -> Int {
+          arr.enumerated().min(by: { abs($0.element - val) < abs($1.element - val) })?.offset ?? 0
+         }
+         static func nearestIntIndex(in arr: [Int], to val: Int) -> Int {
+          arr.enumerated().min(by: { abs($0.element - val) < abs($1.element - val) })?.offset ?? 0
+         }
+         static func powerComponents(gnAt100: Double, iso: Double, distance: Double, aperture: Double, shutter: Int, maxSync: Int, lossEV: Double) -> (mainFraction: String, trimBadge: String?, statusNote: String, isWarning: Bool) {
+          let isoFactor = sqrt(max(iso, 25.0) / 100.0)
+          let closeUpLoss = distance < 1.0 ? (0.35 * (1.0 - distance)) : 0.0
+          let hssStops = shutter > maxSync ? log2(Double(shutter) / Double(max(maxSync, 30))) : 0.0
+          let hssLoss = hssStops > 0 ? (1.5 + 1.0 * hssStops) : 0.0
+          let effectiveGN = gnAt100 * isoFactor * pow(2.0, -(lossEV + closeUpLoss + hssLoss) / 2.0)
+          let fullPowerAperture = effectiveGN / max(distance, 0.3)
+          let ratio = aperture / max(fullPowerAperture, 0.1)
+          let power = ratio * ratio
+          if power > 1.05 { return ("OVER", ">1/1", "欠曝·请开大光圈或靠近", true) }
+          if power < (1.0 / 256.0) { return ("LOW", "<1/128", "过曝·请收小光圈或后退", true) }
+          let stops = round(log2(1.0 / max(power, 0.001)) * 3.0) / 3.0
+          let whole = max(0, min(7, Int(round(stops))))
+          let trimEV = Double(whole) - stops
+          let denom = 1 << whole
+          let fracStr = denom == 1 ? "1/1" : "1/\(denom)"
+          let syncTag = shutter > maxSync ? "HSS高速同步" : "安全同步"
+          if abs(trimEV) < 0.14 {
+           return (fracStr, nil, "整档输出 · \(syncTag)", shutter > maxSync)
+          }
+          return (fracStr, String(format: "%+.1fEV", trimEV), "1/3档微调 · \(syncTag)", shutter > maxSync)
+         }
+         static func formatFStop(_ val: Double) -> String {
+          if abs(val - round(val)) < 0.05 {
+           return String(format: "f/%.0f", round(val))
+          }
+          return String(format: "f/%.1f", val)
+         }
         }
-        return (fracStr, String(format: "%+.1fEV", trimEV), "1/3档微调 · \(syncTag)", shutter > maxSync)
-        }
-        static func formatFStop(_ val: Double) -> String {
-        if abs(val - round(val)) < 0.05 {
-        return String(format: "f/%.0f", round(val))
-        }
-        return String(format: "f/%.1f", val)
-        }
+        struct WidgetSharedStore {
+         static let slot1Key = "com.lumifilm.v92.slot1"
+         static let slot2Key = "com.lumifilm.v92.slot2"
+         static let changeEventKey = "com.lumifilm.v92.changed"
+         static var candidateGroupIDs: [String] {
+          var list = ["group.com.lumifilm.flashmeter"]
+          if let bid = Bundle.main.bundleIdentifier {
+           var base = bid
+           if base.hasSuffix(".widget") { base = String(base.dropLast(7)) }
+           if base.hasSuffix(".LumiFilmWidget") { base = String(base.dropLast(15)) }
+           let dyn = "group.\(base)"
+           if !list.contains(dyn) { list.insert(dyn, at: 0) }
+          }
+          return list
+         }
+         private static func readNotifyUInt64(_ key: String) -> UInt64 {
+          var token: Int32 = 0
+          guard lf_notify_register_check(key, &token) == 0 else { return 0 }
+          var val: UInt64 = 0
+          _ = lf_notify_get_state(token, &val)
+          _ = lf_notify_cancel(token)
+          return val
+         }
+         private static func writeNotifyUInt64(_ key: String, _ val: UInt64) {
+          var token: Int32 = 0
+          guard lf_notify_register_check(key, &token) == 0 else { return }
+          _ = lf_notify_set_state(token, val)
+          _ = lf_notify_cancel(token)
+         }
+         static func loadSharedDict() -> [String: Double] {
+          let s1 = readNotifyUInt64(slot1Key)
+          let s2 = readNotifyUInt64(slot2Key)
+          let magic = Int((s1 >> 56) & 0xFF)
+          if magic == 0xA7 {
+           let theme = Int((s1 >> 48) & 0xFF)
+           let apIdx = Int((s1 >> 40) & 0xFF)
+           let shIdx = Int((s1 >> 32) & 0xFF)
+           let distIdx = Int((s1 >> 24) & 0xFF)
+           let isoIdx = Int((s1 >> 16) & 0xFF)
+           let evIdx = Int((s1 >> 8) & 0xFF)
+           let maxApIdx = Int(s1 & 0xFF)
+           let syncIdx = Int((s2 >> 56) & 0xFF)
+           let gnVal = Int((s2 >> 48) & 0xFF)
+           let auxRaw = Int((s2 >> 32) & 0xFFFF)
+           let ts = Double(UInt32(s2 & 0xFFFFFFFF))
+           let ap = FlashCalculator.apertureSteps[max(0, min(FlashCalculator.apertureSteps.count - 1, apIdx))]
+           let sh = FlashCalculator.shutterSteps[max(0, min(FlashCalculator.shutterSteps.count - 1, shIdx))]
+           let dist = FlashCalculator.distanceSteps[max(0, min(FlashCalculator.distanceSteps.count - 1, distIdx))]
+           let iso = FlashCalculator.isoSteps[max(0, min(FlashCalculator.isoSteps.count - 1, isoIdx))]
+           let ev = FlashCalculator.evCompSteps[max(0, min(FlashCalculator.evCompSteps.count - 1, evIdx))]
+           let maxAp = FlashCalculator.maxAperturePresets[max(0, min(FlashCalculator.maxAperturePresets.count - 1, maxApIdx))]
+           let maxSync = FlashCalculator.syncPresets[max(0, min(FlashCalculator.syncPresets.count - 1, syncIdx))]
+           let auxLoss = (Double(auxRaw) - 500.0) / 10.0
+           return [
+            "lf_theme": Double(max(0, min(2, theme))),
+            "lf_aperture": ap,
+            "lf_shutter": Double(sh),
+            "lf_distance": dist,
+            "lf_iso": iso,
+            "lf_exp_comp_ev": ev,
+            "lf_max_aperture": maxAp,
+            "lf_sync_speed": Double(maxSync),
+            "lf_gn": Double(max(5, min(90, gnVal))),
+            "lf_aux_loss": auxLoss,
+            "lf_sync_ts": ts
+           ]
+          }
+          for gid in candidateGroupIDs {
+           if let suite = UserDefaults(suiteName: gid),
+              let data = suite.data(forKey: "lf_state_blob_v92"),
+              let decoded = try? JSONDecoder().decode([String: Double].self, from: data) {
+            return decoded
+           }
+          }
+          if let data = UserDefaults.standard.data(forKey: "lf_state_blob_v92"),
+             let decoded = try? JSONDecoder().decode([String: Double].self, from: data) {
+           return decoded
+          }
+          return [:]
+         }
+         static func saveSharedDict(_ dict: [String: Double]) {
+          let theme = max(0, min(2, Int(round(dict["lf_theme"] ?? 2.0))))
+          let ap = dict["lf_aperture"] ?? 4.0
+          let sh = Int(round(dict["lf_shutter"] ?? 125.0))
+          let dist = dict["lf_distance"] ?? 2.0
+          let iso = dict["lf_iso"] ?? 400.0
+          let ev = dict["lf_exp_comp_ev"] ?? 0.0
+          let maxAp = dict["lf_max_aperture"] ?? 1.4
+          let maxSync = Int(round(dict["lf_sync_speed"] ?? 125.0))
+          let gn = max(5, min(90, Int(round(dict["lf_gn"] ?? 36.0))))
+          let auxLoss = dict["lf_aux_loss"] ?? ((dict["lf_modifier_loss"] ?? 0.0) + (dict["lf_bounce_loss"] ?? 0.0) + (dict["lf_filter_loss_ev"] ?? 0.0))
+          let apIdx = UInt64(FlashCalculator.nearestIndex(in: FlashCalculator.apertureSteps, to: ap))
+          let shIdx = UInt64(FlashCalculator.nearestIntIndex(in: FlashCalculator.shutterSteps, to: sh))
+          let distIdx = UInt64(FlashCalculator.nearestIndex(in: FlashCalculator.distanceSteps, to: dist))
+          let isoIdx = UInt64(FlashCalculator.nearestIndex(in: FlashCalculator.isoSteps, to: iso))
+          let evIdx = UInt64(FlashCalculator.nearestIndex(in: FlashCalculator.evCompSteps, to: ev))
+          let maxApIdx = UInt64(FlashCalculator.nearestIndex(in: FlashCalculator.maxAperturePresets, to: maxAp))
+          let syncIdx = UInt64(FlashCalculator.nearestIntIndex(in: FlashCalculator.syncPresets, to: maxSync))
+          let auxEnc = UInt64(max(0, min(2000, Int(round(auxLoss * 10.0)) + 500)))
+          let ts = UInt64(UInt32(Date().timeIntervalSince1970))
+          let s1: UInt64 = (UInt64(0xA7) << 56) | (UInt64(theme) << 48) | (apIdx << 40) | (shIdx << 32) | (distIdx << 24) | (isoIdx << 16) | (evIdx << 8) | maxApIdx
+          let s2: UInt64 = (syncIdx << 56) | (UInt64(gn) << 48) | (auxEnc << 32) | ts
+          writeNotifyUInt64(slot1Key, s1)
+          writeNotifyUInt64(slot2Key, s2)
+          _ = lf_notify_post(changeEventKey)
+          var mutable = dict
+          mutable["lf_sync_ts"] = Double(ts)
+          mutable["lf_aux_loss"] = auxLoss
+          if let data = try? JSONEncoder().encode(mutable) {
+           UserDefaults.standard.set(data, forKey: "lf_state_blob_v92")
+           for gid in candidateGroupIDs {
+            UserDefaults(suiteName: gid)?.set(data, forKey: "lf_state_blob_v92")
+           }
+          }
+         }
+         static func double(forKey key: String, default defVal: Double) -> Double {
+          let dict = loadSharedDict()
+          if let v = dict[key] { return v }
+          return defVal
+         }
+         static func setDouble(_ val: Double, forKey key: String) {
+          var dict = loadSharedDict()
+          if dict.isEmpty {
+           dict = [
+            "lf_iso": 400.0,
+            "lf_gn": 36.0,
+            "lf_distance": 2.0,
+            "lf_aperture": 4.0,
+            "lf_shutter": 125.0,
+            "lf_sync_speed": 125.0,
+            "lf_theme": 2.0,
+            "lf_max_aperture": 1.4,
+            "lf_exp_comp_ev": 0.0,
+            "lf_aux_loss": 0.0
+           ]
+          }
+          dict[key] = val
+          saveSharedDict(dict)
+         }
         }
         @available(iOS 17.0, *)
         struct LumiFilmWidgetAdjustIntent: AppIntent {
-        static var title: LocalizedStringResource = "Adjust Flash Parameter"
-        @Parameter(title: "Command") var command: String
-        init() { self.command = "ap+" }
-        init(command: String) { self.command = command }
-        func perform() async throws -> some IntentResult {
-        switch command {
-        case "ap-", "ap+":
-        let delta = command == "ap+" ? 1 : -1
-        let cur = WidgetSharedStore.double(forKey: "lf_aperture", default: 4.0)
-        let maxOpen = WidgetSharedStore.double(forKey: "lf_max_aperture", default: 1.4)
-        let steps = FlashCalculator.apertureSteps.filter { $0 >= maxOpen - 0.01 }
-        if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
-        let nextIdx = max(0, min(steps.count - 1, idx + delta))
-        WidgetSharedStore.setDouble(steps[nextIdx], forKey: "lf_aperture")
-        }
-        case "sh-", "sh+":
-        let delta = command == "sh+" ? 1 : -1
-        let cur = Int(round(WidgetSharedStore.double(forKey: "lf_shutter", default: 125.0)))
-        let steps = FlashCalculator.shutterSteps
-        if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
-        let nextIdx = max(0, min(steps.count - 1, idx + delta))
-        WidgetSharedStore.setDouble(Double(steps[nextIdx]), forKey: "lf_shutter")
-        }
-        case "dist-", "dist+":
-        let delta = command == "dist+" ? 1 : -1
-        let cur = WidgetSharedStore.double(forKey: "lf_distance", default: 2.0)
-        let steps = FlashCalculator.distanceSteps
-        if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
-        let nextIdx = max(0, min(steps.count - 1, idx + delta))
-        WidgetSharedStore.setDouble(steps[nextIdx], forKey: "lf_distance")
-        }
-        case "ev-", "ev+":
-        let delta = command == "ev+" ? 1 : -1
-        let cur = WidgetSharedStore.double(forKey: "lf_exp_comp_ev", default: 0.0)
-        let steps = FlashCalculator.evCompSteps
-        if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
-        let nextIdx = max(0, min(steps.count - 1, idx + delta))
-        WidgetSharedStore.setDouble(steps[nextIdx], forKey: "lf_exp_comp_ev")
-        }
-        case "iso-", "iso+":
-        let delta = command == "iso+" ? 1 : -1
-        let cur = WidgetSharedStore.double(forKey: "lf_iso", default: 400.0)
-        let steps = FlashCalculator.isoSteps
-        if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
-        let nextIdx = max(0, min(steps.count - 1, idx + delta))
-        WidgetSharedStore.setDouble(steps[nextIdx], forKey: "lf_iso")
-        }
-        case "theme":
-        let cur = Int(round(WidgetSharedStore.double(forKey: "lf_theme", default: 2.0)))
-        WidgetSharedStore.setDouble(Double((cur + 1) % 3), forKey: "lf_theme")
-        default:
-        break
-        }
-        WidgetCenter.shared.reloadAllTimelines()
-        return .result()
-        }
+         static var title: LocalizedStringResource = "Adjust Flash Parameter"
+         @Parameter(title: "Command") var command: String
+         init() { self.command = "ap+" }
+         init(command: String) { self.command = command }
+         func perform() async throws -> some IntentResult {
+          switch command {
+          case "ap-", "ap+":
+           let delta = command == "ap+" ? 1 : -1
+           let cur = WidgetSharedStore.double(forKey: "lf_aperture", default: 4.0)
+           let maxOpen = WidgetSharedStore.double(forKey: "lf_max_aperture", default: 1.4)
+           let steps = FlashCalculator.apertureSteps.filter { $0 >= maxOpen - 0.01 }
+           if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
+            let nextIdx = max(0, min(steps.count - 1, idx + delta))
+            WidgetSharedStore.setDouble(steps[nextIdx], forKey: "lf_aperture")
+           }
+          case "sh-", "sh+":
+           let delta = command == "sh+" ? 1 : -1
+           let cur = Int(round(WidgetSharedStore.double(forKey: "lf_shutter", default: 125.0)))
+           let steps = FlashCalculator.shutterSteps
+           if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
+            let nextIdx = max(0, min(steps.count - 1, idx + delta))
+            WidgetSharedStore.setDouble(Double(steps[nextIdx]), forKey: "lf_shutter")
+           }
+          case "dist-", "dist+":
+           let delta = command == "dist+" ? 1 : -1
+           let cur = WidgetSharedStore.double(forKey: "lf_distance", default: 2.0)
+           let steps = FlashCalculator.distanceSteps
+           if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
+            let nextIdx = max(0, min(steps.count - 1, idx + delta))
+            WidgetSharedStore.setDouble(steps[nextIdx], forKey: "lf_distance")
+           }
+          case "ev-", "ev+":
+           let delta = command == "ev+" ? 1 : -1
+           let cur = WidgetSharedStore.double(forKey: "lf_exp_comp_ev", default: 0.0)
+           let steps = FlashCalculator.evCompSteps
+           if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
+            let nextIdx = max(0, min(steps.count - 1, idx + delta))
+            WidgetSharedStore.setDouble(steps[nextIdx], forKey: "lf_exp_comp_ev")
+           }
+          case "iso-", "iso+":
+           let delta = command == "iso+" ? 1 : -1
+           let cur = WidgetSharedStore.double(forKey: "lf_iso", default: 400.0)
+           let steps = FlashCalculator.isoSteps
+           if let idx = steps.enumerated().min(by: { abs($0.element - cur) < abs($1.element - cur) })?.offset {
+            let nextIdx = max(0, min(steps.count - 1, idx + delta))
+            WidgetSharedStore.setDouble(steps[nextIdx], forKey: "lf_iso")
+           }
+          case "theme":
+           let cur = Int(round(WidgetSharedStore.double(forKey: "lf_theme", default: 2.0)))
+           WidgetSharedStore.setDouble(Double((cur + 1) % 3), forKey: "lf_theme")
+          default:
+           break
+          }
+          WidgetCenter.shared.reloadAllTimelines()
+          return .result()
+         }
         }
         struct LumiFilmEntry: TimelineEntry {
-        let date: Date
-        let iso: Double
-        let gn: Double
-        let distance: Double
-        let aperture: Double
-        let shutterDenom: Int
-        let maxSyncSpeed: Int
-        let evComp: Double
-        let themeRaw: Int
-        let mainPower: String
-        let trimBadge: String?
-        let noteText: String
-        let isWarning: Bool
-        var theme: WidgetTheme {
-        WidgetTheme(rawValue: themeRaw) ?? .leicaBrushedBrass
-        }
-        var powerFullText: String {
-        if let trim = trimBadge { return "\(mainPower) \(trim)" }
-        return mainPower
-        }
-        private var querySuffix: String {
-        String(format: "ap=%.1f&dist=%.1f&ev=%.1f&iso=%.0f&gn=%.0f&shutter=%d&theme=%d", aperture, distance, evComp, iso, gn, shutterDenom, themeRaw)
-        }
-        var voiceDeepLinkURL: URL {
-        URL(string: "lumifilm://voice?\(querySuffix)") ?? URL(string: "lumifilm://voice")!
-        }
-        var speakDeepLinkURL: URL {
-        URL(string: "lumifilm://speak?\(querySuffix)") ?? URL(string: "lumifilm://speak")!
-        }
-        var onboardingDeepLinkURL: URL {
-        URL(string: "lumifilm://onboarding?\(querySuffix)") ?? URL(string: "lumifilm://onboarding")!
-        }
-        var meterDeepLinkURL: URL {
-        URL(string: "lumifilm://meter?\(querySuffix)") ?? URL(string: "lumifilm://meter")!
-        }
+         let date: Date
+         let iso: Double
+         let gn: Double
+         let distance: Double
+         let aperture: Double
+         let shutterDenom: Int
+         let maxSyncSpeed: Int
+         let evComp: Double
+         let themeRaw: Int
+         let mainPower: String
+         let trimBadge: String?
+         let noteText: String
+         let isWarning: Bool
+         var theme: WidgetTheme {
+          WidgetTheme(rawValue: themeRaw) ?? .leicaBrushedBrass
+         }
+         var powerFullText: String {
+          if let trim = trimBadge { return "\(mainPower) \(trim)" }
+          return mainPower
+         }
+         private var querySuffix: String {
+          String(format: "ap=%.1f&dist=%.1f&ev=%.1f&iso=%.0f&gn=%.0f&shutter=%d&theme=%d", aperture, distance, evComp, iso, gn, shutterDenom, themeRaw)
+         }
+         var voiceDeepLinkURL: URL {
+          URL(string: "lumifilm://voice?\(querySuffix)") ?? URL(string: "lumifilm://voice")!
+         }
+         var speakDeepLinkURL: URL {
+          URL(string: "lumifilm://speak?\(querySuffix)") ?? URL(string: "lumifilm://speak")!
+         }
+         var onboardingDeepLinkURL: URL {
+          URL(string: "lumifilm://onboarding?\(querySuffix)") ?? URL(string: "lumifilm://onboarding")!
+         }
+         var meterDeepLinkURL: URL {
+          URL(string: "lumifilm://meter?\(querySuffix)") ?? URL(string: "lumifilm://meter")!
+         }
         }
         struct LumiFilmProvider: TimelineProvider {
-        func placeholder(in context: Context) -> LumiFilmEntry {
-        LumiFilmEntry(date: Date(), iso: 400, gn: 36, distance: 2.0, aperture: 4.0, shutterDenom: 125, maxSyncSpeed: 125, evComp: 0.0, themeRaw: 2, mainPower: "1/16", trimBadge: "+0.3EV", noteText: "1/3档微调 · 安全同步", isWarning: false)
-        }
-        func getSnapshot(in context: Context, completion: @escaping (LumiFilmEntry) -> Void) {
-        completion(loadEntry())
-        }
-        func getTimeline(in context: Context, completion: @escaping (Timeline<LumiFilmEntry>) -> Void) {
-        let entry = loadEntry()
-        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(300))))
-        }
-        private func loadEntry() -> LumiFilmEntry {
-        let dict = WidgetSharedStore.loadSharedDict()
-        let iso = dict["lf_iso"] ?? WidgetSharedStore.double(forKey: "lf_iso", default: 400.0)
-        let gn = dict["lf_gn"] ?? WidgetSharedStore.double(forKey: "lf_gn", default: 36.0)
-        let dist = dict["lf_distance"] ?? WidgetSharedStore.double(forKey: "lf_distance", default: 2.0)
-        let ap = dict["lf_aperture"] ?? WidgetSharedStore.double(forKey: "lf_aperture", default: 4.0)
-        let shutter = max(1, Int(round(dict["lf_shutter"] ?? WidgetSharedStore.double(forKey: "lf_shutter", default: 125.0))))
-        let maxSync = max(30, Int(round(dict["lf_sync_speed"] ?? WidgetSharedStore.double(forKey: "lf_sync_speed", default: 125.0))))
-        let evComp = dict["lf_exp_comp_ev"] ?? WidgetSharedStore.double(forKey: "lf_exp_comp_ev", default: 0.0)
-        let themeRaw = Int(round(dict["lf_theme"] ?? WidgetSharedStore.double(forKey: "lf_theme", default: 2.0)))
-        let modLoss = dict["lf_modifier_loss"] ?? WidgetSharedStore.double(forKey: "lf_modifier_loss", default: 0.0)
-        let bounceLoss = dict["lf_bounce_loss"] ?? WidgetSharedStore.double(forKey: "lf_bounce_loss", default: 0.0)
-        let filterLoss = dict["lf_filter_loss_ev"] ?? WidgetSharedStore.double(forKey: "lf_filter_loss_ev", default: 0.0)
-        let totalLoss = modLoss + bounceLoss + filterLoss + evComp
-        let res = FlashCalculator.powerComponents(gnAt100: gn, iso: iso, distance: dist, aperture: ap, shutter: shutter, maxSync: maxSync, lossEV: totalLoss)
-        return LumiFilmEntry(date: Date(), iso: iso, gn: gn, distance: dist, aperture: ap, shutterDenom: shutter, maxSyncSpeed: maxSync, evComp: evComp, themeRaw: themeRaw, mainPower: res.0, trimBadge: res.1, noteText: res.2, isWarning: res.3)
-        }
+         func placeholder(in context: Context) -> LumiFilmEntry {
+          LumiFilmEntry(date: Date(), iso: 400, gn: 36, distance: 2.0, aperture: 4.0, shutterDenom: 125, maxSyncSpeed: 125, evComp: 0.0, themeRaw: 2, mainPower: "1/16", trimBadge: "+0.3EV", noteText: "1/3档微调 · 安全同步", isWarning: false)
+         }
+         func getSnapshot(in context: Context, completion: @escaping (LumiFilmEntry) -> Void) {
+          completion(loadEntry())
+         }
+         func getTimeline(in context: Context, completion: @escaping (Timeline<LumiFilmEntry>) -> Void) {
+          let entry = loadEntry()
+          completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(300))))
+         }
+         private func loadEntry() -> LumiFilmEntry {
+          let dict = WidgetSharedStore.loadSharedDict()
+          let iso = dict["lf_iso"] ?? 400.0
+          let gn = dict["lf_gn"] ?? 36.0
+          let dist = dict["lf_distance"] ?? 2.0
+          let ap = dict["lf_aperture"] ?? 4.0
+          let shutter = max(1, Int(round(dict["lf_shutter"] ?? 125.0)))
+          let maxSync = max(30, Int(round(dict["lf_sync_speed"] ?? 125.0)))
+          let evComp = dict["lf_exp_comp_ev"] ?? 0.0
+          let themeRaw = Int(round(dict["lf_theme"] ?? 2.0))
+          let auxLoss = dict["lf_aux_loss"] ?? 0.0
+          let totalLoss = auxLoss + evComp
+          let res = FlashCalculator.powerComponents(gnAt100: gn, iso: iso, distance: dist, aperture: ap, shutter: shutter, maxSync: maxSync, lossEV: totalLoss)
+          return LumiFilmEntry(date: Date(), iso: iso, gn: gn, distance: dist, aperture: ap, shutterDenom: shutter, maxSyncSpeed: maxSync, evComp: evComp, themeRaw: themeRaw, mainPower: res.0, trimBadge: res.1, noteText: res.2, isWarning: res.3)
+         }
         }
         struct LumiFilmWidgetEntryView: View {
-        var entry: LumiFilmProvider.Entry
-        @Environment(\.widgetFamily) private var family
-        private var t: WidgetTheme { entry.theme }
-        var body: some View {
-        Group {
-        switch family {
-        case .systemMedium:
-        mediumWidgetView
-        case .systemLarge:
-        largeWidgetView
-        case .accessoryRectangular:
-        lockScreenRectangularView
-        default:
-        smallWidgetView
-        }
-        }
-        .widgetURL(entry.meterDeepLinkURL)
-        .containerBackground(for: .widget) {
-        t.bodyBg
-        }
-        }
-        private func powerBadgeRow(mainSize: CGFloat, badgeSize: CGFloat) -> some View {
-        HStack(alignment: .center, spacing: 5) {
-        Text(entry.mainPower)
-        .font(.system(size: mainSize, weight: .black, design: .rounded))
-        .foregroundStyle(entry.isWarning ? Color.orange : Color.white)
-        .minimumScaleFactor(0.65)
-        .lineLimit(1)
-        if let trim = entry.trimBadge {
-        Text(trim)
-        .font(.system(size: badgeSize, weight: .heavy, design: .monospaced))
-        .foregroundStyle(Color.black)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(t.accent, in: Capsule())
-        } else {
-        Text("整档")
-        .font(.system(size: badgeSize - 0.5, weight: .bold, design: .rounded))
-        .foregroundStyle(t.accent)
-        .padding(.horizontal, 5.5)
-        .padding(.vertical, 2)
-        .background(t.accent.opacity(0.18), in: Capsule())
-        }
-        }
-        }
-        private func cameraVoiceKeyButton(height: CGFloat, title: String) -> some View {
-        Link(destination: entry.voiceDeepLinkURL) {
-        HStack(spacing: 5) {
-        Circle()
-        .fill(Color.black.opacity(0.28))
-        .frame(width: height - 10, height: height - 10)
-        .overlay(
-        Image(systemName: "mic.fill")
-        .font(.system(size: height * 0.36, weight: .black))
-        .foregroundStyle(Color.black)
-        )
-        Text(title)
-        .font(.system(size: height * 0.36, weight: .black, design: .rounded))
-        .foregroundStyle(Color.black)
-        .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: height)
-        .background(t.accent, in: Capsule())
-        .overlay(Capsule().stroke(Color.white.opacity(0.55), lineWidth: 1))
-        }
-        }
-        private var smallWidgetView: some View {
-        VStack(alignment: .leading, spacing: 6) {
-        VStack(alignment: .leading, spacing: 4) {
-        HStack(spacing: 4) {
-        Image(systemName: "bolt.circle.fill")
-        .font(.system(size: 11, weight: .bold))
-        .foregroundStyle(t.accent)
-        Text("输出功率")
-        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-        .foregroundStyle(t.accent)
-        Spacer(minLength: 0)
-        Text("GN\(Int(entry.gn))")
-        .font(.system(size: 9, weight: .bold, design: .monospaced))
-        .foregroundStyle(Color.white.opacity(0.6))
-        }
-        powerBadgeRow(mainSize: 28, badgeSize: 9.5)
-        HStack(spacing: 5) {
-        Text("ISO \(Int(entry.iso))")
-        Text("·")
-        Text("1/\(entry.shutterDenom)s")
-        Text("·")
-        Text(String(format: "%.1fm", entry.distance))
-        }
-        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-        .foregroundStyle(Color.white.opacity(0.85))
-        .lineLimit(1)
-        .minimumScaleFactor(0.75)
-        Text("当前光圈 \(FlashCalculator.formatFStop(entry.aperture)) · \(entry.noteText)")
-        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-        .foregroundStyle(Color.white.opacity(0.55))
-        .lineLimit(1)
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 7)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(t.accent.opacity(0.45), lineWidth: 1))
-        cameraVoiceKeyButton(height: 30, title: "语音输入")
-        }
-        .foregroundStyle(Color.white)
-        }
-        private var mediumWidgetView: some View {
-        HStack(spacing: 10) {
-        VStack(alignment: .leading, spacing: 6) {
-        VStack(alignment: .leading, spacing: 3) {
-        HStack(spacing: 4) {
-        Image(systemName: "bolt.circle.fill")
-        .font(.system(size: 12, weight: .bold))
-        .foregroundStyle(t.accent)
-        Text("闪光输出功率")
-        .font(.system(size: 10, weight: .heavy, design: .monospaced))
-        .foregroundStyle(t.accent)
-        Spacer(minLength: 0)
-        Text(t.nameText)
-        .font(.system(size: 8.5, weight: .bold))
-        .foregroundStyle(Color.white.opacity(0.55))
-        }
-        powerBadgeRow(mainSize: 34, badgeSize: 10.5)
-        Text(entry.noteText)
-        .font(.system(size: 9, weight: .semibold, design: .monospaced))
-        .foregroundStyle(Color.white.opacity(0.65))
-        .lineLimit(1)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(t.accent.opacity(0.45), lineWidth: 1))
-        cameraVoiceKeyButton(height: 32, title: "语音输入")
-        }
-        .frame(maxWidth: .infinity)
-        VStack(spacing: 6) {
-        HStack(spacing: 6) {
-        readOnlyInfoCell(label: "感光度 ISO", value: "ISO \(Int(entry.iso))", highlight: t.accent)
-        readOnlyInfoCell(label: "快门速度", value: "1/\(entry.shutterDenom)s", highlight: Color.white)
-        }
-        HStack(spacing: 6) {
-        readOnlyInfoCell(label: "拍摄距离", value: String(format: "%.1f m", entry.distance), highlight: t.secondaryAccent)
-        readOnlyInfoCell(label: "当前光圈", value: FlashCalculator.formatFStop(entry.aperture), highlight: t.accent)
-        }
-        HStack(spacing: 4) {
-        Text("GN \(Int(entry.gn))")
-        Text("·")
-        Text(abs(entry.evComp) < 0.05 ? "补偿 0.0EV" : String(format: "补偿 %+.1fEV", entry.evComp))
-        }
-        .font(.system(size: 9, weight: .bold, design: .monospaced))
-        .foregroundStyle(Color.white.opacity(0.58))
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 4)
-        .background(t.cardBg, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        }
-        .frame(width: 152)
-        }
-        .foregroundStyle(Color.white)
-        }
-        private func readOnlyInfoCell(label: String, value: String, highlight: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-        Text(label)
-        .font(.system(size: 8.5, weight: .bold))
-        .foregroundStyle(Color.white.opacity(0.55))
-        .lineLimit(1)
-        Text(value)
-        .font(.system(size: 12.5, weight: .black, design: .monospaced))
-        .foregroundStyle(highlight)
-        .lineLimit(1)
-        .minimumScaleFactor(0.75)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(t.cardBg, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(t.accent.opacity(0.28), lineWidth: 0.8))
-        }
-        private var largeWidgetView: some View {
-        VStack(spacing: 7) {
-        VStack(alignment: .leading, spacing: 4) {
-        HStack(spacing: 5) {
-        Image(systemName: "camera.aperture")
-        .font(.system(size: 12, weight: .bold))
-        .foregroundStyle(t.accent)
-        Text("LUMIFILM 机顶测光屏 · 输出功率")
-        .font(.system(size: 10, weight: .black, design: .monospaced))
-        .foregroundStyle(t.accent)
-        Spacer(minLength: 0)
-        if #available(iOSApplicationExtension 17.0, *) {
-        Button(intent: LumiFilmWidgetAdjustIntent(command: "theme")) {
-        Text(t.nameText)
-        .font(.system(size: 9, weight: .bold))
-        .foregroundStyle(Color.white.opacity(0.85))
-        .padding(.horizontal, 7)
-        .padding(.vertical, 2.5)
-        .background(t.cardBg, in: Capsule())
-        .overlay(Capsule().stroke(t.accent.opacity(0.45), lineWidth: 0.8))
-        }
-        .buttonStyle(.plain)
-        }
-        }
-        HStack(alignment: .center) {
-        powerBadgeRow(mainSize: 36, badgeSize: 11.5)
-        Spacer(minLength: 6)
-        VStack(alignment: .trailing, spacing: 2) {
-        Text(entry.noteText)
-        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-        .foregroundStyle(entry.isWarning ? Color.orange : t.accent)
-        Text("X-Sync ≤1/\(entry.maxSyncSpeed)s · GN\(Int(entry.gn))")
-        .font(.system(size: 9, weight: .semibold, design: .monospaced))
-        .foregroundStyle(Color.white.opacity(0.6))
-        }
-        }
-        Text("当前参数: \(FlashCalculator.formatFStop(entry.aperture)) · 1/\(entry.shutterDenom)s · \(String(format: "%.1fm", entry.distance)) · ISO \(Int(entry.iso))")
-        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-        .foregroundStyle(Color.white.opacity(0.85))
-        .lineLimit(1)
-        }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(t.accent.opacity(0.5), lineWidth: 1))
-        if #available(iOSApplicationExtension 17.0, *) {
-        HStack(spacing: 7) {
-        largeStepperCard(
-        title: "光圈 APERTURE",
-        value: FlashCalculator.formatFStop(entry.aperture),
-        color: t.accent,
-        decCmd: "ap-",
-        incCmd: "ap+"
-        )
-        largeStepperCard(
-        title: "快门速度 SHUTTER",
-        value: "1/\(entry.shutterDenom)s",
-        color: entry.shutterDenom > entry.maxSyncSpeed ? Color.orange : Color.white,
-        decCmd: "sh-",
-        incCmd: "sh+"
-        )
-        }
-        HStack(spacing: 7) {
-        largeStepperCard(
-        title: "拍摄距离 DISTANCE",
-        value: String(format: "%.1f m", entry.distance),
-        color: t.secondaryAccent,
-        decCmd: "dist-",
-        incCmd: "dist+"
-        )
-        largeStepperCard(
-        title: "曝光补偿 EV COMP",
-        value: abs(entry.evComp) < 0.05 ? "0.0 EV" : String(format: "%+.1f EV", entry.evComp),
-        color: Color.green,
-        decCmd: "ev-",
-        incCmd: "ev+"
-        )
-        }
-        HStack(spacing: 8) {
-        Text("感光度 ISO")
-        .font(.system(size: 10, weight: .bold, design: .monospaced))
-        .foregroundStyle(Color.white.opacity(0.75))
-        Spacer(minLength: 4)
-        Button(intent: LumiFilmWidgetAdjustIntent(command: "iso-")) {
-        Text("−")
-        .font(.system(size: 14, weight: .black, design: .monospaced))
-        .foregroundStyle(Color.white)
-        .frame(width: 30, height: 25)
-        .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        Text("ISO \(Int(entry.iso))")
-        .font(.system(size: 12.5, weight: .black, design: .monospaced))
-        .foregroundStyle(t.accent)
-        .frame(minWidth: 66)
-        Button(intent: LumiFilmWidgetAdjustIntent(command: "iso+")) {
-        Text("+")
-        .font(.system(size: 14, weight: .black, design: .monospaced))
-        .foregroundStyle(Color.white)
-        .frame(width: 30, height: 25)
-        .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(t.cardBg, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(t.accent.opacity(0.32), lineWidth: 0.8))
-        }
-        HStack(spacing: 6) {
-        cameraVoiceKeyButton(height: 31, title: "语音输入")
-        Link(destination: entry.speakDeepLinkURL) {
-        HStack(spacing: 4) {
-        Image(systemName: "speaker.wave.2.fill")
-        .font(.system(size: 10.5, weight: .bold))
-        .foregroundStyle(t.accent)
-        Text("播报功率")
-        .font(.system(size: 11, weight: .bold))
-        .foregroundStyle(Color.white)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 31)
-        .background(t.cardBg, in: Capsule())
-        .overlay(Capsule().stroke(t.accent.opacity(0.45), lineWidth: 0.9))
-        }
-        Link(destination: entry.onboardingDeepLinkURL) {
-        HStack(spacing: 4) {
-        Image(systemName: "slider.horizontal.3")
-        .font(.system(size: 10.5, weight: .bold))
-        .foregroundStyle(t.accent)
-        Text("首次指引")
-        .font(.system(size: 11, weight: .bold))
-        .foregroundStyle(Color.white)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 31)
-        .background(t.cardBg, in: Capsule())
-        .overlay(Capsule().stroke(t.accent.opacity(0.45), lineWidth: 0.9))
-        }
-        }
-        }
-        .foregroundStyle(Color.white)
-        }
-        @available(iOSApplicationExtension 17.0, *)
-        private func largeStepperCard(title: String, value: String, color: Color, decCmd: String, incCmd: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-        Text(title)
-        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-        .foregroundStyle(Color.white.opacity(0.6))
-        .lineLimit(1)
-        HStack(spacing: 0) {
-        Button(intent: LumiFilmWidgetAdjustIntent(command: decCmd)) {
-        Text("−")
-        .font(.system(size: 15, weight: .black, design: .monospaced))
-        .foregroundStyle(Color.white)
-        .frame(width: 30, height: 28)
-        .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        Spacer(minLength: 2)
-        Text(value)
-        .font(.system(size: 14, weight: .black, design: .monospaced))
-        .foregroundStyle(color)
-        .lineLimit(1)
-        .minimumScaleFactor(0.75)
-        Spacer(minLength: 2)
-        Button(intent: LumiFilmWidgetAdjustIntent(command: incCmd)) {
-        Text("+")
-        .font(.system(size: 15, weight: .black, design: .monospaced))
-        .foregroundStyle(Color.white)
-        .frame(width: 30, height: 28)
-        .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity)
-        .background(t.cardBg, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(t.accent.opacity(0.35), lineWidth: 0.9))
-        }
-        private var lockScreenRectangularView: some View {
-        VStack(alignment: .leading, spacing: 2) {
-        HStack(spacing: 4) {
-        Image(systemName: "bolt.fill")
-        Text("FLASH: \(entry.powerFullText)")
-        .font(.system(size: 13, weight: .black, design: .rounded))
-        }
-        Text(String(format: "f/%.1f · 1/%ds · %.1fm · ISO %.0f", entry.aperture, entry.shutterDenom, entry.distance, entry.iso))
-        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-        .opacity(0.85)
-        }
-        }
+         var entry: LumiFilmProvider.Entry
+         @Environment(\.widgetFamily) private var family
+         private var t: WidgetTheme { entry.theme }
+         var body: some View {
+          Group {
+           switch family {
+           case .systemMedium:
+            mediumWidgetView
+           case .systemLarge:
+            largeWidgetView
+           case .accessoryRectangular:
+            lockScreenRectangularView
+           default:
+            smallWidgetView
+           }
+          }
+          .widgetURL(entry.meterDeepLinkURL)
+          .containerBackground(for: .widget) {
+           LinearGradient(colors: t.backgroundGradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+          }
+         }
+         private func powerBadgeRow(mainSize: CGFloat, badgeSize: CGFloat) -> some View {
+          HStack(alignment: .center, spacing: 5) {
+           Text(entry.mainPower)
+            .font(.system(size: mainSize, weight: .black, design: .rounded))
+            .foregroundStyle(entry.isWarning ? Color.orange : Color.white)
+            .minimumScaleFactor(0.65)
+            .lineLimit(1)
+           if let trim = entry.trimBadge {
+            Text(trim)
+             .font(.system(size: badgeSize, weight: .heavy, design: .monospaced))
+             .foregroundStyle(Color.black)
+             .padding(.horizontal, 6)
+             .padding(.vertical, 2)
+             .background(t.accent, in: Capsule())
+           } else {
+            Text("整档")
+             .font(.system(size: badgeSize - 0.5, weight: .bold, design: .rounded))
+             .foregroundStyle(t.accent)
+             .padding(.horizontal, 5.5)
+             .padding(.vertical, 2)
+             .background(t.accent.opacity(0.18), in: Capsule())
+           }
+          }
+         }
+         private func cameraVoiceKeyButton(height: CGFloat, title: String) -> some View {
+          Link(destination: entry.voiceDeepLinkURL) {
+           HStack(spacing: 5) {
+            Circle()
+             .fill(Color.black.opacity(0.28))
+             .frame(width: height - 10, height: height - 10)
+             .overlay(
+              Image(systemName: "mic.fill")
+               .font(.system(size: height * 0.36, weight: .black))
+               .foregroundStyle(Color.black)
+             )
+            Text(title)
+             .font(.system(size: height * 0.36, weight: .black, design: .rounded))
+             .foregroundStyle(Color.black)
+             .lineLimit(1)
+           }
+           .frame(maxWidth: .infinity)
+           .frame(height: height)
+           .background(t.accent, in: Capsule())
+           .overlay(Capsule().stroke(Color.white.opacity(0.55), lineWidth: 1))
+          }
+         }
+         private var smallWidgetView: some View {
+          VStack(alignment: .leading, spacing: 6) {
+           VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+             Image(systemName: "bolt.circle.fill")
+              .font(.system(size: 11, weight: .bold))
+              .foregroundStyle(t.accent)
+             Text("输出功率")
+              .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+              .foregroundStyle(t.accent)
+             Spacer(minLength: 0)
+             Text(t.nameText)
+              .font(.system(size: 8.5, weight: .bold))
+              .foregroundStyle(t.accent.opacity(0.85))
+            }
+            powerBadgeRow(mainSize: 28, badgeSize: 9.5)
+            HStack(spacing: 5) {
+             Text("ISO \(Int(entry.iso))")
+             Text("·")
+             Text("1/\(entry.shutterDenom)s")
+             Text("·")
+             Text(String(format: "%.1fm", entry.distance))
+            }
+            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+            .foregroundStyle(Color.white.opacity(0.85))
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            Text("光圈 \(FlashCalculator.formatFStop(entry.aperture)) · GN\(Int(entry.gn))")
+             .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+             .foregroundStyle(Color.white.opacity(0.58))
+             .lineLimit(1)
+           }
+           .padding(.horizontal, 9)
+           .padding(.vertical, 7)
+           .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+           .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+           .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(t.accent.opacity(0.45), lineWidth: 1))
+           cameraVoiceKeyButton(height: 30, title: "语音输入")
+          }
+          .foregroundStyle(Color.white)
+         }
+         private var mediumWidgetView: some View {
+          HStack(spacing: 10) {
+           VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 3) {
+             HStack(spacing: 4) {
+              Image(systemName: "bolt.circle.fill")
+               .font(.system(size: 12, weight: .bold))
+               .foregroundStyle(t.accent)
+              Text("闪光输出功率")
+               .font(.system(size: 10, weight: .heavy, design: .monospaced))
+               .foregroundStyle(t.accent)
+              Spacer(minLength: 0)
+              Text(t.nameText)
+               .font(.system(size: 8.5, weight: .bold))
+               .foregroundStyle(t.accent.opacity(0.85))
+             }
+             powerBadgeRow(mainSize: 34, badgeSize: 10.5)
+             Text(entry.noteText)
+              .font(.system(size: 9, weight: .semibold, design: .monospaced))
+              .foregroundStyle(Color.white.opacity(0.65))
+              .lineLimit(1)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(t.accent.opacity(0.45), lineWidth: 1))
+            cameraVoiceKeyButton(height: 32, title: "语音输入")
+           }
+           .frame(maxWidth: .infinity)
+           VStack(spacing: 6) {
+            HStack(spacing: 6) {
+             readOnlyInfoCell(label: "感光度 ISO", value: "ISO \(Int(entry.iso))", highlight: t.accent)
+             readOnlyInfoCell(label: "快门速度", value: "1/\(entry.shutterDenom)s", highlight: Color.white)
+            }
+            HStack(spacing: 6) {
+             readOnlyInfoCell(label: "拍摄距离", value: String(format: "%.1f m", entry.distance), highlight: t.secondaryAccent)
+             readOnlyInfoCell(label: "当前光圈", value: FlashCalculator.formatFStop(entry.aperture), highlight: t.accent)
+            }
+            HStack(spacing: 4) {
+             Text("GN \(Int(entry.gn))")
+             Text("·")
+             Text(abs(entry.evComp) < 0.05 ? "补偿 0.0EV" : String(format: "补偿 %+.1fEV", entry.evComp))
+            }
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .foregroundStyle(Color.white.opacity(0.62))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
+            .background(t.cardBg, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+           }
+           .frame(width: 152)
+          }
+          .foregroundStyle(Color.white)
+         }
+         private func readOnlyInfoCell(label: String, value: String, highlight: Color) -> some View {
+          VStack(alignment: .leading, spacing: 2) {
+           Text(label)
+            .font(.system(size: 8.5, weight: .bold))
+            .foregroundStyle(Color.white.opacity(0.55))
+            .lineLimit(1)
+           Text(value)
+            .font(.system(size: 12.5, weight: .black, design: .monospaced))
+            .foregroundStyle(highlight)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+          }
+          .padding(.horizontal, 8)
+          .padding(.vertical, 6)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+          .background(t.cardBg, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+          .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(t.accent.opacity(0.28), lineWidth: 0.8))
+         }
+         private var largeWidgetView: some View {
+          VStack(spacing: 7) {
+           VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 5) {
+             Image(systemName: "camera.aperture")
+              .font(.system(size: 12, weight: .bold))
+              .foregroundStyle(t.accent)
+             Text("LUMIFILM 机顶测光屏 · 输出功率")
+              .font(.system(size: 10, weight: .black, design: .monospaced))
+              .foregroundStyle(t.accent)
+             Spacer(minLength: 0)
+             if #available(iOSApplicationExtension 17.0, *) {
+              Button(intent: LumiFilmWidgetAdjustIntent(command: "theme")) {
+               HStack(spacing: 3) {
+                Circle().fill(t.accent).frame(width: 5, height: 5)
+                Text(t.nameText)
+                 .font(.system(size: 9, weight: .bold))
+                 .foregroundStyle(Color.white.opacity(0.9))
+               }
+               .padding(.horizontal, 7)
+               .padding(.vertical, 2.5)
+               .background(t.cardBg, in: Capsule())
+               .overlay(Capsule().stroke(t.accent.opacity(0.45), lineWidth: 0.8))
+              }
+              .buttonStyle(.plain)
+             }
+            }
+            HStack(alignment: .center) {
+             powerBadgeRow(mainSize: 36, badgeSize: 11.5)
+             Spacer(minLength: 6)
+             VStack(alignment: .trailing, spacing: 2) {
+              Text(entry.noteText)
+               .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+               .foregroundStyle(entry.isWarning ? Color.orange : t.accent)
+              Text("X-Sync ≤1/\(entry.maxSyncSpeed)s · GN\(Int(entry.gn))")
+               .font(.system(size: 9, weight: .semibold, design: .monospaced))
+               .foregroundStyle(Color.white.opacity(0.6))
+             }
+            }
+            Text("当前参数: \(FlashCalculator.formatFStop(entry.aperture)) · 1/\(entry.shutterDenom)s · \(String(format: "%.1fm", entry.distance)) · ISO \(Int(entry.iso))")
+             .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+             .foregroundStyle(Color.white.opacity(0.85))
+             .lineLimit(1)
+           }
+           .padding(.horizontal, 11)
+           .padding(.vertical, 8)
+           .frame(maxWidth: .infinity, alignment: .leading)
+           .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+           .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(t.accent.opacity(0.5), lineWidth: 1))
+           if #available(iOSApplicationExtension 17.0, *) {
+            HStack(spacing: 7) {
+             largeStepperCard(
+              title: "光圈 APERTURE",
+              value: FlashCalculator.formatFStop(entry.aperture),
+              color: t.accent,
+              decCmd: "ap-",
+              incCmd: "ap+"
+             )
+             largeStepperCard(
+              title: "快门速度 SHUTTER",
+              value: "1/\(entry.shutterDenom)s",
+              color: entry.shutterDenom > entry.maxSyncSpeed ? Color.orange : Color.white,
+              decCmd: "sh-",
+              incCmd: "sh+"
+             )
+            }
+            HStack(spacing: 7) {
+             largeStepperCard(
+              title: "拍摄距离 DISTANCE",
+              value: String(format: "%.1f m", entry.distance),
+              color: t.secondaryAccent,
+              decCmd: "dist-",
+              incCmd: "dist+"
+             )
+             largeStepperCard(
+              title: "曝光补偿 EV COMP",
+              value: abs(entry.evComp) < 0.05 ? "0.0 EV" : String(format: "%+.1f EV", entry.evComp),
+              color: Color.green,
+              decCmd: "ev-",
+              incCmd: "ev+"
+             )
+            }
+            HStack(spacing: 8) {
+             Text("感光度 ISO")
+              .font(.system(size: 10, weight: .bold, design: .monospaced))
+              .foregroundStyle(Color.white.opacity(0.75))
+             Spacer(minLength: 4)
+             Button(intent: LumiFilmWidgetAdjustIntent(command: "iso-")) {
+              Text("−")
+               .font(.system(size: 14, weight: .black, design: .monospaced))
+               .foregroundStyle(Color.white)
+               .frame(width: 30, height: 25)
+               .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+             }
+             .buttonStyle(.plain)
+             Text("ISO \(Int(entry.iso))")
+              .font(.system(size: 12.5, weight: .black, design: .monospaced))
+              .foregroundStyle(t.accent)
+              .frame(minWidth: 66)
+             Button(intent: LumiFilmWidgetAdjustIntent(command: "iso+")) {
+              Text("+")
+               .font(.system(size: 14, weight: .black, design: .monospaced))
+               .foregroundStyle(Color.white)
+               .frame(width: 30, height: 25)
+               .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+             }
+             .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(t.cardBg, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(t.accent.opacity(0.32), lineWidth: 0.8))
+           }
+           HStack(spacing: 6) {
+            cameraVoiceKeyButton(height: 31, title: "语音输入")
+            Link(destination: entry.speakDeepLinkURL) {
+             HStack(spacing: 4) {
+              Image(systemName: "speaker.wave.2.fill")
+               .font(.system(size: 10.5, weight: .bold))
+               .foregroundStyle(t.accent)
+              Text("播报功率")
+               .font(.system(size: 11, weight: .bold))
+               .foregroundStyle(Color.white)
+             }
+             .frame(maxWidth: .infinity)
+             .frame(height: 31)
+             .background(t.cardBg, in: Capsule())
+             .overlay(Capsule().stroke(t.accent.opacity(0.45), lineWidth: 0.9))
+            }
+            Link(destination: entry.onboardingDeepLinkURL) {
+             HStack(spacing: 4) {
+              Image(systemName: "slider.horizontal.3")
+               .font(.system(size: 10.5, weight: .bold))
+               .foregroundStyle(t.accent)
+              Text("首次指引")
+               .font(.system(size: 11, weight: .bold))
+               .foregroundStyle(Color.white)
+             }
+             .frame(maxWidth: .infinity)
+             .frame(height: 31)
+             .background(t.cardBg, in: Capsule())
+             .overlay(Capsule().stroke(t.accent.opacity(0.45), lineWidth: 0.9))
+            }
+           }
+          }
+          .foregroundStyle(Color.white)
+         }
+         @available(iOSApplicationExtension 17.0, *)
+         private func largeStepperCard(title: String, value: String, color: Color, decCmd: String, incCmd: String) -> some View {
+          VStack(alignment: .leading, spacing: 4) {
+           Text(title)
+            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+            .foregroundStyle(Color.white.opacity(0.6))
+            .lineLimit(1)
+           HStack(spacing: 0) {
+            Button(intent: LumiFilmWidgetAdjustIntent(command: decCmd)) {
+             Text("−")
+              .font(.system(size: 15, weight: .black, design: .monospaced))
+              .foregroundStyle(Color.white)
+              .frame(width: 30, height: 28)
+              .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            Spacer(minLength: 2)
+            Text(value)
+             .font(.system(size: 14, weight: .black, design: .monospaced))
+             .foregroundStyle(color)
+             .lineLimit(1)
+             .minimumScaleFactor(0.75)
+            Spacer(minLength: 2)
+            Button(intent: LumiFilmWidgetAdjustIntent(command: incCmd)) {
+             Text("+")
+              .font(.system(size: 15, weight: .black, design: .monospaced))
+              .foregroundStyle(Color.white)
+              .frame(width: 30, height: 28)
+              .background(t.lcdBg, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+            .buttonStyle(.plain)
+           }
+          }
+          .padding(.horizontal, 8)
+          .padding(.vertical, 6)
+          .frame(maxWidth: .infinity)
+          .background(t.cardBg, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+          .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(t.accent.opacity(0.35), lineWidth: 0.9))
+         }
+         private var lockScreenRectangularView: some View {
+          VStack(alignment: .leading, spacing: 2) {
+           HStack(spacing: 4) {
+            Image(systemName: "bolt.fill")
+            Text("FLASH: \(entry.powerFullText)")
+             .font(.system(size: 13, weight: .black, design: .rounded))
+           }
+           Text(String(format: "f/%.1f · 1/%ds · %.1fm · ISO %.0f", entry.aperture, entry.shutterDenom, entry.distance, entry.iso))
+            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+            .opacity(0.85)
+          }
+         }
         }
         @main
         struct LumiFilmWidget: Widget {
-        let kind: String = "LumiFilmCameraWidgetV9"
-        var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: LumiFilmProvider()) { entry in
-        LumiFilmWidgetEntryView(entry: entry)
-        }
-        .configurationDisplayName("LumiFilm 闪光测光组件")
-        .description("小号/中号只读显示输出功率、ISO、快门、距离与语音输入相机键；大号(4x4)支持桌面直接调节光圈、快门、距离、补偿与ISO。")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
-        }
+         let kind: String = "LumiFilmCameraWidgetV9"
+         var body: some WidgetConfiguration {
+          StaticConfiguration(kind: kind, provider: LumiFilmProvider()) { entry in
+           LumiFilmWidgetEntryView(entry: entry)
+          }
+          .configurationDisplayName("LumiFilm 闪光测光组件")
+          .description("主题与主App实时互通。小号/中号只读显示输出功率、ISO、快门、距离与语音输入键；大号(4x4)支持桌面直接调参。")
+          .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
+         }
         }
         EOF
         cat << 'EOF' > LumiFilmBuild/LumiFilm/LumiFilmApp.swift
@@ -2555,159 +2557,89 @@ jobs:
         syncWidgetDefaults()
         }
         }
-        @State private var lastLocalSyncTS: Double = 0.0
+        @State private var lastLocalSyncTS: UInt32 = 0
         private var candidateAppGroupIDs: [String] {
-        var list = ["group.com.lumifilm.flashmeter"]
-        if let bid = Bundle.main.bundleIdentifier {
-        let dyn = "group.\(bid)"
-        if !list.contains(dyn) { list.insert(dyn, at: 0) }
+         var list = ["group.com.lumifilm.flashmeter"]
+         if let bid = Bundle.main.bundleIdentifier {
+          let dyn = "group.\(bid)"
+          if !list.contains(dyn) { list.insert(dyn, at: 0) }
+         }
+         return list
         }
-        return list
+        private func writeKernelNotifyUInt64(_ key: String, _ val: UInt64) {
+         var token: Int32 = 0
+         guard lf_app_notify_register_check(key, &token) == 0 else { return }
+         _ = lf_app_notify_set_state(token, val)
+         _ = lf_app_notify_cancel(token)
         }
-        private func runtimeTeamPrefix() -> String? {
-        let probeQuery: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrAccount as String: "lumifilm_team_probe",
-        kSecAttrService as String: "com.lumifilm.probe",
-        kSecReturnAttributes as String: true
-        ]
-        var item: CFTypeRef?
-        var status = SecItemCopyMatching(probeQuery as CFDictionary, &item)
-        if status == errSecItemNotFound {
-        var addQ = probeQuery
-        addQ[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        status = SecItemAdd(addQ as CFDictionary, &item)
-        }
-        if status == errSecSuccess, let dict = item as? [String: Any], let ag = dict[kSecAttrAccessGroup as String] as? String {
-        if let first = ag.split(separator: ".").first, !first.isEmpty {
-        return String(first) + "."
-        }
-        }
-        return nil
+        private func readKernelNotifyUInt64(_ key: String) -> UInt64 {
+         var token: Int32 = 0
+         guard lf_app_notify_register_check(key, &token) == 0 else { return 0 }
+         var val: UInt64 = 0
+         _ = lf_app_notify_get_state(token, &val)
+         _ = lf_app_notify_cancel(token)
+         return val
         }
         private func syncWidgetDefaults() {
-        let nowTS = Date().timeIntervalSince1970
-        lastLocalSyncTS = nowTS
-        let dict: [String: Double] = [
-        "lf_iso": filmISO,
-        "lf_gn": flashGN,
-        "lf_distance": distance,
-        "lf_aperture": aperture,
-        "lf_shutter": Double(shutterDenom),
-        "lf_sync_speed": Double(maxSyncSpeed),
-        "lf_theme": Double(themeRaw),
-        "lf_max_aperture": maxLensAperture,
-        "lf_exp_comp_ev": exposureCompEV,
-        "lf_modifier_loss": modifierLossEV,
-        "lf_bounce_loss": bounceLossEV,
-        "lf_filter_loss_ev": filterLossEV,
-        "lf_sync_ts": nowTS
-        ]
-        let data = try? JSONEncoder().encode(dict)
-        if let data = data {
-        UserDefaults.standard.set(data, forKey: "lf_state_blob_v91")
-        }
-        for (k, v) in dict {
-        UserDefaults.standard.set(v, forKey: k)
-        }
-        for gid in candidateAppGroupIDs {
-        if let suite = UserDefaults(suiteName: gid) {
-        if let data = data { suite.set(data, forKey: "lf_state_blob_v91") }
-        for (k, v) in dict { suite.set(v, forKey: k) }
-        }
-        if let data = data,
-        let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: gid)?.appendingPathComponent("lumifilm_sync.json") {
-        try? data.write(to: url, options: .atomic)
-        }
-        }
-        if let data = data {
-        let svc = "com.lumifilm.shared.sync.v91"
-        if let prefix = runtimeTeamPrefix() {
-        for ag in ["\(prefix)com.lumifilm.shared", "\(prefix)com.lumifilm.flashmeter"] {
-        let delQ: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrService as String: svc,
-        kSecAttrAccount as String: "state_json",
-        kSecAttrAccessGroup as String: ag
-        ]
-        SecItemDelete(delQ as CFDictionary)
-        var addQ = delQ
-        addQ[kSecValueData as String] = data
-        addQ[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(addQ as CFDictionary, nil)
-        }
-        }
-        let delDef: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrService as String: svc,
-        kSecAttrAccount as String: "state_json"
-        ]
-        SecItemDelete(delDef as CFDictionary)
-        var addDef = delDef
-        addDef[kSecValueData as String] = data
-        addDef[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(addDef as CFDictionary, nil)
-        if let str = String(data: data, encoding: .utf8),
-        let pb = UIPasteboard(name: UIPasteboard.Name(svc), create: true) {
-        pb.isPersistent = true
-        pb.string = str
-        }
-        }
-        WidgetCenter.shared.reloadAllTimelines()
+         let ts = UInt32(Date().timeIntervalSince1970)
+         lastLocalSyncTS = ts
+         let tClamp = UInt64(max(0, min(2, themeRaw)))
+         let apIdx = UInt64(allApertureSteps.enumerated().min(by: { abs($0.element - aperture) < abs($1.element - aperture) })?.offset ?? 7)
+         let shIdx = UInt64(shutterSteps.enumerated().min(by: { abs($0.element - shutterDenom) < abs($1.element - shutterDenom) })?.offset ?? 9)
+         let distIdx = UInt64(distanceSteps.enumerated().min(by: { abs($0.element - distance) < abs($1.element - distance) })?.offset ?? 5)
+         let isoIdx = UInt64(isoSteps.enumerated().min(by: { abs($0.element - filmISO) < abs($1.element - filmISO) })?.offset ?? 8)
+         let evIdx = UInt64(evCompSteps.enumerated().min(by: { abs($0.element - exposureCompEV) < abs($1.element - exposureCompEV) })?.offset ?? 6)
+         let maxApIdx = UInt64(maxAperturePresets.enumerated().min(by: { abs($0.element - maxLensAperture) < abs($1.element - maxLensAperture) })?.offset ?? 2)
+         let syncIdx = UInt64(syncPresets.enumerated().min(by: { abs($0.element - maxSyncSpeed) < abs($1.element - maxSyncSpeed) })?.offset ?? 5)
+         let gnInt = UInt64(max(5, min(90, Int(round(flashGN)))))
+         let auxLoss = modifierLossEV + bounceLossEV + filterLossEV
+         let auxEnc = UInt64(max(0, min(2000, Int(round(auxLoss * 10.0)) + 500)))
+         let s1: UInt64 = (UInt64(0xA7) << 56) | (tClamp << 48) | (apIdx << 40) | (shIdx << 32) | (distIdx << 24) | (isoIdx << 16) | (evIdx << 8) | maxApIdx
+         let s2: UInt64 = (syncIdx << 56) | (gnInt << 48) | (auxEnc << 32) | UInt64(ts)
+         writeKernelNotifyUInt64("com.lumifilm.v92.slot1", s1)
+         writeKernelNotifyUInt64("com.lumifilm.v92.slot2", s2)
+         let dict: [String: Double] = [
+          "lf_iso": filmISO,
+          "lf_gn": flashGN,
+          "lf_distance": distance,
+          "lf_aperture": aperture,
+          "lf_shutter": Double(shutterDenom),
+          "lf_sync_speed": Double(maxSyncSpeed),
+          "lf_theme": Double(themeRaw),
+          "lf_max_aperture": maxLensAperture,
+          "lf_exp_comp_ev": exposureCompEV,
+          "lf_aux_loss": auxLoss,
+          "lf_sync_ts": Double(ts)
+         ]
+         if let data = try? JSONEncoder().encode(dict) {
+          UserDefaults.standard.set(data, forKey: "lf_state_blob_v92")
+          for gid in candidateAppGroupIDs {
+           UserDefaults(suiteName: gid)?.set(data, forKey: "lf_state_blob_v92")
+          }
+         }
+         WidgetCenter.shared.reloadAllTimelines()
         }
         private func pullFromWidgetStoreIfNewer() {
-        let svc = "com.lumifilm.shared.sync.v91"
-        var bestDict: [String: Double] = [:]
-        var bestTS: Double = lastLocalSyncTS
-        func consider(_ candidate: [String: Double]?) {
-        guard let c = candidate, let ts = c["lf_sync_ts"], ts > bestTS + 0.05 else { return }
-        bestTS = ts
-        bestDict = c
-        }
-        if let prefix = runtimeTeamPrefix() {
-        for ag in ["\(prefix)com.lumifilm.shared", "\(prefix)com.lumifilm.flashmeter"] {
-        let q: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrService as String: svc,
-        kSecAttrAccount as String: "state_json",
-        kSecAttrAccessGroup as String: ag,
-        kSecReturnData as String: true,
-        kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var ref: CFTypeRef?
-        if SecItemCopyMatching(q as CFDictionary, &ref) == errSecSuccess,
-        let d = ref as? Data,
-        let dec = try? JSONDecoder().decode([String: Double].self, from: d) {
-        consider(dec)
-        }
-        }
-        }
-        for gid in candidateAppGroupIDs {
-        if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: gid)?.appendingPathComponent("lumifilm_sync.json"),
-        let d = try? Data(contentsOf: url),
-        let dec = try? JSONDecoder().decode([String: Double].self, from: d) {
-        consider(dec)
-        }
-        if let suite = UserDefaults(suiteName: gid),
-        let d = suite.data(forKey: "lf_state_blob_v91"),
-        let dec = try? JSONDecoder().decode([String: Double].self, from: d) {
-        consider(dec)
-        }
-        }
-        if let pb = UIPasteboard(name: UIPasteboard.Name(svc), create: false),
-        let str = pb.string,
-        let d = str.data(using: .utf8),
-        let dec = try? JSONDecoder().decode([String: Double].self, from: d) {
-        consider(dec)
-        }
-        guard !bestDict.isEmpty else { return }
-        lastLocalSyncTS = bestTS
-        if let t = bestDict["lf_theme"] { themeRaw = max(0, min(2, Int(round(t)))) }
-        if let ap = bestDict["lf_aperture"] { aperture = max(maxLensAperture, min(22.0, ap)) }
-        if let sh = bestDict["lf_shutter"] { shutterDenom = max(1, min(4000, Int(round(sh)))) }
-        if let dist = bestDict["lf_distance"] { distance = max(0.5, min(15.0, dist)) }
-        if let ev = bestDict["lf_exp_comp_ev"] { setExposureCompClean(ev) }
-        if let iso = bestDict["lf_iso"] { filmISO = iso }
+         let s1 = readKernelNotifyUInt64("com.lumifilm.v92.slot1")
+         let s2 = readKernelNotifyUInt64("com.lumifilm.v92.slot2")
+         let magic = Int((s1 >> 56) & 0xFF)
+         guard magic == 0xA7 else { return }
+         let ts = UInt32(s2 & 0xFFFFFFFF)
+         guard ts >= lastLocalSyncTS else { return }
+         lastLocalSyncTS = ts
+         let newTheme = max(0, min(2, Int((s1 >> 48) & 0xFF)))
+         let apIdx = max(0, min(allApertureSteps.count - 1, Int((s1 >> 40) & 0xFF)))
+         let shIdx = max(0, min(shutterSteps.count - 1, Int((s1 >> 32) & 0xFF)))
+         let distIdx = max(0, min(distanceSteps.count - 1, Int((s1 >> 24) & 0xFF)))
+         let isoIdx = max(0, min(isoSteps.count - 1, Int((s1 >> 16) & 0xFF)))
+         let evIdx = max(0, min(evCompSteps.count - 1, Int((s1 >> 8) & 0xFF)))
+         if themeRaw != newTheme { themeRaw = newTheme }
+         let newAp = max(maxLensAperture, allApertureSteps[apIdx])
+         if abs(aperture - newAp) > 0.05 { aperture = newAp }
+         if shutterDenom != shutterSteps[shIdx] { shutterDenom = shutterSteps[shIdx] }
+         if abs(distance - distanceSteps[distIdx]) > 0.05 { distance = distanceSteps[distIdx] }
+         if abs(filmISO - isoSteps[isoIdx]) > 0.5 { filmISO = isoSteps[isoIdx] }
+         if abs(exposureCompEV - evCompSteps[evIdx]) > 0.05 { exposureCompEV = evCompSteps[evIdx] }
         }
         private func speakCurrentExposureOnce() {
         let msg = lang == .en
@@ -2913,6 +2845,15 @@ jobs:
         syncWidgetDefaults()
         }
         .onChange(of: themeRaw) { _, _ in
+        syncWidgetDefaults()
+        }
+        .onChange(of: modifierLossEV) { _, _ in
+        syncWidgetDefaults()
+        }
+        .onChange(of: bounceLossEV) { _, _ in
+        syncWidgetDefaults()
+        }
+        .onChange(of: filterLossEV) { _, _ in
         syncWidgetDefaults()
         }
         .onChange(of: filmISO) { _, _ in
@@ -3683,177 +3624,185 @@ jobs:
         }
         }
         private var modifiersTab: some View {
-        VStack(spacing: 10) {
-        minimalistOpticalModifiersCard
-        compactFilmRollLogCard
-        Spacer(minLength: 0)
+         ScrollView(showsIndicators: false) {
+          VStack(spacing: 10) {
+           modifiersLiveSummaryBanner
+           opticalModifiers2x2Grid
+           compactFilmRollLogCard
+          }
+          .padding(.bottom, 6)
+         }
         }
+        private var modifiersLiveSummaryBanner: some View {
+         let totalOpticalLoss = modifierLossEV + bounceLossEV + filterLossEV
+         let effISO = Int(round(max(filmISO * pow(2.0, pushPullEV), 25.0)))
+         let effGN = Int(round(computeFullEffectiveGN(forShutter: shutterDenom)))
+         return HStack(spacing: 10) {
+          VStack(alignment: .leading, spacing: 3) {
+           HStack(spacing: 5) {
+            Image(systemName: "bolt.circle.fill")
+             .font(.system(size: 11, weight: .bold))
+             .foregroundStyle(theme.accent)
+            Text(lang == .en ? "MODIFIED FLASH OUTPUT" : "光学修正后建议功率")
+             .font(.system(size: 9.5, weight: .black, design: .monospaced))
+             .foregroundStyle(theme.accent)
+           }
+           Text(exposureResult.powerTitle)
+            .font(.system(size: 24, weight: .black, design: .rounded))
+            .foregroundStyle(exposureResult.statusColor == .red ? Color.red : Color.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+          }
+          Spacer(minLength: 4)
+          VStack(alignment: .trailing, spacing: 4) {
+           HStack(spacing: 5) {
+            Text(String(format: lang == .en ? "Loss -%.1fEV" : "附件光损 -%.1fEV", totalOpticalLoss))
+             .font(.system(size: 10, weight: .bold, design: .monospaced))
+             .foregroundStyle(totalOpticalLoss > 0.05 ? Color.black : Color.white.opacity(0.8))
+             .padding(.horizontal, 7)
+             .padding(.vertical, 3)
+             .background(totalOpticalLoss > 0.05 ? theme.accent : Color.white.opacity(0.12), in: Capsule())
+            Button {
+             feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+             withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
+              modifierLossEV = 0.0
+              bounceLossEV = 0.0
+              filterLossEV = 0.0
+              pushPullEV = 0.0
+             }
+            } label: {
+             Text(lang == .en ? "Reset" : "归零")
+              .font(.system(size: 10, weight: .black))
+              .foregroundStyle(theme.accent)
+              .padding(.horizontal, 8)
+              .padding(.vertical, 3)
+              .background(Color.white.opacity(0.12), in: Capsule())
+              .overlay(Capsule().stroke(theme.accent.opacity(0.45), lineWidth: 0.8))
+            }
+           }
+           Text(lang == .en ? "EI \(effISO) · Eff. GN \(effGN) · \(formatFStop(aperture)) · \(String(format: "%.1fm", distance))" : "折算 EI \(effISO) · 有效 GN \(effGN) · \(formatFStop(aperture)) · \(String(format: "%.1fm", distance))")
+            .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+            .foregroundStyle(Color.white.opacity(0.65))
+            .lineLimit(1)
+          }
+         }
+         .padding(.horizontal, 13)
+         .padding(.vertical, 10)
+         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(theme.accent.opacity(0.42), lineWidth: 1.1))
         }
-        private var minimalistOpticalModifiersCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-        HStack {
-        Label(lang == .en ? "Optical & Film Modifiers" : "光学附件与胶片冲扫修正", systemImage: "camera.filters")
-        .font(.system(size: 13, weight: .bold))
-        .foregroundStyle(Color.white)
-        Spacer()
-        Button {
-        feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
-        modifierLossEV = 0.0
-        bounceLossEV = 0.0
-        filterLossEV = 0.0
-        pushPullEV = 0.0
-        exposureCompEV = 0.0
+        private var opticalModifiers2x2Grid: some View {
+         VStack(spacing: 8) {
+          HStack(spacing: 8) {
+           modifierBentoTile(
+            icon: "light.beacon.max.fill",
+            title: lang == .en ? "Diffuser" : "柔光附件",
+            badgeText: abs(modifierLossEV) < 0.05 ? "0 EV" : String(format: "-%.1f EV", modifierLossEV),
+            isActive: modifierLossEV > 0.05,
+            chips: [
+             (lang == .en ? "Bare 0" : "裸灯 0", 0.0),
+             (lang == .en ? "Dome -1" : "肥皂盒 -1", 1.0),
+             (lang == .en ? "Sphere -1.5" : "球形 -1.5", 1.5),
+             (lang == .en ? "Softbox -2" : "柔光箱 -2", 2.0)
+            ],
+            selection: $modifierLossEV
+           )
+           modifierBentoTile(
+            icon: "arrow.up.right.circle.fill",
+            title: lang == .en ? "Bounce" : "跳闪角度",
+            badgeText: abs(bounceLossEV) < 0.05 ? "0 EV" : String(format: "-%.1f EV", bounceLossEV),
+            isActive: bounceLossEV > 0.05,
+            chips: [
+             (lang == .en ? "Direct 0°" : "0°直闪", 0.0),
+             (lang == .en ? "60° -1.5" : "60°眼神板", 1.5),
+             (lang == .en ? "90° -2.0" : "90°白顶", 2.0),
+             (lang == .en ? "Wall -2.5" : "反跳白墙", 2.5)
+            ],
+            selection: $bounceLossEV
+           )
+          }
+          HStack(spacing: 8) {
+           modifierBentoTile(
+            icon: "circle.hexagongrid.fill",
+            title: lang == .en ? "Lens Filter" : "镜头滤镜",
+            badgeText: abs(filterLossEV) < 0.05 ? "0 EV" : String(format: "-%.1f EV", filterLossEV),
+            isActive: filterLossEV > 0.05,
+            chips: [
+             (lang == .en ? "None 0" : "无滤镜", 0.0),
+             (lang == .en ? "Mist -0.3" : "黑柔-0.3", 0.3),
+             (lang == .en ? "CPL -1.0" : "CPL/黄-1", 1.0),
+             (lang == .en ? "ND4 -2.0" : "ND4 -2", 2.0),
+             (lang == .en ? "ND8 -3.0" : "ND8 -3", 3.0)
+            ],
+            selection: $filterLossEV
+           )
+           modifierBentoTile(
+            icon: "film.stack.fill",
+            title: lang == .en ? "Push / Pull" : "迫冲与减感",
+            badgeText: abs(pushPullEV) < 0.05 ? "EI \(Int(filmISO))" : String(format: "%+.0f EV", pushPullEV),
+            isActive: abs(pushPullEV) > 0.05,
+            chips: [
+             (lang == .en ? "Pull -1" : "减感 -1", -1.0),
+             (lang == .en ? "Box 0" : "标准 0", 0.0),
+             (lang == .en ? "Push +1" : "迫冲 +1", 1.0),
+             (lang == .en ? "Push +2" : "迫冲 +2", 2.0)
+            ],
+            selection: $pushPullEV
+           )
+          }
+         }
         }
-        } label: {
-        Text(lang == .en ? "Reset 0 EV" : "重置 0 EV")
-        .font(.system(size: 10, weight: .bold, design: .monospaced))
-        .foregroundStyle(theme.accent)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.white.opacity(0.10), in: Capsule())
-        }
-        }
-        minimalistDropdownRow(
-        icon: "light.beacon.max.fill",
-        title: lang == .en ? "Flash Diffuser" : "柔光附件",
-        currentText: currentOptionTitle(in: diffuserOptions, matching: modifierLossEV),
-        options: diffuserOptions,
-        selectedValue: $modifierLossEV
-        )
-        minimalistDropdownRow(
-        icon: "arrow.up.right.circle.fill",
-        title: lang == .en ? "Bounce Angle" : "跳闪角度",
-        currentText: currentOptionTitle(in: bounceOptions, matching: bounceLossEV),
-        options: bounceOptions,
-        selectedValue: $bounceLossEV
-        )
-        minimalistDropdownRow(
-        icon: "circle.hexagongrid.fill",
-        title: lang == .en ? "Lens Filter" : "镜头滤镜补偿",
-        currentText: currentOptionTitle(in: filterOptions, matching: filterLossEV),
-        options: filterOptions,
-        selectedValue: $filterLossEV
-        )
-        minimalistDropdownRow(
-        icon: "film.stack.fill",
-        title: lang == .en ? "Push / Pull EI" : "胶片迫冲与减感",
-        currentText: currentOptionTitle(in: pushPullOptions, matching: pushPullEV),
-        options: pushPullOptions,
-        selectedValue: $pushPullEV
-        )
-        HStack {
-        Image(systemName: "sun.max.trianglebadge.exclamationmark.fill")
-        .font(.system(size: 12, weight: .bold))
-        .foregroundStyle(theme.accent)
-        .frame(width: 18)
-        Text(lang == .en ? "Flash Role" : "闪光补光策略")
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(Color.white)
-        Spacer()
-        Button {
-        feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-        withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
-        showFlashRoleCenteredMenu = true
-        }
-        } label: {
-        dropdownCapsuleLabel(text: flashRole.shortTag(for: lang))
-        }
-        }
-        HStack(spacing: 6) {
-        Image(systemName: "sparkles.tv.fill")
-        .font(.system(size: 12, weight: .bold))
-        .foregroundStyle(theme.accent)
-        .frame(width: 18)
-        Text(lang == .en ? "Ambient Scene" : "环境光场景")
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(Color.white)
-        Spacer()
-        Button {
-        feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-        showCameraEVMeterSheet = true
-        } label: {
-        HStack(spacing: 3) {
-        Image(systemName: "camera.viewfinder")
-        .font(.system(size: 10, weight: .bold))
-        Text(lang == .en ? "Live EV" : "实测EV")
-        .font(.system(size: 10, weight: .bold))
-        }
-        .foregroundStyle(Color.black)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(theme.accent, in: Capsule())
-        }
-        Menu {
-        ForEach(ambientSceneOptions) { sc in
-        Button {
-        feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-        ambientEV100 = sc.value
-        }
-        } label: {
-        HStack {
-        Text(sc.title(for: lang))
-        if abs(ambientEV100 - sc.value) < 0.6 {
-        Image(systemName: "checkmark")
-        }
-        }
-        }
-        }
-        } label: {
-        dropdownCapsuleLabel(text: currentOptionTitle(in: ambientSceneOptions, matching: ambientEV100))
-        }
-        }
-        }
-        .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-        RoundedRectangle(cornerRadius: 20, style: .continuous)
-        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-        )
-        }
-        private func minimalistDropdownRow(icon: String, title: String, currentText: String, options: [PresetOption], selectedValue: Binding<Double>) -> some View {
-        HStack {
-        Image(systemName: icon)
-        .font(.system(size: 12, weight: .bold))
-        .foregroundStyle(theme.accent)
-        .frame(width: 18)
-        Text(title)
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(Color.white)
-        Spacer()
-        Menu {
-        ForEach(options) { item in
-        Button {
-        feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-        selectedValue.wrappedValue = item.value
-        }
-        } label: {
-        HStack {
-        Text(item.title(for: lang))
-        if abs(selectedValue.wrappedValue - item.value) < 0.05 {
-        Image(systemName: "checkmark")
-        }
-        }
-        }
-        }
-        } label: {
-        HStack(spacing: 5) {
-        Text(currentText)
-        .font(.system(size: 11, weight: .bold, design: .rounded))
-        .foregroundStyle(Color.white)
-        .contentTransition(.numericText())
-        Image(systemName: "chevron.up.chevron.down")
-        .font(.system(size: 9, weight: .bold))
-        .foregroundStyle(theme.accent)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color.white.opacity(0.12), in: Capsule())
-        .overlay(Capsule().stroke(theme.accent.opacity(0.35), lineWidth: 0.8))
-        }
-        }
+        private func modifierBentoTile(icon: String, title: String, badgeText: String, isActive: Bool, chips: [(String, Double)], selection: Binding<Double>) -> some View {
+         VStack(alignment: .leading, spacing: 7) {
+          HStack(spacing: 4) {
+           Image(systemName: icon)
+            .font(.system(size: 11.5, weight: .bold))
+            .foregroundStyle(theme.accent)
+           Text(title)
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(Color.white)
+            .lineLimit(1)
+           Spacer(minLength: 2)
+           Text(badgeText)
+            .font(.system(size: 9.5, weight: .black, design: .monospaced))
+            .foregroundStyle(isActive ? Color.black : Color.white.opacity(0.75))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(isActive ? theme.accent : Color.white.opacity(0.12), in: Capsule())
+          }
+          LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)], spacing: 5) {
+           ForEach(0..<chips.count, id: \.self) { idx in
+            let item = chips[idx]
+            let selected = abs(selection.wrappedValue - item.1) < 0.05
+            Button {
+             feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+             withAnimation(.spring(response: 0.26, dampingFraction: 0.78)) {
+              selection.wrappedValue = item.1
+             }
+            } label: {
+             Text(item.0)
+              .font(.system(size: 10.5, weight: selected ? .black : .semibold, design: .rounded))
+              .foregroundStyle(selected ? Color.black : Color.white.opacity(0.88))
+              .lineLimit(1)
+              .minimumScaleFactor(0.75)
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, 6.5)
+              .background(selected ? theme.accent : Color.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+              .overlay(
+               RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .stroke(selected ? Color.white.opacity(0.6) : Color.white.opacity(0.12), lineWidth: 0.8)
+              )
+            }
+           }
+          }
+         }
+         .padding(10)
+         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+         .overlay(
+          RoundedRectangle(cornerRadius: 17, style: .continuous)
+           .stroke(isActive ? theme.accent.opacity(0.55) : Color.white.opacity(0.16), lineWidth: 1.0)
+         )
         }
         private var exportedRollMarkdown: String {
         let header = String(format: "# LumiFilm Roll #%02d · %@ · %@\nFrame | Aperture | Shutter | Flash Power | Dist | ISO | EV Comp | Filter | Time\n",
@@ -5501,13 +5450,13 @@ jobs:
         /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string lumifilm" "$APP_PATH/Info.plist"
 
         # Ensure Main App Info.plist has valid non-empty Bundle Version strings (fixes Sideloadly IXErrorDomain Code=17)
-        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 9.1.0" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 9.1.0" "$APP_PATH/Info.plist"
-        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 91" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 91" "$APP_PATH/Info.plist"
+        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 9.2.0" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 9.2.0" "$APP_PATH/Info.plist"
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 92" "$APP_PATH/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 92" "$APP_PATH/Info.plist"
 
         # Ensure Embedded Widget Extension Info.plist also has valid non-empty Bundle Version strings
         if [ -d "$APP_PATH/PlugIns/LumiFilmWidget.appex" ]; then
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 9.1.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 9.1.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 91" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 91" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 9.2.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 9.2.0" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 92" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist" || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 92" "$APP_PATH/PlugIns/LumiFilmWidget.appex/Info.plist"
         fi
 
         # Embed App Group & Shared Keychain entitlements into Mach-O binaries so Sideloadly automatically provisions them
