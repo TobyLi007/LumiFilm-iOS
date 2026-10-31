@@ -299,16 +299,6 @@ jobs:
         import WidgetKit
         import SwiftUI
         import AppIntents
-        @_silgen_name("notify_register_check")
-        private func lf_app_notify_register_check(_ name: UnsafePointer<CChar>, _ outToken: UnsafeMutablePointer<Int32>) -> UInt32
-        @_silgen_name("notify_set_state")
-        private func lf_app_notify_set_state(_ token: Int32, _ state64: UInt64) -> UInt32
-        @_silgen_name("notify_get_state")
-        private func lf_app_notify_get_state(_ token: Int32, _ state64: UnsafeMutablePointer<UInt64>) -> UInt32
-        @_silgen_name("notify_post")
-        private func lf_app_notify_post(_ name: UnsafePointer<CChar>) -> UInt32
-        @_silgen_name("notify_cancel")
-        private func lf_app_notify_cancel(_ token: Int32) -> UInt32
         import Foundation
         @_silgen_name("notify_register_check")
         private func lf_notify_register_check(_ name: UnsafePointer<CChar>, _ outToken: UnsafeMutablePointer<Int32>) -> UInt32
@@ -1102,6 +1092,16 @@ jobs:
         import WidgetKit
         import Speech
         import AppIntents
+        @_silgen_name("notify_register_check")
+        private func lf_app_notify_register_check(_ name: UnsafePointer<CChar>, _ outToken: UnsafeMutablePointer<Int32>) -> UInt32
+        @_silgen_name("notify_set_state")
+        private func lf_app_notify_set_state(_ token: Int32, _ state64: UInt64) -> UInt32
+        @_silgen_name("notify_get_state")
+        private func lf_app_notify_get_state(_ token: Int32, _ state64: UnsafeMutablePointer<UInt64>) -> UInt32
+        @_silgen_name("notify_post")
+        private func lf_app_notify_post(_ name: UnsafePointer<CChar>) -> UInt32
+        @_silgen_name("notify_cancel")
+        private func lf_app_notify_cancel(_ token: Int32) -> UInt32
         @available(iOS 17.0, *)
         struct LumiFilmVoiceMeterIntent: AppIntent {
         static var title: LocalizedStringResource = "Voice Flash Meter (语音调参)"
@@ -3694,66 +3694,85 @@ jobs:
         private var opticalModifiers2x2Grid: some View {
          VStack(spacing: 8) {
           HStack(spacing: 8) {
-           modifierBentoTile(
-            icon: "light.beacon.max.fill",
-            title: lang == .en ? "Diffuser" : "柔光附件",
-            badgeText: abs(modifierLossEV) < 0.05 ? "0 EV" : String(format: "-%.1f EV", modifierLossEV),
-            isActive: modifierLossEV > 0.05,
-            chips: [
-             (lang == .en ? "Bare 0" : "裸灯 0", 0.0),
-             (lang == .en ? "Dome -1" : "肥皂盒 -1", 1.0),
-             (lang == .en ? "Sphere -1.5" : "球形 -1.5", 1.5),
-             (lang == .en ? "Softbox -2" : "柔光箱 -2", 2.0)
-            ],
-            selection: $modifierLossEV
-           )
-           modifierBentoTile(
-            icon: "arrow.up.right.circle.fill",
-            title: lang == .en ? "Bounce" : "跳闪角度",
-            badgeText: abs(bounceLossEV) < 0.05 ? "0 EV" : String(format: "-%.1f EV", bounceLossEV),
-            isActive: bounceLossEV > 0.05,
-            chips: [
-             (lang == .en ? "Direct 0°" : "0°直闪", 0.0),
-             (lang == .en ? "60° -1.5" : "60°眼神板", 1.5),
-             (lang == .en ? "90° -2.0" : "90°白顶", 2.0),
-             (lang == .en ? "Wall -2.5" : "反跳白墙", 2.5)
-            ],
-            selection: $bounceLossEV
-           )
+           diffuserBentoTile
+           bounceBentoTile
           }
           HStack(spacing: 8) {
-           modifierBentoTile(
-            icon: "circle.hexagongrid.fill",
-            title: lang == .en ? "Lens Filter" : "镜头滤镜",
-            badgeText: abs(filterLossEV) < 0.05 ? "0 EV" : String(format: "-%.1f EV", filterLossEV),
-            isActive: filterLossEV > 0.05,
-            chips: [
-             (lang == .en ? "None 0" : "无滤镜", 0.0),
-             (lang == .en ? "Mist -0.3" : "黑柔-0.3", 0.3),
-             (lang == .en ? "CPL -1.0" : "CPL/黄-1", 1.0),
-             (lang == .en ? "ND4 -2.0" : "ND4 -2", 2.0),
-             (lang == .en ? "ND8 -3.0" : "ND8 -3", 3.0)
-            ],
-            selection: $filterLossEV
-           )
-           modifierBentoTile(
-            icon: "film.stack.fill",
-            title: lang == .en ? "Push / Pull" : "迫冲与减感",
-            badgeText: abs(pushPullEV) < 0.05 ? "EI \(Int(filmISO))" : String(format: "%+.0f EV", pushPullEV),
-            isActive: abs(pushPullEV) > 0.05,
-            chips: [
-             (lang == .en ? "Pull -1" : "减感 -1", -1.0),
-             (lang == .en ? "Box 0" : "标准 0", 0.0),
-             (lang == .en ? "Push +1" : "迫冲 +1", 1.0),
-             (lang == .en ? "Push +2" : "迫冲 +2", 2.0)
-            ],
-            selection: $pushPullEV
-           )
+           filterBentoTile
+           pushPullBentoTile
           }
          }
         }
-        private func modifierBentoTile(icon: String, title: String, badgeText: String, isActive: Bool, chips: [(String, Double)], selection: Binding<Double>) -> some View {
-         VStack(alignment: .leading, spacing: 7) {
+        private var diffuserBentoTile: some View {
+         let active: Bool = modifierLossEV > 0.05
+         let badge: String = active ? String(format: "-%.1f EV", modifierLossEV) : "0 EV"
+         return modifierTileContainer(icon: "light.beacon.max.fill", title: lang == .en ? "Diffuser" : "柔光附件", badgeText: badge, isActive: active) {
+          VStack(spacing: 5) {
+           HStack(spacing: 5) {
+            modifierChipButton(label: lang == .en ? "Bare 0" : "裸灯 0", target: 0.0, selection: $modifierLossEV)
+            modifierChipButton(label: lang == .en ? "Dome -1" : "肥皂盒 -1", target: 1.0, selection: $modifierLossEV)
+           }
+           HStack(spacing: 5) {
+            modifierChipButton(label: lang == .en ? "Sphere -1.5" : "球形 -1.5", target: 1.5, selection: $modifierLossEV)
+            modifierChipButton(label: lang == .en ? "Softbox -2" : "柔光箱 -2", target: 2.0, selection: $modifierLossEV)
+           }
+          }
+         }
+        }
+        private var bounceBentoTile: some View {
+         let active: Bool = bounceLossEV > 0.05
+         let badge: String = active ? String(format: "-%.1f EV", bounceLossEV) : "0 EV"
+         return modifierTileContainer(icon: "arrow.up.right.circle.fill", title: lang == .en ? "Bounce" : "跳闪角度", badgeText: badge, isActive: active) {
+          VStack(spacing: 5) {
+           HStack(spacing: 5) {
+            modifierChipButton(label: lang == .en ? "Direct 0°" : "0°直闪", target: 0.0, selection: $bounceLossEV)
+            modifierChipButton(label: lang == .en ? "60° -1.5" : "60°眼神板", target: 1.5, selection: $bounceLossEV)
+           }
+           HStack(spacing: 5) {
+            modifierChipButton(label: lang == .en ? "90° -2.0" : "90°白顶", target: 2.0, selection: $bounceLossEV)
+            modifierChipButton(label: lang == .en ? "Wall -2.5" : "反跳白墙", target: 2.5, selection: $bounceLossEV)
+           }
+          }
+         }
+        }
+        private var filterBentoTile: some View {
+         let active: Bool = filterLossEV > 0.05
+         let badge: String = active ? String(format: "-%.1f EV", filterLossEV) : "0 EV"
+         return modifierTileContainer(icon: "circle.hexagongrid.fill", title: lang == .en ? "Lens Filter" : "镜头滤镜", badgeText: badge, isActive: active) {
+          VStack(spacing: 5) {
+           HStack(spacing: 5) {
+            modifierChipButton(label: lang == .en ? "None 0" : "无滤镜", target: 0.0, selection: $filterLossEV)
+            modifierChipButton(label: lang == .en ? "Mist -0.3" : "黑柔-0.3", target: 0.3, selection: $filterLossEV)
+           }
+           HStack(spacing: 5) {
+            modifierChipButton(label: lang == .en ? "CPL -1" : "CPL/黄-1", target: 1.0, selection: $filterLossEV)
+            modifierChipButton(label: "ND4 -2", target: 2.0, selection: $filterLossEV)
+            modifierChipButton(label: "ND8 -3", target: 3.0, selection: $filterLossEV)
+           }
+          }
+         }
+        }
+        private var pushPullBentoTile: some View {
+         let active: Bool = abs(pushPullEV) > 0.05
+         let badge: String = active ? String(format: "%+.0f EV", pushPullEV) : "EI \(Int(filmISO))"
+         return modifierTileContainer(icon: "film.stack.fill", title: lang == .en ? "Push / Pull" : "迫冲与减感", badgeText: badge, isActive: active) {
+          VStack(spacing: 5) {
+           HStack(spacing: 5) {
+            modifierChipButton(label: lang == .en ? "Pull -1" : "减感 -1", target: -1.0, selection: $pushPullEV)
+            modifierChipButton(label: lang == .en ? "Box 0" : "标准 0", target: 0.0, selection: $pushPullEV)
+           }
+           HStack(spacing: 5) {
+            modifierChipButton(label: lang == .en ? "Push +1" : "迫冲 +1", target: 1.0, selection: $pushPullEV)
+            modifierChipButton(label: lang == .en ? "Push +2" : "迫冲 +2", target: 2.0, selection: $pushPullEV)
+           }
+          }
+         }
+        }
+        private func modifierTileContainer<Content: View>(icon: String, title: String, badgeText: String, isActive: Bool, @ViewBuilder content: () -> Content) -> some View {
+         let badgeFg: Color = isActive ? Color.black : Color.white.opacity(0.75)
+         let badgeBg: Color = isActive ? theme.accent : Color.white.opacity(0.12)
+         let strokeCol: Color = isActive ? theme.accent.opacity(0.55) : Color.white.opacity(0.16)
+         return VStack(alignment: .leading, spacing: 7) {
           HStack(spacing: 4) {
            Image(systemName: icon)
             .font(.system(size: 11.5, weight: .bold))
@@ -3765,44 +3784,40 @@ jobs:
            Spacer(minLength: 2)
            Text(badgeText)
             .font(.system(size: 9.5, weight: .black, design: .monospaced))
-            .foregroundStyle(isActive ? Color.black : Color.white.opacity(0.75))
+            .foregroundStyle(badgeFg)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(isActive ? theme.accent : Color.white.opacity(0.12), in: Capsule())
+            .background(badgeBg, in: Capsule())
           }
-          LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)], spacing: 5) {
-           ForEach(0..<chips.count, id: \.self) { idx in
-            let item = chips[idx]
-            let selected = abs(selection.wrappedValue - item.1) < 0.05
-            Button {
-             feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-             withAnimation(.spring(response: 0.26, dampingFraction: 0.78)) {
-              selection.wrappedValue = item.1
-             }
-            } label: {
-             Text(item.0)
-              .font(.system(size: 10.5, weight: selected ? .black : .semibold, design: .rounded))
-              .foregroundStyle(selected ? Color.black : Color.white.opacity(0.88))
-              .lineLimit(1)
-              .minimumScaleFactor(0.75)
-              .frame(maxWidth: .infinity)
-              .padding(.vertical, 6.5)
-              .background(selected ? theme.accent : Color.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-              .overlay(
-               RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .stroke(selected ? Color.white.opacity(0.6) : Color.white.opacity(0.12), lineWidth: 0.8)
-              )
-            }
-           }
-          }
+          content()
          }
          .padding(10)
          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-         .overlay(
-          RoundedRectangle(cornerRadius: 17, style: .continuous)
-           .stroke(isActive ? theme.accent.opacity(0.55) : Color.white.opacity(0.16), lineWidth: 1.0)
-         )
+         .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).stroke(strokeCol, lineWidth: 1.0))
+        }
+        private func modifierChipButton(label: String, target: Double, selection: Binding<Double>) -> some View {
+         let selected: Bool = abs(selection.wrappedValue - target) < 0.05
+         let fg: Color = selected ? Color.black : Color.white.opacity(0.88)
+         let bg: Color = selected ? theme.accent : Color.white.opacity(0.10)
+         let border: Color = selected ? Color.white.opacity(0.6) : Color.white.opacity(0.12)
+         let weight: Font.Weight = selected ? .black : .semibold
+         return Button {
+          feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+          withAnimation(.spring(response: 0.26, dampingFraction: 0.78)) {
+           selection.wrappedValue = target
+          }
+         } label: {
+          Text(label)
+           .font(.system(size: 10.5, weight: weight, design: .rounded))
+           .foregroundStyle(fg)
+           .lineLimit(1)
+           .minimumScaleFactor(0.72)
+           .frame(maxWidth: .infinity)
+           .padding(.vertical, 6.5)
+           .background(bg, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+           .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).stroke(border, lineWidth: 0.8))
+         }
         }
         private var exportedRollMarkdown: String {
         let header = String(format: "# LumiFilm Roll #%02d · %@ · %@\nFrame | Aperture | Shutter | Flash Power | Dist | ISO | EV Comp | Filter | Time\n",
