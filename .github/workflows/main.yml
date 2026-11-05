@@ -5956,6 +5956,27 @@ jobs:
 
   - name: Sync Generated Sources to Repository Root
     run: |
+      echo "=== Syncing generated Swift sources to repository root ==="
+      mkdir -p LumiFilm LumiFilmWidget
+      cp -R LumiFilmBuild/LumiFilm/* LumiFilm/
+      cp -R LumiFilmBuild/LumiFilmWidget/* LumiFilmWidget/
+      cp LumiFilmBuild/project.yml ./project.yml
+      cp LumiFilmBuild/LumiFilm.entitlements ./LumiFilm.entitlements 2>/dev/null || true
+
+
+      git config user.name "TobyLi007"
+      git config user.email "huijunli007@gmail.com"
+
+      git add LumiFilm LumiFilmWidget project.yml LumiFilm.entitlements
+      if git diff --staged --quiet; then
+        echo "No changes in generated source files to commit."
+      else
+        git commit -m "chore(sync): auto-sync generated Swift sources & project.yml [skip ci]"
+        git push origin HEAD || git push origin main || true
+      fi
+
+  - name: Sync Generated Sources to Repository Root
+    run: |
      echo "=== Syncing generated Swift sources to repository root ==="
      mkdir -p LumiFilm LumiFilmWidget
      cp -R LumiFilmBuild/LumiFilm/* LumiFilm/
