@@ -1,44 +1,55 @@
 name: LumiFilm
 options:
-  bundleIdPrefix: com.lumifilm.exposure
+  bundleIdPrefix: com.lumifilm
   deploymentTarget:
-    iOS: "16.4"
-  xcodeVersion: "15.0"
-  generateEmptyDirectories: true
-
+    iOS: "17.0"
 targets:
   LumiFilm:
     type: application
     platform: iOS
-    deploymentTarget: "16.4"
+    deploymentTarget: "17.0"
     sources:
       - path: LumiFilm
-    info:
-      path: LumiFilm/Info.plist
-      properties:
-        CFBundleDisplayName: LumiFilm
-        CFBundleShortVersionString: "4.0.0"
-        CFBundleVersion: "40"
-        UILaunchScreen: {}
-        NSMicrophoneUsageDescription: "LumiFilm 需要麦克风权限来识别您说出的拍摄距离、光圈与场景，立即播报推荐的闪光灯输出功率。"
-        NSSpeechRecognitionUsageDescription: "LumiFilm 需要语音识别权限以将您的抓拍语音转换为闪光灯曝光参数。"
-        UISupportedInterfaceOrientations:
-          - UIInterfaceOrientationPortrait
     dependencies:
       - target: LumiFilmWidget
         embed: true
-
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        SWIFT_STRICT_CONCURRENCY: minimal
+        PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_CFBundleDisplayName: LumiFilm
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "LumiFilm 使用麦克风接收您的语音指令（如：光圈f4、快门125、距离2米），直接调节胶片闪光参数。"
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "LumiFilm 使用语音识别将您说出的曝光参数实时转换为转盘与状态栏数值。"
+        INFOPLIST_KEY_NSCameraUsageDescription: "LumiFilm 使用摄像头传感器实时测量现场环境光亮度 (EV100)，帮助您精准控制闪光与环境光比。"
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "LumiFilm 使用当前位置为您的胶片手账自动记录每张照片的拍摄城市与街道地址。"
+        MARKETING_VERSION: "9.3.0"
+        CURRENT_PROJECT_VERSION: "93"
+        GENERATE_INFOPLIST_FILE: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
   LumiFilmWidget:
     type: app-extension
     platform: iOS
-    deploymentTarget: "16.4"
+    deploymentTarget: "17.0"
     sources:
       - path: LumiFilmWidget
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        SWIFT_STRICT_CONCURRENCY: minimal
+        PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter.widget
+        INFOPLIST_KEY_CFBundleDisplayName: LumiFilmWidget
+        MARKETING_VERSION: "9.3.0"
+        CURRENT_PROJECT_VERSION: "93"
+        GENERATE_INFOPLIST_FILE: YES
     info:
       path: LumiFilmWidget/Info.plist
       properties:
-        CFBundleDisplayName: LumiFilm Widget
-        CFBundleShortVersionString: "4.0.0"
-        CFBundleVersion: "40"
+        CFBundleShortVersionString: "9.3.0"
+        CFBundleVersion: "93"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
