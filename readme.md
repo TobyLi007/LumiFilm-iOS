@@ -1,4 +1,3 @@
-&lt;div align=&quot;center&quot;&gt;
 
 # ⚡ LumiFilm — Pro Analog Flash & Ambient Meter for iOS
 ### 专业胶片摄影闪光测光表 · 机顶桌面小组件 · 实时环境光比 · GPS 胶片手账
