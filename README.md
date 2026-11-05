@@ -1,7 +1,5 @@
 # LumiFilm-iOS
 
-# LumiFilm-iOS
-
 <div align="center">
 
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg?style=flat-square&logo=swift)](https://swift.org)
