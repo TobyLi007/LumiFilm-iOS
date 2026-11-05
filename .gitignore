@@ -1,0 +1,15 @@
+.DS_Store
+build/
+build_output/
+DerivedData/
+LumiFilmBuild/
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+xcuserdata/
+Payload/
+*.ipa
+*.dSYM.zip
+*.dSYM
+build.log
+release_notes.md
+make_icon.swift
