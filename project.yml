@@ -27,8 +27,8 @@ targets:
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "LumiFilm 使用语音识别将您说出的曝光参数实时转换为转盘与状态栏数值。"
         INFOPLIST_KEY_NSCameraUsageDescription: "LumiFilm 使用摄像头传感器实时测量现场环境光亮度 (EV100)，帮助您精准控制闪光与环境光比。"
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "LumiFilm 使用当前位置为您的胶片手账自动记录每张照片的拍摄城市与街道地址。"
-        MARKETING_VERSION: "9.3.0"
-        CURRENT_PROJECT_VERSION: "93"
+        MARKETING_VERSION: "9.4.0"
+        CURRENT_PROJECT_VERSION: "94"
         GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
   LumiFilmWidget:
@@ -43,13 +43,13 @@ targets:
         SWIFT_STRICT_CONCURRENCY: minimal
         PRODUCT_BUNDLE_IDENTIFIER: com.lumifilm.flashmeter.widget
         INFOPLIST_KEY_CFBundleDisplayName: LumiFilmWidget
-        MARKETING_VERSION: "9.3.0"
-        CURRENT_PROJECT_VERSION: "93"
+        MARKETING_VERSION: "9.4.0"
+        CURRENT_PROJECT_VERSION: "94"
         GENERATE_INFOPLIST_FILE: YES
     info:
       path: LumiFilmWidget/Info.plist
       properties:
-        CFBundleShortVersionString: "9.3.0"
-        CFBundleVersion: "93"
+        CFBundleShortVersionString: "9.4.0"
+        CFBundleVersion: "94"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension

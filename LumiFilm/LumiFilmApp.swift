@@ -188,6 +188,58 @@ final class LocationAddressResolver: NSObject, ObservableObject, CLLocationManag
   DispatchQueue.main.async { self.isLocating = false }
  }
 }
+enum FilmFormatType: Int, CaseIterable, Identifiable {
+ case f135 = 0
+ case f120_645 = 1
+ case f120_6x6 = 2
+ case f120_6x7 = 3
+ case f120_6x9 = 4
+ var id: Int { rawValue }
+ var maxFrames: Int {
+  switch self {
+  case .f135: return 36
+  case .f120_645: return 16
+  case .f120_6x6: return 12
+  case .f120_6x7: return 10
+  case .f120_6x9: return 8
+  }
+ }
+ var shortTag: String {
+  switch self {
+  case .f135: return "135"
+  case .f120_645: return "120·645"
+  case .f120_6x6: return "120·6x6"
+  case .f120_6x7: return "120·6x7"
+  case .f120_6x9: return "120·6x9"
+  }
+ }
+ func pillTitle(for lang: AppLanguage) -> String {
+  switch self {
+  case .f135: return lang == .en ? "135 (36)" : "135 (36张)"
+  case .f120_645: return lang == .en ? "645 (16)" : "645 (16张)"
+  case .f120_6x6: return lang == .en ? "6x6 (12)" : "6x6 (12张)"
+  case .f120_6x7: return lang == .en ? "6x7 (10)" : "6x7 (10张)"
+  case .f120_6x9: return lang == .en ? "6x9 (8)" : "6x9 (8张)"
+  }
+ }
+ func bellowsHint(for lang: AppLanguage) -> String {
+  switch self {
+  case .f135: return lang == .en ? "135 Full-Frame (36 exp) · Std <1.0m Close-up" : "135 全画幅 (36张/卷) · 标准 <1.0m 近摄补偿"
+  case .f120_645: return lang == .en ? "120 645 (16 exp) · 80mm≈50mm · <1.2m Bellows Comp" : "120 645 (16张) · 80mm等效50mm · 自动 <1.2m 近摄皮腔补偿"
+  case .f120_6x6: return lang == .en ? "120 6x6 (12 exp) · 80mm≈44mm · <1.2m Bellows Comp" : "120 6x6 (12张) · 80mm等效44mm · 哈苏/禄来 <1.2m 皮腔补偿"
+  case .f120_6x7: return lang == .en ? "120 6x7 (10 exp) · 105mm≈50mm · <1.3m Bellows Comp" : "120 6x7 (10张) · 105mm等效50mm · 宾得67/RB67 <1.3m 皮腔补偿"
+  case .f120_6x9: return lang == .en ? "120 6x9 (8 exp) · 90mm≈39mm · <1.3m Bellows Comp" : "120 6x9 (8张) · 90mm等效39mm · 富士690 <1.3m 皮腔补偿"
+  }
+ }
+ func closeUpLoss(at distance: Double) -> Double {
+  switch self {
+  case .f135: return distance < 1.0 ? (0.35 * (1.0 - distance)) : 0.0
+  case .f120_645: return distance < 1.2 ? (0.50 * (1.2 - distance)) : 0.0
+  case .f120_6x6: return distance < 1.2 ? (0.60 * (1.2 - distance)) : 0.0
+  case .f120_6x7, .f120_6x9: return distance < 1.3 ? (0.75 * (1.3 - distance)) : 0.0
+  }
+ }
+}
 enum FilmBrandCategory: String, CaseIterable, Identifiable {
  case kodak = "kodak"
  case fujifilm = "fujifilm"
@@ -1168,6 +1220,7 @@ struct ContentView: View {
 @AppStorage("lf_current_frame") private var currentFrameNumber: Double = 1.0
 @AppStorage("lf_roll_log_v93_json") private var rollLogJSON: String = "[]"
 @AppStorage("lf_film_stock_id") private var selectedFilmStockID: String = "kodak_portra_400"
+@AppStorage("lf_film_format") private var filmFormatRaw: Int = 0
 @AppStorage("lf_log_location") private var currentLocationNote: String = ""
 @AppStorage("lf_log_scene_note") private var currentSceneNote: String = ""
 @State private var selectedFilmBrand: FilmBrandCategory = .kodak
@@ -1242,6 +1295,9 @@ return lang == .en
 let eff = Int(round(flashGN * pow(Double(mm) / Double(max(selectedFlashModel.ratedZoomMM, 24)), 0.35)))
 return lang == .en ? "\(mm)mm Lens (Eff. GN\(eff))" : "\(mm)mm 镜头 (折算 GN\(eff))"
 }
+private var filmFormat: FilmFormatType {
+ FilmFormatType(rawValue: filmFormatRaw) ?? .f135
+}
 private var selectedFilmStock: FilmStockModel? {
  FilmStockModel.catalog.first(where: { $0.id == selectedFilmStockID })
 }
@@ -1257,31 +1313,6 @@ private func isoMenuLabel(for val: Double) -> String {
  }
  return "ISO \(Int(val))"
 }
-private let pushPullOptions: [PresetOption] = [
-PresetOption("pull1", zh: "减感 -1档 (Pull -1)", en: "Pull -1 Stop (-1 EV)", value: -1.0),
-PresetOption("std0", zh: "标准冲扫 (0 EV)", en: "Standard Box Speed (0 EV)", value: 0.0),
-PresetOption("push1", zh: "迫冲 +1档 (Push +1)", en: "Push +1 Stop (+1 EV)", value: 1.0),
-PresetOption("push2", zh: "迫冲 +2档 (Push +2)", en: "Push +2 Stops (+2 EV)", value: 2.0)
-]
-private let filterOptions: [PresetOption] = [
-PresetOption("f0", zh: "无滤镜 (0 EV)", en: "No Filter (0 EV)", value: 0.0),
-PresetOption("f03", zh: "柔焦/黑柔 (-0.3 EV)", en: "Mist / UV (-0.3 EV)", value: 0.3),
-PresetOption("f10", zh: "黑白黄镜/CPL (-1.0 EV)", en: "Yellow / CPL (-1.0 EV)", value: 1.0),
-PresetOption("f20", zh: "ND4 减光镜 (-2.0 EV)", en: "ND4 Filter (-2.0 EV)", value: 2.0),
-PresetOption("f30", zh: "ND8 减光镜 (-3.0 EV)", en: "ND8 Filter (-3.0 EV)", value: 3.0)
-]
-private let diffuserOptions: [PresetOption] = [
-PresetOption("d0", zh: "裸灯直闪 (0 EV)", en: "Bare Flash (0 EV)", value: 0.0),
-PresetOption("d10", zh: "肥皂盒柔光罩 (-1.0 EV)", en: "Dome Diffuser (-1.0 EV)", value: 1.0),
-PresetOption("d15", zh: "球形柔光罩 (-1.5 EV)", en: "Sphere Diffuser (-1.5 EV)", value: 1.5),
-PresetOption("d20", zh: "双层柔光箱 (-2.0 EV)", en: "Softbox (-2.0 EV)", value: 2.0)
-]
-private let bounceOptions: [PresetOption] = [
-PresetOption("b0", zh: "0° 正面直打 (0 EV)", en: "0° Direct (0 EV)", value: 0.0),
-PresetOption("b15", zh: "60° 眼神板跳闪 (-1.5 EV)", en: "60° Bounce (-1.5 EV)", value: 1.5),
-PresetOption("b20", zh: "90° 白顶跳闪 (-2.0 EV)", en: "90° Ceiling (-2.0 EV)", value: 2.0),
-PresetOption("b25", zh: "反跳白墙 (-2.5 EV)", en: "Wall Bounce (-2.5 EV)", value: 2.5)
-]
 private var lang: AppLanguage {
 AppLanguage(rawValue: langRaw) ?? .zh
 }
@@ -1359,7 +1390,7 @@ let effectiveISO = max(filmISO * pow(2.0, pushPullEV), 25.0)
 let isoFactor = sqrt(effectiveISO / 100.0)
 let hssStops = shutter > maxSyncSpeed ? log2(Double(shutter) / Double(maxSyncSpeed)) : 0.0
 let hssLoss = hssStops > 0 ? (1.5 + 1.0 * hssStops) : 0.0
-let closeUpLoss = distance < 1.0 ? (0.35 * (1.0 - distance)) : 0.0
+let closeUpLoss = filmFormat.closeUpLoss(at: distance)
 let roleBiasEV: Double
 switch flashRole {
 case .fillNatural: roleBiasEV = -1.3
@@ -1721,6 +1752,7 @@ private func syncWidgetDefaults() {
   "lf_shutter": Double(shutterDenom),
   "lf_sync_speed": Double(maxSyncSpeed),
   "lf_theme": Double(themeRaw),
+  "lf_film_format": Double(filmFormatRaw),
   "lf_max_aperture": maxLensAperture,
   "lf_exp_comp_ev": exposureCompEV,
   "lf_aux_loss": auxLoss,
@@ -1841,10 +1873,11 @@ speakCurrentExposureOnce()
 }
 private func recordCurrentFrameToLog() {
  feedback.lockToggleFeedback(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
- let fNum = max(1, min(36, Int(round(currentFrameNumber))))
+ let maxF = filmFormat.maxFrames
+ let fNum = max(1, min(maxF, Int(round(currentFrameNumber))))
  let fmt = DateFormatter()
  fmt.dateFormat = "MM-dd HH:mm"
- let stockTitle = selectedFilmStock?.name ?? "ISO \(Int(filmISO))"
+ let stockTitle = "\(selectedFilmStock?.name ?? "ISO \(Int(filmISO))") [\(filmFormat.shortTag)]"
  var modParts: [String] = []
  if modifierLossEV > 0.05 { modParts.append(String(format: "柔光-%.1f", modifierLossEV)) }
  if bounceLossEV > 0.05 { modParts.append(String(format: "跳闪-%.1f", bounceLossEV)) }
@@ -1880,7 +1913,7 @@ withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
 logSavedToast = lang == .en
 ? String(format: "Saved #%02d (%@ · 1/%ds · %@)", fNum, formatFStop(aperture), shutterDenom, exposureResult.powerTitle)
 : String(format: "已存 #%02d (%@ · 1/%ds · %@)", fNum, formatFStop(aperture), shutterDenom, exposureResult.powerTitle)
-if fNum < 36 {
+if fNum < maxF {
 currentFrameNumber = Double(fNum + 1)
 }
 }
@@ -2002,6 +2035,12 @@ syncWidgetDefaults()
 .onChange(of: filmISO) { _, _ in
 syncWidgetDefaults()
 }
+.onChange(of: filmFormatRaw) { _, _ in
+if currentFrameNumber > Double(filmFormat.maxFrames) {
+ currentFrameNumber = Double(filmFormat.maxFrames)
+}
+syncWidgetDefaults()
+}
 .onChange(of: flashGN) { _, _ in
 syncWidgetDefaults()
 }
@@ -2056,6 +2095,7 @@ theme: theme
 OnboardingSetupSheet(
 filmISO: $filmISO,
 selectedFilmStockID: $selectedFilmStockID,
+filmFormatRaw: $filmFormatRaw,
 flashGN: $flashGN,
 selectedFlashID: $selectedFlashID,
 maxLensAperture: $maxLensAperture,
@@ -2427,7 +2467,7 @@ HStack(spacing: 5) {
 Image(systemName: "film.stack")
 .foregroundStyle(theme.secondaryAccent)
 .font(.system(size: 13, weight: .bold))
-Text(lang == .en ? "Frame" : "胶片张数")
+Text(filmFormat.shortTag)
 .font(.system(size: 12, weight: .bold))
 .foregroundStyle(Color.white)
 .fixedSize()
@@ -2444,15 +2484,15 @@ Image(systemName: "chevron.left")
 .frame(width: 28, height: 28)
 .background(Color.white.opacity(0.12), in: Circle())
 }
-Text(String(format: "#%02d / 36", Int(round(currentFrameNumber))))
+Text(String(format: "#%02d / %02d", Int(round(currentFrameNumber)), filmFormat.maxFrames))
 .font(.system(size: 13, weight: .black, design: .monospaced))
 .foregroundStyle(theme.accent)
 .contentTransition(.numericText())
-.frame(width: 68)
+.frame(width: 72)
 Button {
 feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
 withAnimation(.spring(response: 0.25, dampingFraction: 0.78)) {
-currentFrameNumber = min(36.0, currentFrameNumber + 1.0)
+currentFrameNumber = min(Double(filmFormat.maxFrames), currentFrameNumber + 1.0)
 }
 } label: {
 Image(systemName: "chevron.right")
@@ -2778,7 +2818,8 @@ private var modifiersTab: some View {
  }
 }
 private var modifiersLiveSummaryBanner: some View {
- let totalOpticalLoss = modifierLossEV + bounceLossEV + filterLossEV
+ let bellowsLoss = filmFormat.closeUpLoss(at: distance)
+ let totalOpticalLoss = modifierLossEV + bounceLossEV + filterLossEV + bellowsLoss
  let effISO = Int(round(max(filmISO * pow(2.0, pushPullEV), 25.0)))
  let effGN = Int(round(computeFullEffectiveGN(forShutter: shutterDenom)))
  return HStack(spacing: 10) {
@@ -2987,7 +3028,7 @@ private var compactFilmRollLogCard: some View {
    .foregroundStyle(Color.white)
    .lineLimit(1)
    Spacer()
-   Text("\(rollFrames.count)/36 张")
+   Text("\(filmFormat.shortTag) · \(rollFrames.count)/\(filmFormat.maxFrames) 张")
     .font(.system(size: 11, weight: .bold, design: .monospaced))
     .foregroundStyle(theme.accent)
   }
@@ -3183,6 +3224,39 @@ private var settingsTab: some View {
 }
 private var twoLevelFilmStockSelectorView: some View {
  VStack(alignment: .leading, spacing: 7) {
+  HStack {
+   Text(lang == .en ? "Film Format (135 / 120)" : "胶片画幅（联动手账张数与120近摄皮腔补偿）")
+    .font(.system(size: 10.5, weight: .bold))
+    .foregroundStyle(Color.white.opacity(0.72))
+   Spacer()
+   Text("\(filmFormat.maxFrames) 张/卷")
+    .font(.system(size: 10, weight: .black, design: .monospaced))
+    .foregroundStyle(theme.accent)
+  }
+  ScrollView(.horizontal, showsIndicators: false) {
+   HStack(spacing: 6) {
+    ForEach(FilmFormatType.allCases) { fmt in
+     let isFmtSel: Bool = (filmFormatRaw == fmt.rawValue)
+     Button {
+      feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+      withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+       filmFormatRaw = fmt.rawValue
+      }
+     } label: {
+      Text(fmt.pillTitle(for: lang))
+       .font(.system(size: 11, weight: .bold, design: .monospaced))
+       .foregroundStyle(isFmtSel ? Color.black : Color.white)
+       .padding(.horizontal, 10)
+       .padding(.vertical, 5.5)
+       .background(isFmtSel ? theme.accent : Color.white.opacity(0.12), in: Capsule())
+     }
+    }
+   }
+  }
+  Text(filmFormat.bellowsHint(for: lang))
+   .font(.system(size: 9.5, weight: .medium))
+   .foregroundStyle(theme.secondaryAccent)
+   .lineLimit(1)
   HStack {
    Text(lang == .en ? "Step 1: Film Brand" : "第一步：选择胶片厂商")
     .font(.system(size: 10.5, weight: .bold))
@@ -4451,6 +4525,7 @@ Text(rows[idx].1)
 struct OnboardingSetupSheet: View {
 @Binding var filmISO: Double
 @Binding var selectedFilmStockID: String
+@Binding var filmFormatRaw: Int
 @Binding var flashGN: Double
 @Binding var selectedFlashID: String
 @Binding var maxLensAperture: Double
@@ -4533,8 +4608,30 @@ Text(lang == .en ? "Save & Start Metering" : "保存并进入 LumiFilm 闪光测
 }
 private var isoSetupCard: some View {
  VStack(alignment: .leading, spacing: 9) {
+  Text(lang == .en ? "1A. Select Film Format (135 / 120)" : "1A. 选择胶片画幅（自动匹配每卷张数与120皮腔补偿）")
+   .font(.system(size: 12.5, weight: .bold))
+   .foregroundStyle(Color.white)
+  ScrollView(.horizontal, showsIndicators: false) {
+   HStack(spacing: 6) {
+    ForEach(FilmFormatType.allCases) { fmt in
+     let isFmtSel: Bool = (filmFormatRaw == fmt.rawValue)
+     Button {
+      withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+       filmFormatRaw = fmt.rawValue
+      }
+     } label: {
+      Text(fmt.pillTitle(for: lang))
+       .font(.system(size: 11, weight: .bold, design: .monospaced))
+       .foregroundStyle(isFmtSel ? Color.black : Color.white)
+       .padding(.horizontal, 10)
+       .padding(.vertical, 6)
+       .background(isFmtSel ? theme.accent : Color.white.opacity(0.12), in: Capsule())
+     }
+    }
+   }
+  }
   HStack {
-   Text(lang == .en ? "1. Select Film Brand & Stock" : "1. 选择胶片厂商与胶卷型号 (二级选择)")
+   Text(lang == .en ? "1B. Select Film Brand & Stock" : "1B. 选择胶片厂商与胶卷型号 (二级选择)")
     .font(.system(size: 13, weight: .bold))
     .foregroundStyle(Color.white)
    Spacer()

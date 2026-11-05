@@ -83,9 +83,17 @@ struct FlashCalculator {
  static let evCompSteps: [Double] = [
   -2.0, -1.7, -1.3, -1.0, -0.7, -0.3, 0.0, 0.3, 0.7, 1.0, 1.3, 1.7, 2.0
  ]
- static func powerComponents(gnAt100: Double, iso: Double, distance: Double, aperture: Double, shutter: Int, maxSync: Int, lossEV: Double) -> (mainFraction: String, trimBadge: String?, statusNote: String, isWarning: Bool) {
+ static func closeUpBellowsLoss(distance: Double, formatRaw: Int) -> Double {
+  switch formatRaw {
+  case 1: return distance < 1.2 ? (0.50 * (1.2 - distance)) : 0.0
+  case 2: return distance < 1.2 ? (0.60 * (1.2 - distance)) : 0.0
+  case 3, 4: return distance < 1.3 ? (0.75 * (1.3 - distance)) : 0.0
+  default: return distance < 1.0 ? (0.35 * (1.0 - distance)) : 0.0
+  }
+ }
+ static func powerComponents(gnAt100: Double, iso: Double, distance: Double, aperture: Double, shutter: Int, maxSync: Int, lossEV: Double, formatRaw: Int = 0) -> (mainFraction: String, trimBadge: String?, statusNote: String, isWarning: Bool) {
   let isoFactor = sqrt(max(iso, 25.0) / 100.0)
-  let closeUpLoss = distance < 1.0 ? (0.35 * (1.0 - distance)) : 0.0
+  let closeUpLoss = closeUpBellowsLoss(distance: distance, formatRaw: formatRaw)
   let hssStops = shutter > maxSync ? log2(Double(shutter) / Double(max(maxSync, 30))) : 0.0
   let hssLoss = hssStops > 0 ? (1.5 + 1.0 * hssStops) : 0.0
   let effectiveGN = gnAt100 * isoFactor * pow(2.0, -(lossEV + closeUpLoss + hssLoss) / 2.0)
@@ -357,8 +365,9 @@ struct LumiFilmProvider: TimelineProvider {
   let evComp = dict["lf_exp_comp_ev"] ?? 0.0
   let themeRaw = Int(round(dict["lf_theme"] ?? 2.0))
   let auxLoss = dict["lf_aux_loss"] ?? 0.0
+  let fmtRaw = Int(round(dict["lf_film_format"] ?? 0.0))
   let totalLoss = auxLoss + evComp
-  let res = FlashCalculator.powerComponents(gnAt100: gn, iso: iso, distance: dist, aperture: ap, shutter: shutter, maxSync: maxSync, lossEV: totalLoss)
+  let res = FlashCalculator.powerComponents(gnAt100: gn, iso: iso, distance: dist, aperture: ap, shutter: shutter, maxSync: maxSync, lossEV: totalLoss, formatRaw: fmtRaw)
   return LumiFilmEntry(date: Date(), iso: iso, gn: gn, distance: dist, aperture: ap, shutterDenom: shutter, maxSyncSpeed: maxSync, evComp: evComp, themeRaw: themeRaw, mainPower: res.0, trimBadge: res.1, noteText: res.2, isWarning: res.3)
  }
 }
