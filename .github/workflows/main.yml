@@ -8,12 +8,18 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+permissions:
+  contents: write
+
 jobs:
  build-ipa:
   runs-on: macos-15
   steps:
   - name: Checkout Repository
     uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
+      token: ${{ secrets.GITHUB_TOKEN }}
 
   - name: Generate Project, 3D Dynamic Glossy Glass App Icon & SwiftUI Sources
     run: |
@@ -5947,3 +5953,53 @@ jobs:
     with:
      name: LumiFilm-Unsigned-IPA
      path: LumiFilm-Unsigned.ipa
+
+  - name: Sync Generated Sources to Repository Root
+    run: |
+     echo "=== Syncing generated Swift sources to repository root ==="
+     mkdir -p LumiFilm LumiFilmWidget
+     cp -R LumiFilmBuild/LumiFilm/* LumiFilm/
+     cp -R LumiFilmBuild/LumiFilmWidget/* LumiFilmWidget/
+     cp LumiFilmBuild/project.yml ./project.yml
+     cp LumiFilmBuild/LumiFilm.entitlements ./LumiFilm.entitlements 2>/dev/null || true
+
+     git config user.name "github-actions[bot]"
+     git config user.email "github-actions[bot]@users.noreply.github.com"
+     git add LumiFilm LumiFilmWidget project.yml LumiFilm.entitlements
+     if git diff --staged --quiet; then
+       echo "No changes in generated source files to commit."
+     else
+       git commit -m "chore(sync): auto-sync generated Swift sources & project.yml [skip ci]"
+       git push origin HEAD || git push origin main || true
+     fi
+
+  - name: Publish GitHub Release & Attach IPA
+    env:
+     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    run: |
+     VERSION="v9.3.0"
+     echo "=== Creating or Updating GitHub Release for ${VERSION} ==="
+     cat << 'RELEASENOTES' > release_notes.md
+     ## ⚡ LumiFilm v9.3.0 — Professional Analog Flash & Ambient Meter
+
+     ### 🌟 Highlights
+     - **Local Loopback UDP (`127.0.0.1:49188`) Instant Theme Sync**: 100% real-time theme & parameter synchronization between Home Screen Widgets and main App, even under free Apple ID sideloading without paid App Group entitlements.
+     - **Two-Level Film Stock Library (Brand → Stock)**: Covers 37 authentic films across Kodak, Fujifilm, CineStill, Ilford, and Lomo/Harman/Foma.
+     - **GPS Reverse Geocoding Film Roll Logger**: Automatically logs city & street address (📍), film stock, lens aperture, shutter, flash power, modifier loss, and custom scene notes for every frame.
+     - **Curved Liquid Glass Bottom Navigation**: High-polish fluid transition with zero harsh borders.
+     - **Standardized Photographic Scales**: Full range of standard f-stops, shutter speeds, and 1/3-stop EV compensation values.
+
+     ### 📲 Installation via Sideloadly (No Mac required)
+     1. Download `LumiFilm-Unsigned.ipa` below.
+     2. Connect iPhone via USB, drag `LumiFilm-Unsigned.ipa` into [Sideloadly](https://sideloadly.io/), and click **Start**.
+     3. On iPhone: Go to **Settings → General → VPN & Device Management** and Trust your Apple ID.
+     RELEASENOTES
+
+     if gh release view "$VERSION" >/dev/null 2>&1; then
+       echo "Release $VERSION already exists. Updating notes and uploading IPA..."
+       gh release upload "$VERSION" LumiFilm-Unsigned.ipa --clobber
+       gh release edit "$VERSION" --notes-file release_notes.md
+     else
+       echo "Creating new release $VERSION..."
+       gh release create "$VERSION" LumiFilm-Unsigned.ipa          --title "LumiFilm v9.3.0 — Analog Flash & Ambient Light Meter"          --notes-file release_notes.md          --latest
+     fi
