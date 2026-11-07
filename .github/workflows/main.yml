@@ -2303,7 +2303,7 @@ jobs:
     case 1: selectedParameter = .distance
     case 2: selectedParameter = .shutter
     default: break }
-    feedback.selectionTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+    feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
     } else if abs(dx) >= 20 {
     let stepX = dx > 0 ? 1 : -1
     snapseedLastX = val.translation.width; snapseedLastY = val.translation.height
@@ -2315,18 +2315,25 @@ jobs:
     default: stepExposureComp(by: stepX); feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: abs(exposureCompEV) < 0.05) }}}}
     .onEnded { _ in
     withAnimation(.easeOut(duration: 0.25)) { snapseedHUDActive = false }}}
+    private func snapseedHUDRow(_ idx: Int) -> some View {
+    let titles: [String] = lang == .en ? ["Aperture (f/)", "Distance (m)", "Shutter (1/s)", "EV Compensation"] : ["光圈 APERTURE", "距离 DISTANCE", "快门 SHUTTER", "曝光补偿 EV COMP"]
+    let vals: [String] = [formatFStop(aperture), String(format: "%.1fm", distance), "1/\(shutterDenom)s", String(format: "%+.1fEV", exposureCompEV)]
+    let isCur: Bool = (snapseedModeIndex == idx)
+    let fg: Color = isCur ? Color.black : Color.white.opacity(0.65)
+    let bg: Color = isCur ? theme.accent : Color.white.opacity(0.08)
+    return HStack {
+    Text(titles[idx]).fSys(12, .bold)
+    Spacer()
+    Text(vals[idx]).fMono(12, .bold)
+    }.foregroundStyle(fg).padding(.horizontal, 12).padding(.vertical, 5.5).background(bg, in: RoundedRectangle(cornerRadius: 9))
+    }
     private var snapseedFloatingHUDOverlay: some View {
     VStack(spacing: 10) {
     Text(lang == .en ? "↕ SWIPE VERTICAL: ATTRIBUTE · ↔ HORIZONTAL: VALUE" : "↕ 上下滑动切换属性 · ↔ 左右滑动增减数值").fMono(9.5, .bold).foregroundStyle(Color.white.opacity(0.7))
     Text(snapseedActiveModeValue).fMono(34, .black).foregroundStyle(theme.accent).contentTransition(.numericText())
     VStack(spacing: 4) {
-    ForEach(0..<4, id: \.self) { idx in
-    let titles = lang == .en ? ["Aperture (f/)", "Distance (m)", "Shutter (1/s)", "EV Compensation"] : ["光圈 APERTURE", "距离 DISTANCE", "快门 SHUTTER", "曝光补偿 EV COMP"]; let vals = [formatFStop(aperture), String(format: "%.1fm", distance), "1/\(shutterDenom)s", String(format: "%+.1fEV", exposureCompEV)]; let isCur = (snapseedModeIndex == idx)
-    HStack {
-    Text(titles[idx]).font(.system(size: isCur ? 12.5 : 11, weight: isCur ? .black : .semibold))
-    Spacer()
-    Text(vals[idx]).font(.system(size: isCur ? 12.5 : 11, weight: .bold, design: .monospaced))
-    }.foregroundStyle(isCur ? Color.black : Color.white.opacity(0.65)).padding(.horizontal, 12).padding(.vertical, 5.5).background(isCur ? theme.accent : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 9)).scaleEffect(isCur ? 1.03 : 0.97) }}
+    ForEach(0..<4, id: \.self) { idx in snapseedHUDRow(idx) }
+    }
     HStack(spacing: 6) {
     Image(systemName: "bolt.fill").fSys(11, .bold).foregroundStyle(theme.accent)
     Text(lang == .en ? "Flash Output: \(exposureResult.powerTitle)" : "实时解算闪光输出: \(exposureResult.powerTitle)").fMono(11.5, .black).foregroundStyle(Color.white) }
@@ -3290,7 +3297,7 @@ jobs:
     (lang == .en ? "05 · RIG PASS READY" : "05 · 主题与器材确认", lang == .en ? "Choose theme & start metering" : "选择界面风格并确认您的胶片装备", lang == .en ? "Review your analog rig pass below." : "核对下方「器材就绪通行证」，点击底部按钮即可开拍。") ] }
     private func triggerAutoAdvance(from step: Int) {
     guard autoAdvanceEnabled, stepIndex == step, stepIndex < 4 else { return }
-    FeedbackEngine.shared.selectionTick(soundEnabled: true, hapticEnabled: true)
+    FeedbackEngine.shared.buttonTap(soundEnabled: true, hapticEnabled: true)
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
     if self.stepIndex == step && self.stepIndex < 4 {
     withAnimation(.snappy) { self.stepIndex += 1 }}}}
@@ -3312,22 +3319,35 @@ jobs:
     default: step5ThemeAndSummaryView }
     }.padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 22) }
     wizardBottomNavBar }}}
-    private var appleMusicLyricsFocusRail: some View {
-    VStack(alignment: .leading, spacing: 6) {
-    ForEach(0..<5, id: \.self) { idx in
-    let isCur = (idx == stepIndex); let isNear = abs(idx - stepIndex) == 1
+    @ViewBuilder private func lyricsFocusRow(_ idx: Int) -> some View {
+    let isCur: Bool = (idx == stepIndex)
+    let isNear: Bool = abs(idx - stepIndex) == 1
     if isCur || isNear {
-    Button { FeedbackEngine.shared.selectionTick(soundEnabled: true, hapticEnabled: true)
-    withAnimation(.snappy) { stepIndex = idx }} label: {
+    let item = lyricsStepLines[idx]
+    let badgeFg: Color = isCur ? Color.black : theme.accent
+    let badgeBg: Color = isCur ? theme.accent : Color.clear
+    let rowOpacity: Double = isCur ? 1.0 : 0.36
+    let titleSize: CGFloat = isCur ? 19.0 : 13.0
+    Button {
+    FeedbackEngine.shared.buttonTap(soundEnabled: true, hapticEnabled: true)
+    withAnimation(.snappy) { stepIndex = idx }
+    } label: {
     VStack(alignment: .leading, spacing: 3) {
     HStack(spacing: 6) {
-    Text(lyricsStepLines[idx].badge).font(.system(size: isCur ? 10 : 8.5, weight: .black, design: .monospaced)).foregroundStyle(isCur ? Color.black : theme.accent).padding(.horizontal, isCur ? 7 : 0).padding(.vertical, isCur ? 2 : 0).background(isCur ? theme.accent : Color.clear, in: Capsule())
-    if idx < stepIndex { Image(systemName: "checkmark.circle.fill").font(.system(size: 10)).foregroundStyle(Color.green) }}
-    Text(lyricsStepLines[idx].title).font(.system(size: isCur ? 19.5 : 13, weight: .black, design: .rounded)).foregroundStyle(Color.white)
+    Text(item.badge).fMono(9.5, .black).foregroundStyle(badgeFg).padding(.horizontal, 6).padding(.vertical, 2).background(badgeBg, in: Capsule())
+    if idx < stepIndex { Image(systemName: "checkmark.circle.fill").fSys(10, .bold).foregroundStyle(Color.green) }
+    }
+    Text(item.title).fSys(titleSize, .black).foregroundStyle(Color.white)
     if isCur {
-    Text(lyricsStepLines[idx].sub).fSys(11, .medium).foregroundStyle(Color.white.opacity(0.76)).fixedSize(horizontal: false, vertical: true) }
-    }.frame(maxWidth: .infinity, alignment: .leading).scaleEffect(isCur ? 1.0 : 0.95, anchor: .leading).opacity(isCur ? 1.0 : 0.34).blur(radius: isCur ? 0 : 0.4)
-    }.buttonStyle(.plain) }}
+    Text(item.sub).fSys(11, .medium).foregroundStyle(Color.white.opacity(0.76)).fixedSize(horizontal: false, vertical: true)
+    }
+    }.frame(maxWidth: .infinity, alignment: .leading).opacity(rowOpacity)
+    }.buttonStyle(.plain)
+    }
+    }
+    private var appleMusicLyricsFocusRail: some View {
+    VStack(alignment: .leading, spacing: 6) {
+    ForEach(0..<5, id: \.self) { idx in lyricsFocusRow(idx) }
     }.padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(theme.accent.opacity(0.35), lineWidth: 1)) }
     private var wizardTopHeader: some View {
     VStack(spacing: 8) {
