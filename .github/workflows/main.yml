@@ -1,4 +1,4 @@
-name: Build Unsigned LumiFilm iOS App (v10.2 - Theme-Blended 3D Drum Wheel, Camera Meter Badge, Enlarged Flash Modes & Clean Picker)
+name: Build Unsigned LumiFilm iOS App (v10.3 - Bottom-Right Camera Button, Flash Mode Matrix & Illuminated 3D Drum Wheel)
 
 on:
   workflow_dispatch:
@@ -2287,16 +2287,16 @@ jobs:
     syncWidgetDefaults()
     }
     } label: {
-    VStack(alignment: .leading, spacing: 2) {
+    VStack(alignment: .leading, spacing: 2.5) {
     HStack(spacing: 4) {
-    Image(systemName: iconName).fSys(11.5, .bold).foregroundStyle(isSel ? Color.black : theme.accent)
+    Image(systemName: iconName).fSys(12, .bold).foregroundStyle(isSel ? Color.black : theme.accent)
     Text(shortTitle).fSys(11.5, .black).lineLimit(1).minimumScaleFactor(0.75)
     Spacer(minLength: 0)
     }
     Text(subBias).fMono(9, .bold).foregroundStyle(isSel ? Color.black.opacity(0.72) : Color.white.opacity(0.55)).lineLimit(1)
     }
     .foregroundStyle(isSel ? Color.black : Color.white)
-    .padding(.horizontal, 9).frame(maxWidth: .infinity).frame(height: 44)
+    .padding(.horizontal, 9).frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(isSel ? theme.accent : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
     }.buttonStyle(.plain)
     }
@@ -2380,70 +2380,43 @@ jobs:
     case .flashPower: return max(0, min(powerDenominators.count - 1, manualPowerIndex))
     }
     }
-    private var liveOpticalViewfinderHUDCard: some View {
-    VStack(spacing: 7) {
+    private var rightColumnFlashModesAndCameraButton: some View {
+    VStack(alignment: .leading, spacing: 7) {
+    Text(lang == .en ? "FLASH MODE" : "闪光补光模式").fMono(9.5, .bold).foregroundStyle(Color.white.opacity(0.62))
+    LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
+    ForEach(FlashRoleMode.allCases) { role in flashRoleRightThumbTile(role) }
+    }.frame(maxHeight: .infinity)
+    Button {
+    feedback.tabSwitchHaptic(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+    showCameraEVMeterSheet = true
+    } label: {
+    HStack(spacing: 8) {
     ZStack {
-    RoundedRectangle(cornerRadius: 15).fill(LinearGradient(colors: [theme.accent.opacity(0.16), Color.white.opacity(0.06), theme.secondaryAccent.opacity(0.12)], startPoint: .topLeading, endPoint: .bottomTrailing))
-    VStack(spacing: 5) {
-    HStack(spacing: 7) {
-    ZStack {
-    Circle().fill(theme.accent.opacity(0.22)).frame(width: 32, height: 32)
-    Image(systemName: "camera.fill").fSys(14, .black).foregroundStyle(theme.accent)
+    Circle().fill(Color.black.opacity(0.22)).frame(width: 34, height: 34)
+    Image(systemName: "camera.fill").fSys(15, .black).foregroundStyle(Color.black)
     }
-    VStack(alignment: .leading, spacing: 1) {
+    VStack(alignment: .leading, spacing: 1.5) {
     HStack(spacing: 4) {
-    Text(lang == .en ? "CAMERA METER" : "实景相机测光 · 测距").fSys(11.5, .black).foregroundStyle(Color.white).lineLimit(1)
+    Text(lang == .en ? "Camera Meter" : "实景测光 · 测距").fSys(12.5, .black).foregroundStyle(Color.black).lineLimit(1)
     if cameraEVReader.isRunning {
     Circle().fill(Color.green).frame(width: 6, height: 6)
     }
     }
-    Text(lang == .en ? "Tap to Measure EV & Distance" : "点击开启相机测光与激光测距").fSys(9, .medium).foregroundStyle(Color.white.opacity(0.65)).lineLimit(1)
+    Text(String(format: "EV %.1f · %.1fm", ambientEV100, distance)).fMono(10, .bold).foregroundStyle(Color.black.opacity(0.75)).lineLimit(1)
     }
     Spacer(minLength: 0)
+    Image(systemName: "chevron.right").fSys(11, .black).foregroundStyle(Color.black.opacity(0.65))
     }
-    Spacer(minLength: 0)
-    HStack(spacing: 6) {
-    HStack(spacing: 4) {
-    Image(systemName: "scope").fSys(10, .bold).foregroundStyle(theme.accent)
-    Text(String(format: "%.1fm", distance)).fMono(13, .black).foregroundStyle(Color.white)
-    }.padding(.horizontal, 8).padding(.vertical, 4).background(Color.white.opacity(0.08), in: Capsule())
-    Spacer(minLength: 2)
-    HStack(spacing: 3) {
-    Button {
-    feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-    withAnimation(.snappy) { ambientEV100 = max(-2.0, ambientEV100 - 0.5) }
-    } label: {
-    Text("-").fMono(11, .black).foregroundStyle(Color.white).frame(width: 22, height: 22).background(Color.white.opacity(0.12), in: Circle())
-    }
-    Text(String(format: "EV %.1f", ambientEV100)).fMono(11.5, .black).foregroundStyle(theme.accent)
-    Button {
-    feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-    withAnimation(.snappy) { ambientEV100 = min(18.0, ambientEV100 + 0.5) }
-    } label: {
-    Text("+").fMono(11, .black).foregroundStyle(Color.white).frame(width: 22, height: 22).background(Color.white.opacity(0.12), in: Circle())
-    }
-    }
-    }
-    }.padding(10)
-    }
-    .frame(maxHeight: .infinity)
-    .contentShape(RoundedRectangle(cornerRadius: 15))
-    .onTapGesture {
-    feedback.tabSwitchHaptic(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-    showCameraEVMeterSheet = true
-    }
-    VStack(alignment: .leading, spacing: 5) {
-    Text(lang == .en ? "FLASH MODE · 闪光补光模式" : "FLASH MODE · 闪光补光模式").fMono(9, .bold).foregroundStyle(Color.white.opacity(0.62))
-    LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
-    ForEach(FlashRoleMode.allCases) { role in flashRoleRightThumbTile(role) }
-    }
-    }
+    .padding(.horizontal, 10).frame(maxWidth: .infinity).frame(height: 50)
+    .background(LinearGradient(colors: [theme.accent, theme.secondaryAccent], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 14))
+    .shadow(color: theme.accent.opacity(0.28), radius: 6, x: 0, y: 3)
+    }.buttonStyle(.plain)
     }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     private var bottomDrumAndRightThumbConsoleCard: some View {
     VStack(spacing: 6) {
     quickChipsBar
-    HStack(alignment: .center, spacing: 8) {
+    HStack(alignment: .center, spacing: 10) {
     iOSClockDrumWheelView(
     items: currentDrumItems,
     selectedIndex: currentDrumIndex,
@@ -2454,7 +2427,7 @@ jobs:
     withAnimation(.snappy) { stepSelectedParameter(by: delta) }
     }
     ).frame(maxWidth: .infinity, maxHeight: .infinity)
-    liveOpticalViewfinderHUDCard
+    rightColumnFlashModesAndCameraButton
     }.frame(maxHeight: .infinity)
     }.padding(.horizontal, 10).padding(.vertical, 8).frame(maxWidth: .infinity, maxHeight: .infinity).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
     }
@@ -3105,37 +3078,55 @@ jobs:
     let theme: AppTheme
     let onStepChange: (Int) -> Void
     @State private var dragAccumY: CGFloat = 0
+    @State private var liveDragY: CGFloat = 0
     @ViewBuilder private func drumRowView(offset: Int) -> some View {
     let targetIdx = selectedIndex + offset
     if targetIdx >= 0 && targetIdx < items.count {
     let isCenter = (offset == 0)
     let absOff = abs(offset)
-    let fontSz: CGFloat = isCenter ? 23.0 : (absOff == 1 ? 15.5 : 12.0)
-    let rowAlpha: Double = isCenter ? 1.0 : (absOff == 1 ? 0.52 : 0.25)
-    let rowScale: CGFloat = isCenter ? 1.0 : (absOff == 1 ? 0.88 : 0.76)
-    let deg: Double = Double(offset) * -18.0
+    let fontSz: CGFloat = isCenter ? 25.0 : (absOff == 1 ? 15.5 : 11.5)
+    let rowAlpha: Double = isCenter ? 1.0 : (absOff == 1 ? 0.46 : 0.16)
+    let rowScale: CGFloat = isCenter ? 1.05 : (absOff == 1 ? 0.85 : 0.70)
+    let deg: Double = Double(offset) * -24.0 + Double(liveDragY * 0.45)
+    let blurR: CGFloat = isCenter ? 0.0 : (absOff == 1 ? 0.35 : 1.1)
+    HStack(spacing: 6) {
+    RoundedRectangle(cornerRadius: 1).fill(isCenter ? theme.accent : Color.white.opacity(0.22)).frame(width: isCenter ? 10 : 5, height: isCenter ? 2.2 : 1.2)
     Text(items[targetIdx])
     .font(.system(size: fontSz, weight: isCenter ? .black : .bold, design: .monospaced))
-    .foregroundStyle(isCenter ? theme.accent : Color.white.opacity(0.88))
+    .foregroundStyle(isCenter ? Color.white : Color.white.opacity(0.82))
+    .shadow(color: isCenter ? theme.accent.opacity(0.75) : Color.clear, radius: isCenter ? 8 : 0)
+    .contentTransition(.numericText())
     .lineLimit(1).minimumScaleFactor(0.75)
-    .frame(maxWidth: .infinity).frame(height: isCenter ? 38 : 25)
+    .frame(maxWidth: .infinity)
+    RoundedRectangle(cornerRadius: 1).fill(isCenter ? theme.accent : Color.white.opacity(0.22)).frame(width: isCenter ? 10 : 5, height: isCenter ? 2.2 : 1.2)
+    }
+    .padding(.horizontal, 8)
+    .frame(height: isCenter ? 40 : 25)
     .scaleEffect(rowScale)
     .opacity(rowAlpha)
-    .rotation3DEffect(.degrees(deg), axis: (x: 1, y: 0, z: 0), perspective: 0.4)
+    .blur(radius: blurR)
+    .rotation3DEffect(.degrees(deg), axis: (x: 1, y: 0, z: 0), perspective: 0.48)
+    .offset(y: liveDragY * (isCenter ? 0.28 : 0.18))
     .contentShape(Rectangle())
     .onTapGesture {
     if offset != 0 { onStepChange(offset > 0 ? 1 : -1) }
     }
     } else {
-    Color.clear.frame(height: offset == 0 ? 38 : 25)
+    Color.clear.frame(height: offset == 0 ? 40 : 25)
     }
     }
     var body: some View {
     VStack(spacing: 4) {
     ZStack {
-    RoundedRectangle(cornerRadius: 15).fill(LinearGradient(colors: [theme.accent.opacity(0.08), Color.white.opacity(0.05), theme.secondaryAccent.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
-    RoundedRectangle(cornerRadius: 11).fill(Color.white.opacity(0.14))
-    .frame(height: 38).padding(.horizontal, 8)
+    RadialGradient(colors: [theme.accent.opacity(0.28), theme.secondaryAccent.opacity(0.08), Color.clear], center: .center, startRadius: 6, endRadius: 82)
+    ZStack {
+    RoundedRectangle(cornerRadius: 13)
+    .fill(LinearGradient(colors: [theme.accent.opacity(0.26), Color.white.opacity(0.16), theme.accent.opacity(0.20)], startPoint: .leading, endPoint: .trailing))
+    RoundedRectangle(cornerRadius: 13)
+    .strokeBorder(LinearGradient(colors: [Color.white.opacity(0.55), theme.accent.opacity(0.85), Color.white.opacity(0.35)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.2)
+    }
+    .frame(height: 40).padding(.horizontal, 4)
+    .shadow(color: theme.accent.opacity(0.35), radius: 10, x: 0, y: 0)
     VStack(spacing: 1) {
     drumRowView(offset: -2)
     drumRowView(offset: -1)
@@ -3143,22 +3134,29 @@ jobs:
     drumRowView(offset: 1)
     drumRowView(offset: 2)
     }
-    .mask(LinearGradient(stops: [.init(color: .clear, location: 0.0), .init(color: .white, location: 0.16), .init(color: .white, location: 0.84), .init(color: .clear, location: 1.0)], startPoint: .top, endPoint: .bottom))
+    .mask(LinearGradient(stops: [.init(color: .clear, location: 0.0), .init(color: .white.opacity(0.38), location: 0.18), .init(color: .white, location: 0.38), .init(color: .white, location: 0.62), .init(color: .white.opacity(0.38), location: 0.82), .init(color: .clear, location: 1.0)], startPoint: .top, endPoint: .bottom))
     }
     .frame(maxHeight: .infinity)
     .contentShape(Rectangle())
     .gesture(
-    DragGesture(minimumDistance: 4)
+    DragGesture(minimumDistance: 3)
     .onChanged { val in
     let dy = val.translation.height - dragAccumY
-    let stepH: CGFloat = 22.0
+    withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.75)) {
+    liveDragY = max(-14, min(14, dy))
+    }
+    let stepH: CGFloat = 21.0
     if abs(dy) >= stepH {
     let steps = Int(dy / stepH)
     dragAccumY += CGFloat(steps) * stepH
+    liveDragY = 0
     onStepChange(steps < 0 ? 1 : -1)
     }
     }
-    .onEnded { _ in dragAccumY = 0 }
+    .onEnded { _ in
+    dragAccumY = 0
+    withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) { liveDragY = 0 }
+    }
     )
     HStack(spacing: 4) {
     Image(systemName: parameterIcon).fSys(9.5, .bold).foregroundStyle(theme.accent)
@@ -3733,10 +3731,10 @@ jobs:
    env:
     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
    run: |
-    VERSION="v10.2.0"
+    VERSION="v10.3.0"
     echo "=== Creating or Updating GitHub Release for ${VERSION} ==="
     cat << 'RELEASENOTES' > release_notes.md
-    ## ⚡ LumiFilm v10.2.0 — Professional Analog Flash & Ambient Meter
+    ## ⚡ LumiFilm v10.3.0 — Professional Analog Flash & Ambient Meter
 
     ### 🌟 Highlights
     - **Local Loopback UDP (`127.0.0.1:49188`) Instant Theme Sync**: 100% real-time theme & parameter synchronization between Home Screen Widgets and main App, even under free Apple ID sideloading without paid App Group entitlements.
@@ -3757,5 +3755,5 @@ jobs:
       gh release edit "$VERSION" --notes-file release_notes.md
     else
       echo "Creating new release $VERSION..."
-      gh release create "$VERSION" LumiFilm-Unsigned.ipa          --title "LumiFilm v10.2.0 — Analog Flash & Ambient Light Meter"          --notes-file release_notes.md          --latest
+      gh release create "$VERSION" LumiFilm-Unsigned.ipa          --title "LumiFilm v10.3.0 — Analog Flash & Ambient Light Meter"          --notes-file release_notes.md          --latest
     fi
