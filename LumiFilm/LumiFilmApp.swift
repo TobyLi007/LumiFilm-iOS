@@ -286,7 +286,37 @@ case .fujifilm: return (Color(red: 0.10, green: 0.72, blue: 0.50), Color(red: 0.
 case .cinestill: return (Color(red: 0.94, green: 0.22, blue: 0.28), Color(red: 0.14, green: 0.60, blue: 0.94))
 case .ilford: return (Color(red: 0.70, green: 0.75, blue: 0.84), Color(red: 0.40, green: 0.45, blue: 0.55))
 case .lomoOther: return (Color(red: 0.68, green: 0.30, blue: 0.98), Color(red: 0.96, green: 0.44, blue: 0.18))
-case .customISO: return (Color(red: 0.90, green: 0.68, blue: 0.30), Color(red: 0.35, green: 0.56, blue: 0.86)) }}}
+case .customISO: return (Color(red: 0.90, green: 0.68, blue: 0.30), Color(red: 0.35, green: 0.56, blue: 0.86)) }}
+var logoCode: String {
+switch self {
+case .kodak: return "KODAK"
+case .fujifilm: return "FUJI"
+case .cinestill: return "CS"
+case .ilford: return "ILFORD"
+case .lomoOther: return "LOMO"
+case .customISO: return "FILM" }}
+static func detect(from name: String) -> FilmBrandCategory {
+let s = name.lowercased()
+if s.contains("kodak") || s.contains("portra") || s.contains("gold") || s.contains("ektar") || s.contains("tri-x") || s.contains("t-max") || s.contains("vision") || s.contains("ultramax") || s.contains("colorplus") { return .kodak }
+if s.contains("fuji") || s.contains("velvia") || s.contains("provia") || s.contains("acros") || s.contains("superia") || s.contains("natura") || s.contains("c200") || s.contains("400h") { return .fujifilm }
+if s.contains("cinestill") || s.contains("800t") || s.contains("400d") || s.contains("50d") || s.contains("bwxx") { return .cinestill }
+if s.contains("ilford") || s.contains("hp5") || s.contains("fp4") || s.contains("delta") || s.contains("pan f") { return .ilford }
+if s.contains("lomo") || s.contains("harman") || s.contains("phoenix") || s.contains("foma") { return .lomoOther }
+return .customISO }}
+struct FilmBrandLogoBadge: View {
+let brand: FilmBrandCategory
+var compact: Bool = false
+var body: some View {
+let pair = brand.meshColors; let fg: Color = (brand == .kodak || brand == .ilford) ? Color.black : Color.white; let bg1: Color = brand == .kodak ? Color(red: 1.0, green: 0.73, blue: 0.0) : (brand == .ilford ? Color.white : pair.0); let bg2: Color = brand == .kodak ? Color(red: 0.90, green: 0.12, blue: 0.20) : (brand == .ilford ? Color(white: 0.86) : pair.1)
+return HStack(spacing: 2.5) {
+if brand == .kodak {
+Circle().fill(Color(red: 0.88, green: 0.08, blue: 0.15)).frame(width: 5, height: 5)
+} else if brand == .fujifilm {
+Circle().fill(Color(red: 0.92, green: 0.05, blue: 0.12)).frame(width: 5, height: 5)
+} else if brand == .cinestill {
+Image(systemName: "sparkles").font(.system(size: 7.5, weight: .black)).foregroundStyle(Color.yellow) }
+Text(brand.logoCode).fMono(compact ? 8.5 : 9.5, .black).foregroundStyle(fg) }.padding(.horizontal, compact ? 5.5 : 7).padding(.vertical, compact ? 2.5 : 3.5).background(LinearGradient(colors: [bg1, bg == true ? bg1 : bg2], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 6)) }
+private var bg: Bool { brand == .kodak || brand == .ilford }}
 struct FilmStockModel: Identifiable, Equatable {
 let id: String; let brand: FilmBrandCategory; let name: String; let iso: Double; let tagZh: String; let tagEn: String
 func subtitle(for lang: AppLanguage) -> String {
@@ -1430,8 +1460,7 @@ appleMusicMiniRollBar.padding(.horizontal, 14).frame(height: 42)
 appleMusicLiquidGlassBottomBar.padding(.horizontal, 16).frame(height: 58)
 }.frame(height: 106).padding(.bottom, 2)
 }.ignoresSafeArea(.keyboard, edges: .bottom)
-if showFlashRoleCenteredMenu {
-flashRoleCenteredPopoverOverlay.transition(.opacity.combined(with: .scale(scale: 0.94))).zIndex(50) }}
+}
 .onAppear {
 if aperture < maxLensAperture { aperture = maxLensAperture }
 setExposureCompClean(exposureCompEV)
@@ -1505,38 +1534,37 @@ ambientEV100: $ambientEV100, subjectDistance: $distance, lang: lang, theme: them
 .sheet(isPresented: $showOnboardingSheet) {
 OnboardingSetupSheet(
 filmISO: $filmISO, selectedFilmStockID: $selectedFilmStockID, filmFormatRaw: $filmFormatRaw, flashGN: $flashGN, selectedFlashID: $selectedFlashID, maxLensAperture: $maxLensAperture, maxSyncSpeed: $maxSyncSpeed, syncModeRaw: $syncModeRaw, cameraPresetID: $cameraPresetID, aperture: $aperture, themeRaw: $themeRaw, hasCompletedOnboarding: $hasCompletedOnboarding, lang: lang, theme: theme ).presentationDetents([.large]).interactiveDismissDisabled(!hasCompletedOnboarding) }}
+private var currentFilmBrand: FilmBrandCategory {
+selectedFilmStock?.brand ?? .customISO }
 private var headerBar: some View {
 HStack(spacing: 6) {
 Button { feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
 withAnimation(.snappy) { selectedTab = 2 }} label: {
-HStack(spacing: 6) {
-Circle().fill(activeFilmMeshColors.0).frame(width: 8, height: 8)
-Text("ISO \(Int(filmISO))").fMono(12.5, .black).foregroundStyle(theme.accent)
-Text("· \(filmFormat.shortTag) · \(formatFStop(maxLensAperture)) · GN\(Int(flashGN))").fMono(10.5, .bold).foregroundStyle(Color.white.opacity(0.88)).lineLimit(1)
-}.padding(.horizontal, 10).padding(.vertical, 6.5).background(Color.white.opacity(0.10), in: Capsule())
+HStack(spacing: 5) {
+FilmBrandLogoBadge(brand: currentFilmBrand, compact: true)
+Text("ISO \(Int(filmISO)) · \(filmFormat.shortTag) · \(formatFStop(maxLensAperture)) · GN\(Int(flashGN))").fMono(10.5, .bold).foregroundStyle(Color.white.opacity(0.92)).lineLimit(1).minimumScaleFactor(0.8)
+}.padding(.horizontal, 9).frame(height: 32).background(Color.white.opacity(0.10), in: Capsule())
 }.buttonStyle(.plain)
 Spacer(minLength: 2)
 Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true)
 withAnimation(.snappy) { syncModeRaw = (syncModeEnum == .leafShutterLens) ? ShutterSyncMode.focalPlaneMechanical.rawValue : ShutterSyncMode.leafShutterLens.rawValue }} label: {
-HStack(spacing: 3) {
-Image(systemName: syncModeEnum == .leafShutterLens ? "camera.aperture" : "rectangle.split.2x1.fill").fSys(9, .bold)
-Text(syncModeEnum == .leafShutterLens ? (lang == .en ? "LS 1/500s" : "LS镜间 1/500s") : (lang == .en ? "≤1/\(maxSyncSpeed)s" : "幕帘≤1/\(maxSyncSpeed)s")).fMono(10, .black)
-}.foregroundStyle(syncModeEnum == .leafShutterLens ? Color.black : (shutterDenom > effectiveMaxSyncSpeed ? Color.white : theme.accent)).padding(.horizontal, 9).padding(.vertical, 6).background(syncModeEnum == .leafShutterLens ? Color.green : (shutterDenom > effectiveMaxSyncSpeed ? Color.red : Color.white.opacity(0.10)), in: Capsule())
+HStack(spacing: 3.5) {
+Image(systemName: syncModeEnum == .leafShutterLens ? "camera.aperture" : "rectangle.split.2x1.fill").fSys(10, .bold)
+Text(syncModeEnum == .leafShutterLens ? (lang == .en ? "LS 1/500s" : "LS 1/500s") : (lang == .en ? "≤1/\(maxSyncSpeed)s" : "幕帘≤1/\(maxSyncSpeed)s")).fMono(10.5, .bold).lineLimit(1)
+}.foregroundStyle(syncModeEnum == .leafShutterLens ? Color.black : (shutterDenom > effectiveMaxSyncSpeed ? Color.white : theme.accent)).padding(.horizontal, 9).frame(height: 32).background(syncModeEnum == .leafShutterLens ? Color.green : (shutterDenom > effectiveMaxSyncSpeed ? Color.red : Color.white.opacity(0.10)), in: Capsule())
 }.buttonStyle(.plain)
 Button { feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
 feedback.toggleVoiceListening(lang: lang) { spokenText in applyVoiceCommand(spokenText) }} label: {
-Image(systemName: feedback.isListening ? "waveform" : "mic.fill").fSys(11.5, .bold).foregroundStyle(Color.white).frame(width: 30, height: 30).background(feedback.isListening ? Color.red : Color.white.opacity(0.10), in: Circle()) }}}
+Image(systemName: feedback.isListening ? "waveform" : "mic.fill").fSys(11, .bold).foregroundStyle(Color.white).frame(width: 32, height: 32).background(feedback.isListening ? Color.red : Color.white.opacity(0.10), in: Circle()) }}}
 private var meterMainTab: some View {
 VStack(spacing: 0) {
 flashOutputBannerCard
-Spacer(minLength: 5)
-flashRoleFourPillBar
 Spacer(minLength: 5)
 parameterLockGridCard
 Spacer(minLength: 5)
 dedicatedExposureCompensationCard
 Spacer(minLength: 5)
-rotaryDialAndRightThumbLiveMeterCard.frame(maxHeight: .infinity)
+bottomDrumAndRightThumbConsoleCard.frame(maxHeight: .infinity)
 }.frame(maxWidth: .infinity, maxHeight: .infinity) }
 private var powerMainAndTrim: (main: String, trim: String?) {
 let raw = exposureResult.powerTitle
@@ -1585,7 +1613,7 @@ Text(warning).fSys(10, .semibold).foregroundStyle(Color.yellow).lineLimit(1).min
 Text(exposureResult.subNote).fMono(10.5, .bold).foregroundStyle(exposureResult.statusColor).lineLimit(1) }
 }.frame(height: 15, alignment: .leading)
 }.padding(.horizontal, 14).padding(.vertical, 8).frame(height: 92).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20)).overlay(RoundedRectangle(cornerRadius: 20).stroke(bannerStroke, lineWidth: isCurtainAlert || lockPower ? 1.6 : 0)) }
-private func flashRoleQuickChip(_ role: FlashRoleMode) -> some View {
+private func flashRoleRightThumbTile(_ role: FlashRoleMode) -> some View {
 let isSel: Bool = (flashRoleRaw == role.rawValue); let iconName: String = role == .keyAutoSum ? "bolt.shield.fill" : (role == .fillNatural ? "sun.max.fill" : (role == .catchlightSoft ? "sparkles" : "moon.stars.fill")); let shortTitle: String = role == .keyAutoSum ? (lang == .en ? "Key Auto" : "主光防过曝") : (role == .fillNatural ? (lang == .en ? "Fill -1.3" : "逆光补光") : (role == .catchlightSoft ? (lang == .en ? "Eye -2.0" : "眼神微补") : (lang == .en ? "Pure Flash" : "纯闪光")))
 return Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true)
 withAnimation(.snappy) {
@@ -1593,13 +1621,10 @@ flashRoleRaw = role.rawValue
 if lockPower { solveForLockedPower(changed: .flashPower) }
 syncWidgetDefaults() }} label: {
 HStack(spacing: 4) {
-Image(systemName: iconName).fSys(11, .bold)
-Text(shortTitle).fSys(10.5, .black).lineLimit(1).minimumScaleFactor(0.75)
-}.foregroundStyle(isSel ? Color.black : Color.white.opacity(0.88)).frame(maxWidth: .infinity).padding(.vertical, 8).background(isSel ? theme.accent : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+Image(systemName: iconName).fSys(10, .bold)
+Text(shortTitle).fSys(10, .black).lineLimit(1).minimumScaleFactor(0.72)
+}.foregroundStyle(isSel ? Color.black : Color.white.opacity(0.88)).frame(maxWidth: .infinity).frame(height: 31).background(isSel ? theme.accent : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
 }.buttonStyle(.plain) }
-private var flashRoleFourPillBar: some View {
-HStack(spacing: 5) {
-ForEach(FlashRoleMode.allCases) { role in flashRoleQuickChip(role) }}}
 private var parameterLockGridCard: some View {
 LazyVGrid(columns: [GridItem(.flexible(), spacing: 7), GridItem(.flexible(), spacing: 7)], spacing: 7) {
 lockableMetricTile(param: .distance, label: lang == .en ? "1. DISTANCE (∝ d²)" : "★ 距离 DISTANCE (最敏感)", value: String(format: "%.1f m", distance), isLocked: $lockDistance)
@@ -1625,9 +1650,7 @@ HStack(spacing: 8) {
 Button { feedback.tabSwitchHaptic(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
 withAnimation(.spring(response: 0.36, dampingFraction: 0.74)) { selectedTab = (selectedTab == 1) ? 0 : 1 }} label: {
 HStack(spacing: 7) {
-ZStack {
-RoundedRectangle(cornerRadius: 7).fill(LinearGradient(colors: [activeFilmMeshColors.0, activeFilmMeshColors.1], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(width: 26, height: 26)
-Image(systemName: "film.stack.fill").fSys(11.5, .bold).foregroundStyle(Color.white) }
+FilmBrandLogoBadge(brand: currentFilmBrand, compact: false)
 VStack(alignment: .leading, spacing: 1) {
 HStack(spacing: 4) {
 Text(selectedFilmStock?.name ?? "ISO \(Int(filmISO))").fSys(11, .black).foregroundStyle(Color.white).lineLimit(1)
@@ -1644,48 +1667,71 @@ Image(systemName: "camera.shutter.button.fill").fSys(10.5, .bold)
 Text(lang == .en ? "+1 Log" : "+1 快记").fSys(10.5, .black)
 }.foregroundStyle(Color.black).padding(.horizontal, 10).padding(.vertical, 5.5).background(theme.accent, in: Capsule()) }
 }.padding(.horizontal, 10).padding(.vertical, 5.5).background(.ultraThinMaterial, in: Capsule()) }
-private var autoSensorTurretWheel: some View {
+private var currentDrumItems: [String] {
+switch selectedParameter {
+case .aperture: return apertureSteps.map { formatFStop($0) }
+case .distance: return distanceSteps.map { String(format: "%.1f m", $0) }
+case .shutter: return shutterSteps.map { "1/\($0)s" }
+case .flashPower: return powerDenominators.map { $0 == 1 ? "1/1" : "1/\($0)" }}}
+private var currentDrumIndex: Int {
+switch selectedParameter {
+case .aperture: return apertureSteps.enumerated().min(by: { abs($0.element - aperture) < abs($1.element - aperture) })?.offset ?? 0
+case .distance: return distanceSteps.enumerated().min(by: { abs($0.element - distance) < abs($1.element - distance) })?.offset ?? 0
+case .shutter: return shutterSteps.enumerated().min(by: { abs($0.element - shutterDenom) < abs($1.element - shutterDenom) })?.offset ?? 0
+case .flashPower: return max(0, min(powerDenominators.count - 1, manualPowerIndex)) }}
+private var liveOpticalViewfinderHUDCard: some View {
+VStack(spacing: 6) {
+ZStack {
+RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color.black.opacity(0.62), Color(white: 0.12)], startPoint: .top, endPoint: .bottom))
+RoundedRectangle(cornerRadius: 10).strokeBorder(style: StrokeStyle(lineWidth: 1.0, dash: [8, 6])).foregroundStyle(theme.accent.opacity(0.45)).padding(6)
+Circle().stroke(cameraEVReader.isRunning ? Color.green.opacity(0.55) : theme.accent.opacity(0.35), lineWidth: 1.0).frame(width: 68, height: 68)
+Circle().stroke(theme.accent.opacity(0.75), style: StrokeStyle(lineWidth: 1.2, dash: [3, 3])).frame(width: 34, height: 34)
 VStack(spacing: 3) {
-ZStack {
-Circle().fill(RadialGradient(colors: [(cameraEVReader.isRunning ? Color.green : theme.accent).opacity(0.24), Color.clear], center: .center, startRadius: 48, endRadius: 86)).frame(width: 162, height: 162)
-Circle().fill(AngularGradient(colors: theme.dialRingColors, center: .center)).frame(width: 154, height: 154).shadow(color: Color.black.opacity(0.5), radius: 9, x: 0, y: 4)
-Circle().fill(LinearGradient(colors: [Color(white: 0.16), Color(white: 0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(width: 136, height: 136)
-ZStack {
-ForEach(0..<24, id: \.self) { i in
-Rectangle().fill(i % 6 == 0 ? theme.accent : Color.white.opacity(0.32)).frame(width: i % 6 == 0 ? 2.2 : 1.0, height: i % 6 == 0 ? 10 : 5).offset(y: -60).rotationEffect(.degrees(Double(i) * 15.0)) }
-Circle().stroke(cameraEVReader.isRunning ? Color.green.opacity(0.75) : theme.accent.opacity(0.55), style: StrokeStyle(lineWidth: 1.2, dash: [4, 4])).frame(width: 102, height: 102) }
-Circle().fill(.ultraThinMaterial).frame(width: 98, height: 98)
-VStack(spacing: 1.5) {
-HStack(spacing: 3) {
-Circle().fill(cameraEVReader.isRunning ? Color.green : theme.accent).frame(width: 5.5, height: 5.5)
-Text(lang == .en ? "AUTO SCAN" : "AUTO 实景测算").fMono(8.5, .black).foregroundStyle(theme.accent) }
-Text(String(format: "🎯 %.1fm", distance)).font(.system(size: 18, weight: .black, design: .rounded)).foregroundStyle(Color.white).contentTransition(.numericText())
-Text(String(format: "☀️ EV %.1f", ambientEV100)).fMono(10.5, .bold).foregroundStyle(theme.accent).contentTransition(.numericText())
-HStack(spacing: 12) {
+HStack {
+HStack(spacing: 3.5) {
+Circle().fill(cameraEVReader.isRunning ? Color.green : theme.accent).frame(width: 6, height: 6)
+Text(lang == .en ? "OPTICAL / LiDAR" : "实景光学取景 · 激光测距").fMono(8.5, .black).foregroundStyle(theme.accent) }
+Spacer()
+Image(systemName: "viewfinder").fSys(11, .bold).foregroundStyle(theme.accent) }
+Spacer(minLength: 0)
+HStack(alignment: .firstTextBaseline, spacing: 8) {
+VStack(alignment: .leading, spacing: 1) {
+Text(lang == .en ? "SUBJECT DIST" : "中心主体距离").fMono(8, .bold).foregroundStyle(Color.white.opacity(0.55))
+Text(String(format: "🎯 %.1fm", distance)).font(.system(size: 18, weight: .black, design: .rounded)).foregroundStyle(Color.white).contentTransition(.numericText()) }
+Spacer(minLength: 2)
+VStack(alignment: .trailing, spacing: 1) {
+Text(lang == .en ? "AMBIENT EV" : "现场环境光").fMono(8, .bold).foregroundStyle(Color.white.opacity(0.55))
+Text(String(format: "☀️ EV %.1f", ambientEV100)).fMono(13, .black).foregroundStyle(theme.accent).contentTransition(.numericText()) }}
+Spacer(minLength: 0)
+HStack(spacing: 5) {
 Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
 withAnimation(.snappy) { ambientEV100 = max(-2.0, ambientEV100 - 0.5) }} label: {
-Text("EV-").fMono(8.5, .black).foregroundStyle(Color.white.opacity(0.85)).padding(.horizontal, 5).padding(.vertical, 2).background(Color.white.opacity(0.12), in: Capsule()) }
+Text("EV-").fMono(9, .black).foregroundStyle(Color.white).padding(.horizontal, 7).padding(.vertical, 3).background(Color.white.opacity(0.14), in: Capsule()) }
+Text(lang == .en ? "Tap Viewfinder" : "点取景框全屏实测").fSys(9, .bold).foregroundStyle(Color.black).frame(maxWidth: .infinity).padding(.vertical, 3.5).background(theme.accent, in: Capsule())
 Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
 withAnimation(.snappy) { ambientEV100 = min(18.0, ambientEV100 + 0.5) }} label: {
-Text("EV+").fMono(8.5, .black).foregroundStyle(Color.black).padding(.horizontal, 5).padding(.vertical, 2).background(theme.accent, in: Capsule()) }
-}.padding(.top, 1) }}
-.contentShape(Circle())
+Text("EV+").fMono(9, .black).foregroundStyle(Color.white).padding(.horizontal, 7).padding(.vertical, 3).background(Color.white.opacity(0.14), in: Capsule()) }}
+}.padding(9) }.frame(maxHeight: .infinity)
+.contentShape(RoundedRectangle(cornerRadius: 14))
 .onTapGesture {
 feedback.tabSwitchHaptic(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
 showCameraEVMeterSheet = true }
-Text(lang == .en ? "🎯 Tap Lens for LiDAR & EV" : "🎯 点击镜头进入激光测距与测光").fSys(9.5, .medium).foregroundStyle(Color.white.opacity(0.75)).lineLimit(1)
-}.frame(maxWidth: .infinity) }
-private var rotaryDialAndRightThumbLiveMeterCard: some View {
+VStack(alignment: .leading, spacing: 4) {
+Text(lang == .en ? "OUTPUT MODE (RIGHT-THUMB)" : "闪光输出模式 (右手拇指区)").fMono(8.5, .bold).foregroundStyle(Color.white.opacity(0.58))
+LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)], spacing: 5) {
+ForEach(FlashRoleMode.allCases) { role in flashRoleRightThumbTile(role) }}}
+}.frame(maxWidth: .infinity, maxHeight: .infinity) }
+private var bottomDrumAndRightThumbConsoleCard: some View {
 VStack(spacing: 6) {
 quickChipsBar
-Spacer(minLength: 0)
-HStack(alignment: .center, spacing: 6) {
-MechanicalRotaryDialView(
-selectedParameter: selectedParameter, currentValueText: currentSelectedParameterText, subtitleText: currentSelectedParameterSubtitle, lang: lang, theme: theme,
-onStepChange: { delta in withAnimation(.snappy) { stepSelectedParameter(by: delta) }}
-).frame(maxWidth: .infinity)
-autoSensorTurretWheel }
-Spacer(minLength: 0)
+HStack(alignment: .center, spacing: 8) {
+iOSClockDrumWheelView(
+items: currentDrumItems, selectedIndex: currentDrumIndex, parameterIcon: selectedParameter.icon, subtitleText: currentSelectedParameterSubtitle, theme: theme,
+onStepChange: { delta in
+withAnimation(.snappy) { stepSelectedParameter(by: delta) }}
+).frame(maxWidth: .infinity, maxHeight: .infinity)
+liveOpticalViewfinderHUDCard
+}.frame(maxHeight: .infinity)
 }.padding(.horizontal, 10).padding(.vertical, 8).frame(maxWidth: .infinity, maxHeight: .infinity).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22)) }
 private var ambientBalanceBadgeText: String {
 let diff = exposureResult.ambientDiffEV; let roleTag = flashRole.shortTag(for: lang)
@@ -1999,8 +2045,9 @@ ForEach(rollFrames) { item in
 loggedFrameRowView(item) }}}} .padding(13).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20)) }
 private func loggedFrameRowView(_ item: FilmFrameRecord) -> some View {
 VStack(alignment: .leading, spacing: 3) {
-HStack(spacing: 6) {
-Text(String(format: "#%02d", item.frameNumber)).fMono(11, .black).foregroundStyle(Color.black).padding(.horizontal, 6).padding(.vertical, 1.5).background(theme.accent, in: Capsule())
+HStack(spacing: 5) {
+Text(String(format: "#%02d", item.frameNumber)).fMono(10.5, .black).foregroundStyle(Color.black).padding(.horizontal, 5.5).padding(.vertical, 1.5).background(theme.accent, in: Capsule())
+FilmBrandLogoBadge(brand: FilmBrandCategory.detect(from: item.filmStockName), compact: true)
 Text(item.filmStockName).fSys(11, .heavy).foregroundStyle(theme.accent).lineLimit(1)
 Spacer(minLength: 2)
 Text(item.powerLabel).fMono(11, .black).foregroundStyle(Color.white)
@@ -2299,49 +2346,6 @@ private func dropdownCapsuleLabel(text: String) -> some View {
 HStack(spacing: 5) {
 Text(text).fMono(11, .bold).foregroundStyle(Color.white).lineLimit(1).contentTransition(.numericText())
 Image(systemName: "chevron.up.chevron.down").fSys(9, .bold).foregroundStyle(theme.accent) } .padding(.horizontal, 10).padding(.vertical, 5.5).background(Color.white.opacity(0.12), in: Capsule()) }
-private var flashRoleCenteredPopoverOverlay: some View {
-ZStack {
-Color.black.opacity(0.52).ignoresSafeArea()
-.onTapGesture {
-withAnimation(.snappy) { showFlashRoleCenteredMenu = false }}
-VStack(spacing: 10) {
-VStack(spacing: 3) {
-Text(lang == .en ? "⚡ Flash & Ambient Role" : "⚡ 主光联动与补光策略").font(.system(size: 14, weight: .black, design: .rounded)).foregroundStyle(Color.white).multilineTextAlignment(.center)
-Text(lang == .en ? "Select how flash output balances with ambient light" : "选择闪光灯与现场环境光的能量配比方式").fSys(10.5, .medium).foregroundStyle(Color.white.opacity(0.68)).multilineTextAlignment(.center) } .padding(.top, 2)
-VStack(spacing: 7) {
-ForEach(FlashRoleMode.allCases) { role in
-let isSel = (flashRoleRaw == role.rawValue)
-Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true)
-withAnimation(.snappy) {
-flashRoleRaw = role.rawValue
-if lockPower { solveForLockedPower(changed: .flashPower) }
-syncWidgetDefaults()
-showFlashRoleCenteredMenu = false }} label: {
-VStack(spacing: 2.5) {
-HStack(spacing: 6) {
-Spacer(minLength: 0)
-Text(role.title(for: lang)).fSys(12, .bold).foregroundStyle(isSel ? Color.black : Color.white)
-if isSel {
-Image(systemName: "checkmark.circle.fill").fSys(12, .bold).foregroundStyle(Color.black) }
-Spacer(minLength: 0) }
-Text(role.subtitle(for: lang)).fSys(9.5, .medium).foregroundStyle(isSel ? Color.black.opacity(0.78) : Color.white.opacity(0.62)).multilineTextAlignment(.center).lineLimit(2) } .frame(maxWidth: .infinity).padding(.horizontal, 12).padding(.vertical, 8.5).background(isSel ? theme.accent : Color.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 13)).overlay(RoundedRectangle(cornerRadius: 13).stroke(isSel ? Color.white.opacity(0.6) : Color.white.opacity(0.14), lineWidth: 1)) } .buttonStyle(.plain) }}
-Divider().background(Color.white.opacity(0.18))
-VStack(spacing: 6) {
-Text(lang == .en ? "Quick Scene Ambient EV Preset" : "快速选择现场环境光预设 (或点相机实测)").fSys(10, .bold).foregroundStyle(Color.white.opacity(0.72)).multilineTextAlignment(.center)
-LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-ForEach(ambientSceneOptions) { sc in
-let active = abs(ambientEV100 - sc.value) < 0.6
-Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-withAnimation(.snappy) { ambientEV100 = sc.value }} label: {
-Text("EV \(Int(sc.value))").fMono(10.5, .bold).foregroundStyle(active ? Color.black : Color.white).frame(maxWidth: .infinity).padding(.vertical, 6).background(active ? theme.accent : Color.white.opacity(0.10), in: Capsule()) } .buttonStyle(.plain) }}}
-Button { feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-withAnimation(.snappy) { showFlashRoleCenteredMenu = false }} label: {
-Text(lang == .en ? "Done" : "完成").fSys(12, .bold).foregroundStyle(Color.white.opacity(0.85)).frame(maxWidth: .infinity).padding(.vertical, 7.5).background(Color.white.opacity(0.12), in: Capsule()) }} .padding(16).frame(maxWidth: 326).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
-.overlay(
-RoundedRectangle(cornerRadius: 24)
-.stroke(
-LinearGradient(
-colors: [Color.white.opacity(0.65), theme.accent.opacity(0.45), Color.white.opacity(0.20)], startPoint: .topLeading, endPoint: .bottomTrailing ), lineWidth: 1.5 ) ).shadow(color: Color.black.opacity(0.55), radius: 24, x: 0, y: 12).padding(.horizontal, 24) }}
 private var appleMusicLiquidGlassBottomBar: some View {
 GeometryReader { geo in
 let pad: CGFloat = 6; let availW = max(180, geo.size.width - pad * 2); let tabW = availW / 3.0
@@ -2368,53 +2372,48 @@ Text(title).font(.system(size: 10.5, weight: isSelected ? .black : .semibold, de
 .contentShape(Rectangle())
 .animation(.spring(response: 0.34, dampingFraction: 0.72), value: isSelected)
 }.buttonStyle(.plain) }}
-struct MechanicalRotaryDialView: View {
-let selectedParameter: DialParameter; let currentValueText: String; let subtitleText: String; let lang: AppLanguage; let theme: AppTheme; let onStepChange: (Int) -> Void; @State private var visualAngle: Double = 0; @State private var lastDragAngle: Double? = nil; @State private var accumulatedAngle: Double = 0
-private func tickColor(for index: Int) -> Color {
-if index == 0 { return theme.accent }
-return (index % 3 == 0) ? Color.white.opacity(0.90) : Color.white.opacity(0.30) }
+struct iOSClockDrumWheelView: View {
+let items: [String]; let selectedIndex: Int; let parameterIcon: String; let subtitleText: String; let theme: AppTheme; let onStepChange: (Int) -> Void; @State private var dragAccumY: CGFloat = 0
+@ViewBuilder private func drumRowView(offset: Int) -> some View {
+let targetIdx = selectedIndex + offset
+if targetIdx >= 0 && targetIdx < items.count {
+let isCenter = (offset == 0); let absOff = abs(offset); let fontSz: CGFloat = isCenter ? 21.0 : (absOff == 1 ? 15.0 : 12.0); let rowAlpha: Double = isCenter ? 1.0 : (absOff == 1 ? 0.52 : 0.24); let rowScale: CGFloat = isCenter ? 1.0 : (absOff == 1 ? 0.88 : 0.76); let deg: Double = Double(offset) * -18.0
+Text(items[targetIdx]).font(.system(size: fontSz, weight: isCenter ? .black : .bold, design: .monospaced)).foregroundStyle(isCenter ? Color.white : Color.white.opacity(0.85)).lineLimit(1).minimumScaleFactor(0.75).frame(maxWidth: .infinity).frame(height: isCenter ? 36 : 25).scaleEffect(rowScale).opacity(rowAlpha).rotation3DEffect(.degrees(deg), axis: (x: 1, y: 0, z: 0), perspective: 0.4)
+.contentShape(Rectangle())
+.onTapGesture {
+if offset != 0 { onStepChange(offset > 0 ? 1 : -1) }}} else {
+Color.clear.frame(height: offset == 0 ? 36 : 25) }}
 var body: some View {
-VStack(spacing: 3) {
+VStack(spacing: 4) {
 ZStack {
-Circle().fill(RadialGradient(colors: [theme.accent.opacity(0.22), Color.clear], center: .center, startRadius: 48, endRadius: 86)).frame(width: 162, height: 162)
-Circle().fill(AngularGradient(colors: theme.dialRingColors, center: .center)).frame(width: 154, height: 154).shadow(color: Color.black.opacity(0.5), radius: 9, x: 0, y: 4)
-Circle().fill(LinearGradient(colors: [Color(white: 0.17), Color(white: 0.06)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(width: 136, height: 136)
-ZStack {
-ForEach(0..<36, id: \.self) { i in
-Rectangle().fill(tickColor(for: i)).frame(width: i % 3 == 0 ? 2.2 : 1.0, height: i % 3 == 0 ? 10 : 5).offset(y: -60).rotationEffect(.degrees(Double(i) * 10.0)) }
-Circle().fill(theme.accent).frame(width: 7, height: 7).offset(y: -47).shadow(color: theme.accent, radius: 4)
-}.rotationEffect(.degrees(visualAngle))
-Circle().fill(.ultraThinMaterial).frame(width: 98, height: 98)
-VStack(spacing: 1.5) {
-HStack(spacing: 3) {
-Image(systemName: selectedParameter.icon).fSys(9, .bold).foregroundStyle(theme.accent)
-Text(lang == .en ? "MANUAL DIAL" : "MANUAL 手动调参").fMono(8.5, .black).foregroundStyle(theme.accent) }
-Text(currentValueText).font(.system(size: 19, weight: .black, design: .rounded)).foregroundStyle(Color.white).minimumScaleFactor(0.7).contentTransition(.numericText())
-HStack(spacing: 14) {
-Button { withAnimation(.snappy) { visualAngle -= 14 }; onStepChange(-1) } label: {
-Image(systemName: "minus.circle.fill").fSys(16, .bold).foregroundStyle(Color.white.opacity(0.78)) }
-Button { withAnimation(.snappy) { visualAngle += 14 }; onStepChange(1) } label: {
-Image(systemName: "plus.circle.fill").fSys(16, .bold).foregroundStyle(theme.accent) }
-}.padding(.top, 1) }}
-.contentShape(Circle())
+RoundedRectangle(cornerRadius: 16).fill(LinearGradient(colors: [Color.black.opacity(0.55), Color(white: 0.10), Color.black.opacity(0.55)], startPoint: .top, endPoint: .bottom))
+RoundedRectangle(cornerRadius: 11).fill(Color.white.opacity(0.14)).overlay(RoundedRectangle(cornerRadius: 11).stroke(theme.accent.opacity(0.75), lineWidth: 1.2)).frame(height: 38).padding(.horizontal, 6)
+VStack(spacing: 1) {
+drumRowView(offset: -2)
+drumRowView(offset: -1)
+drumRowView(offset: 0)
+drumRowView(offset: 1)
+drumRowView(offset: 2) }.mask(LinearGradient(stops: [.init(color: .clear, location: 0.0), .init(color: .white, location: 0.18), .init(color: .white, location: 0.82), .init(color: .clear, location: 1.0)], startPoint: .top, endPoint: .bottom))
+HStack {
+Button { onStepChange(-1) } label: {
+Image(systemName: "minus").fSys(13, .black).foregroundStyle(Color.white).frame(width: 30, height: 30).background(Color.white.opacity(0.14), in: Circle()) }
+Spacer()
+Button { onStepChange(1) } label: {
+Image(systemName: "plus").fSys(13, .black).foregroundStyle(Color.black).frame(width: 30, height: 30).background(theme.accent, in: Circle()) }
+}.padding(.horizontal, 11) }.frame(maxHeight: .infinity)
+.contentShape(Rectangle())
 .gesture(
-DragGesture(minimumDistance: 0)
-.onChanged { value in
-let center = CGPoint(x: 81, y: 81); let dx = Double(value.location.x - center.x); let dy = Double(value.location.y - center.y); let currentAngle = atan2(dy, dx) * 180.0 / .pi
-if let last = lastDragAngle {
-var delta = currentAngle - last
-if delta > 180 { delta -= 360 }
-if delta < -180 { delta += 360 }
-visualAngle += delta
-accumulatedAngle += delta
-let stepThreshold = 12.0
-if abs(accumulatedAngle) >= stepThreshold {
-let steps = Int(accumulatedAngle / stepThreshold)
-accumulatedAngle -= Double(steps) * stepThreshold
-onStepChange(steps > 0 ? 1 : -1) }}
-lastDragAngle = currentAngle }
-.onEnded { _ in lastDragAngle = nil; accumulatedAngle = 0 } )
-Text(subtitleText).fSys(9.5, .medium).foregroundStyle(Color.white.opacity(0.75)).lineLimit(1) }}}
+DragGesture(minimumDistance: 4)
+.onChanged { val in
+let dy = val.translation.height - dragAccumY; let stepH: CGFloat = 22.0
+if abs(dy) >= stepH {
+let steps = Int(dy / stepH)
+dragAccumY += CGFloat(steps) * stepH
+onStepChange(steps < 0 ? 1 : -1) }}
+.onEnded { _ in dragAccumY = 0 } )
+HStack(spacing: 4) {
+Image(systemName: parameterIcon).fSys(9.5, .bold).foregroundStyle(theme.accent)
+Text(subtitleText).fSys(9.5, .medium).foregroundStyle(Color.white.opacity(0.72)).lineLimit(1) }}}}
 struct CameraAmbientMeterSheet: View {
 @Binding var ambientEV100: Double
 @Binding var subjectDistance: Double
@@ -2425,78 +2424,68 @@ let lang: AppLanguage; let theme: AppTheme
 private let distSteps: [Double] = [0.5, 0.7, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0]
 private func snapDistance(_ raw: Double) -> Double {
 distSteps.min(by: { abs($0 - raw) < abs($1 - raw) }) ?? max(0.5, min(15.0, (raw * 2.0).rounded() / 2.0)) }
-private func sceneHint(for ev: Double) -> String {
-if ev < 5.5 { return lang == .en ? "Night Street (~EV 5)" : "🌃 暗夜街拍 (~EV 5)" }
-if ev < 7.5 { return lang == .en ? "IndoorDim (~EV 7)" : "☕ 室内环境 (~EV 7)" }
-if ev < 10.5 { return lang == .en ? "Bright Indoor (~EV 9)" : "🏢 明亮室内 (~EV 9)" }
-if ev < 12.8 { return lang == .en ? "Shade / Overcast (~EV 12)" : "🌿 树荫/阴天 (~EV 12)" }
-return lang == .en ? "Direct Sunlight (~EV 15)" : "☀️ 晴天阳光 (~EV 15)" }
 var body: some View {
 ZStack {
-LinearGradient(colors: theme.backgroundGradient, startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
-VStack(spacing: 10) {
-HStack {
+Color.black.ignoresSafeArea()
+CameraPreviewLayerView(session: reader.session).ignoresSafeArea()
+.onTapGesture { reader.recenterExposurePoint() }
+ZStack {
+RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.28), lineWidth: 1.2).frame(width: 260, height: 260)
+Circle().stroke(Color.white.opacity(0.85), style: StrokeStyle(lineWidth: 1.5, dash: [6, 6])).frame(width: 120, height: 120)
+Circle().stroke(theme.accent, lineWidth: 2.2).frame(width: 28, height: 28)
+VStack {
+Spacer().frame(height: 165)
+Text(String(format: "🎯 %.1f m · %@", reader.liveDistanceMeters, reader.distanceSensorLabel)).fMono(11.5, .black).foregroundStyle(Color.black).padding(.horizontal, 10).padding(.vertical, 4).background(theme.accent, in: Capsule()) }
+}.allowsHitTesting(false)
+VStack {
+HStack(spacing: 8) {
 HStack(spacing: 6) {
 Circle().fill(reader.isRunning ? Color.green : Color.orange).frame(width: 8, height: 8)
-Text(lang == .en ? "Live EV100 & LiDAR Subject Distance" : "📷 实景环境光测光 + 🎯 中心主体激光测距").fSys(13.5, .black).foregroundStyle(Color.white) }
+Text(lang == .en ? "LIVE VIEWFINDER" : "全屏实景测光 · 激光测距").fSys(13, .black).foregroundStyle(Color.white)
+}.padding(.horizontal, 12).padding(.vertical, 7).background(.ultraThinMaterial, in: Capsule())
+Button { reader.toggleLensFieldOfView(lang: lang) } label: {
+Text(reader.useUltraWideLens ? "0.5x" : "1x").fMono(12, .black).foregroundStyle(Color.black).padding(.horizontal, 10).padding(.vertical, 7).background(theme.accent, in: Capsule()) }
 Spacer()
 Button {
 if !keepRunningInBackground { reader.stopReading() }
 dismiss() } label: {
-Image(systemName: "xmark.circle.fill").font(.system(size: 22)).foregroundStyle(Color.white.opacity(0.65)) }}
-ZStack {
-CameraPreviewLayerView(session: reader.session).frame(height: 290).clipShape(RoundedRectangle(cornerRadius: 20))
-.onTapGesture { reader.recenterExposurePoint() }
-ZStack {
-RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.22), lineWidth: 1).frame(width: 210, height: 150)
-Circle().stroke(Color.white.opacity(0.8), style: StrokeStyle(lineWidth: 1.3, dash: [5, 5])).frame(width: 92, height: 92)
-Circle().stroke(theme.accent, lineWidth: 2.0).frame(width: 24, height: 24)
-VStack(spacing: 2) {
-Spacer().frame(height: 118)
-Text(String(format: "🎯 %.1f m (%@)", reader.liveDistanceMeters, reader.distanceSensorLabel)).fMono(10.5, .black).foregroundStyle(Color.black).padding(.horizontal, 8).padding(.vertical, 3).background(theme.accent, in: Capsule()) }}
-VStack {
-HStack(spacing: 6) {
-Button { reader.toggleLensFieldOfView(lang: lang) } label: {
-HStack(spacing: 4) {
-Image(systemName: "camera.aperture").fSys(10, .bold)
-Text(reader.useUltraWideLens ? (lang == .en ? "0.5x Ultra-Wide" : "0.5x 超广角") : (lang == .en ? "1x Wide + Depth" : "1x 广角测距")).fSys(10, .bold)
-}.foregroundStyle(Color.black).padding(.horizontal, 9).padding(.vertical, 4.5).background(theme.accent, in: Capsule()) }
+Image(systemName: "xmark.circle.fill").font(.system(size: 28)).foregroundStyle(Color.white).shadow(radius: 4) }
+}.padding(.horizontal, 16).padding(.top, 14)
+HStack {
+Text(String(format: "CMOS: f/%.1f · 1/%ds · ISO %.0f", reader.cameraAperture, reader.cameraShutterDenom, reader.cameraISO)).fMono(10, .bold).foregroundStyle(Color.cyan).padding(.horizontal, 10).padding(.vertical, 4.5).background(Color.black.opacity(0.55), in: Capsule())
 Spacer()
-Text(String(format: "f/%.1f · 1/%ds · ISO %.0f", reader.cameraAperture, reader.cameraShutterDenom, reader.cameraISO)).fMono(9.5, .bold).foregroundStyle(Color.cyan).padding(.horizontal, 8).padding(.vertical, 4).background(Color.black.opacity(0.65), in: Capsule())
-}.padding(10)
+}.padding(.horizontal, 16).padding(.top, 4)
 Spacer()
+VStack(spacing: 10) {
 HStack(alignment: .center) {
-VStack(alignment: .leading, spacing: 1) {
-Text(lang == .en ? "AMBIENT EV100" : "实时环境光亮度").fMono(8.5, .bold).foregroundStyle(Color.white.opacity(0.65))
-Text(String(format: "EV %.1f", reader.liveEV100)).font(.system(size: 26, weight: .black, design: .rounded)).foregroundStyle(theme.accent).contentTransition(.numericText()) }
+VStack(alignment: .leading, spacing: 2) {
+Text(lang == .en ? "AMBIENT LIGHT" : "现场环境光亮度").fMono(9.5, .bold).foregroundStyle(Color.white.opacity(0.7))
+Text(String(format: "☀️ EV %.1f", reader.liveEV100)).font(.system(size: 30, weight: .black, design: .rounded)).foregroundStyle(theme.accent).contentTransition(.numericText()) }
 Spacer()
-VStack(alignment: .trailing, spacing: 1) {
-Text(reader.distanceSensorLabel).fMono(8.5, .bold).foregroundStyle(Color.green)
-Text(String(format: "🎯 %.1f m", reader.liveDistanceMeters)).font(.system(size: 26, weight: .black, design: .rounded)).foregroundStyle(Color.white).contentTransition(.numericText()) }
-}.padding(.horizontal, 14).padding(.vertical, 8).background(Color.black.opacity(0.72))
-}.frame(height: 290).clipShape(RoundedRectangle(cornerRadius: 20)) }
+VStack(alignment: .trailing, spacing: 2) {
+Text(reader.distanceSensorLabel).fMono(9.5, .bold).foregroundStyle(Color.green)
+Text(String(format: "🎯 %.1f m", reader.liveDistanceMeters)).font(.system(size: 30, weight: .black, design: .rounded)).foregroundStyle(Color.white).contentTransition(.numericText()) }}
 HStack(spacing: 8) {
-Text(lang == .en ? "EV Calibration" : "反射率校准").fSys(11, .semibold).foregroundStyle(Color.white.opacity(0.85))
+Text(lang == .en ? "EV Trim" : "反射率校准").fSys(11, .semibold).foregroundStyle(Color.white.opacity(0.85))
 Slider(value: $reader.calibrationTrimEV, in: -1.0...1.0, step: 0.1).tint(theme.accent)
 Button { reader.calibrationTrimEV = 0.0 } label: {
-Text(String(format: "%+.1f EV", reader.calibrationTrimEV)).fMono(10, .bold).foregroundStyle(abs(reader.calibrationTrimEV) < 0.05 ? Color.white : Color.black).padding(.horizontal, 7).padding(.vertical, 4).background(abs(reader.calibrationTrimEV) < 0.05 ? Color.white.opacity(0.14) : theme.accent, in: Capsule()) }
-}.padding(.horizontal, 12).padding(.vertical, 7).background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 13))
+Text(String(format: "%+.1f EV", reader.calibrationTrimEV)).fMono(10, .bold).foregroundStyle(abs(reader.calibrationTrimEV) < 0.05 ? Color.white : Color.black).padding(.horizontal, 7).padding(.vertical, 4).background(abs(reader.calibrationTrimEV) < 0.05 ? Color.white.opacity(0.14) : theme.accent, in: Capsule()) }}
 Toggle(isOn: $keepRunningInBackground) {
-Text(lang == .en ? "Keep Live EV running in background" : "返回测光页后保持后台连续测光").fSys(11, .semibold).foregroundStyle(Color.white.opacity(0.9))
-}.tint(Color.green).padding(.horizontal, 4)
+Text(lang == .en ? "Keep Live EV active in background" : "返回主页后保持后台连续测光").fSys(11, .semibold).foregroundStyle(Color.white.opacity(0.9))
+}.tint(Color.green)
 Button { ambientEV100 = reader.liveEV100
 subjectDistance = snapDistance(reader.liveDistanceMeters)
 if !keepRunningInBackground { reader.stopReading() }
 dismiss() } label: {
 HStack(spacing: 6) {
 Image(systemName: "scope").fSys(14, .black)
-Text(lang == .en ? String(format: "Apply Both: EV %.1f + Distance %.1fm", reader.liveEV100, snapDistance(reader.liveDistanceMeters)) : String(format: "同时填入环境光 (EV %.1f) 与中心距离 (%.1fm)", reader.liveEV100, snapDistance(reader.liveDistanceMeters))).fSys(13.5, .black)
-}.foregroundStyle(Color.black).frame(maxWidth: .infinity).padding(.vertical, 12.5).background(theme.accent, in: RoundedRectangle(cornerRadius: 15)) }
+Text(lang == .en ? String(format: "Apply EV %.1f + Distance %.1fm", reader.liveEV100, snapDistance(reader.liveDistanceMeters)) : String(format: "同时填入环境光 (EV %.1f) 与中心距离 (%.1fm)", reader.liveEV100, snapDistance(reader.liveDistanceMeters))).fSys(13.5, .black)
+}.foregroundStyle(Color.black).frame(maxWidth: .infinity).padding(.vertical, 13).background(theme.accent, in: RoundedRectangle(cornerRadius: 15)) }
 Button { ambientEV100 = reader.liveEV100
 if !keepRunningInBackground { reader.stopReading() }
 dismiss() } label: {
-Text(lang == .en ? String(format: "Apply EV %.1f Only (Keep Current Distance)", reader.liveEV100) : String(format: "仅填入环境光 EV %.1f（保持原距离不变）", reader.liveEV100)).fSys(11.5, .bold).foregroundStyle(Color.white.opacity(0.85)).frame(maxWidth: .infinity).padding(.vertical, 9).background(Color.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 12)) }
-}.padding(16) }
+Text(lang == .en ? String(format: "Apply EV %.1f Only (Keep Distance)", reader.liveEV100) : String(format: "仅填入环境光 EV %.1f（保持原距离不变）", reader.liveEV100)).fSys(11.5, .bold).foregroundStyle(Color.white.opacity(0.9)).frame(maxWidth: .infinity).padding(.vertical, 9).background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12)) }
+}.padding(16).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24)).padding(.horizontal, 12).padding(.bottom, 10) }}
 .onAppear {
 keepRunningInBackground = reader.isRunning
 reader.startReading(lang: lang) { newEV in ambientEV100 = newEV }}
