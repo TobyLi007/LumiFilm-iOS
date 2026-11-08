@@ -1614,125 +1614,189 @@ Text(exposureResult.subNote).fMono(10.5, .bold).foregroundStyle(exposureResult.s
 }.frame(height: 15, alignment: .leading)
 }.padding(.horizontal, 14).padding(.vertical, 8).frame(height: 92).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20)).overlay(RoundedRectangle(cornerRadius: 20).stroke(bannerStroke, lineWidth: isCurtainAlert || lockPower ? 1.6 : 0)) }
 private func flashRoleRightThumbTile(_ role: FlashRoleMode) -> some View {
-let isSel: Bool = (flashRoleRaw == role.rawValue); let iconName: String = role == .keyAutoSum ? "bolt.shield.fill" : (role == .fillNatural ? "sun.max.fill" : (role == .catchlightSoft ? "sparkles" : "moon.stars.fill")); let shortTitle: String = role == .keyAutoSum ? (lang == .en ? "Key Auto" : "主光防过曝") : (role == .fillNatural ? (lang == .en ? "Fill -1.3" : "逆光补光") : (role == .catchlightSoft ? (lang == .en ? "Eye -2.0" : "眼神微补") : (lang == .en ? "Pure Flash" : "纯闪光")))
-return Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true)
+let isSel: Bool = (flashRoleRaw == role.rawValue)
+let iconName: String = role == .keyAutoSum ? "bolt.shield.fill" : (role == .fillNatural ? "sun.max.fill" : (role == .catchlightSoft ? "sparkles" : "moon.stars.fill"))
+let shortTitle: String = role == .keyAutoSum ? (lang == .en ? "Key Auto" : "主光防过曝") : (role == .fillNatural ? (lang == .en ? "Fill Light" : "逆光补光") : (role == .catchlightSoft ? (lang == .en ? "Catchlight" : "眼神微补") : (lang == .en ? "Pure Flash" : "纯闪光")))
+let subBias: String = role == .keyAutoSum ? (lang == .en ? "Auto Balance" : "环境光联动") : (role == .fillNatural ? "-1.3 EV" : (role == .catchlightSoft ? "-2.0 EV" : (lang == .en ? "Darkroom" : "忽略环境光")))
+return Button {
+feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true)
 withAnimation(.snappy) {
 flashRoleRaw = role.rawValue
 if lockPower { solveForLockedPower(changed: .flashPower) }
-syncWidgetDefaults() }} label: {
+syncWidgetDefaults()
+}
+} label: {
+VStack(alignment: .leading, spacing: 2) {
 HStack(spacing: 4) {
-Image(systemName: iconName).fSys(10, .bold)
-Text(shortTitle).fSys(10, .black).lineLimit(1).minimumScaleFactor(0.72)
-}.foregroundStyle(isSel ? Color.black : Color.white.opacity(0.88)).frame(maxWidth: .infinity).frame(height: 31).background(isSel ? theme.accent : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
-}.buttonStyle(.plain) }
+Image(systemName: iconName).fSys(11.5, .bold).foregroundStyle(isSel ? Color.black : theme.accent)
+Text(shortTitle).fSys(11.5, .black).lineLimit(1).minimumScaleFactor(0.75)
+Spacer(minLength: 0)
+}
+Text(subBias).fMono(9, .bold).foregroundStyle(isSel ? Color.black.opacity(0.72) : Color.white.opacity(0.55)).lineLimit(1)
+}
+.foregroundStyle(isSel ? Color.black : Color.white)
+.padding(.horizontal, 9).frame(maxWidth: .infinity).frame(height: 44)
+.background(isSel ? theme.accent : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+}.buttonStyle(.plain)
+}
 private var parameterLockGridCard: some View {
 LazyVGrid(columns: [GridItem(.flexible(), spacing: 7), GridItem(.flexible(), spacing: 7)], spacing: 7) {
 lockableMetricTile(param: .distance, label: lang == .en ? "1. DISTANCE (∝ d²)" : "★ 距离 DISTANCE (最敏感)", value: String(format: "%.1f m", distance), isLocked: $lockDistance)
 lockableMetricTile(param: .aperture, label: lang == .en ? "2. APERTURE (f/)" : "★ 光圈 APERTURE (控景深)", value: formatFStop(aperture), isLocked: $lockAperture)
 lockableMetricTile(param: .shutter, label: lang == .en ? "3. SHUTTER (Amb)" : "快门 SHUTTER (控背景)", value: "1/\(shutterDenom)s", isLocked: $lockShutter)
-lockableMetricTile(param: .flashPower, label: lang == .en ? "4. POWER" : "闪光功率 POWER", value: lockPower ? lockedPowerText : (lang == .en ? "AUTO" : "AUTO 自动"), isLocked: $lockPower) }}
+lockableMetricTile(param: .flashPower, label: lang == .en ? "4. POWER" : "闪光功率 POWER", value: lockPower ? lockedPowerText : (lang == .en ? "AUTO" : "AUTO 自动"), isLocked: $lockPower)
+}
+}
 private var dedicatedExposureCompensationCard: some View {
 HStack(spacing: 8) {
 Text(lang == .en ? "EV Bias" : "曝光补偿").fSys(11.5, .bold).foregroundStyle(Color.white.opacity(0.85)).fixedSize()
-Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-withAnimation(.snappy) { stepExposureComp(by: -1) }} label: {
-Image(systemName: "minus").fSys(10.5, .black).foregroundStyle(Color.white).frame(width: 26, height: 26).background(Color.white.opacity(0.10), in: Circle()) }
+Button {
+feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+withAnimation(.snappy) { stepExposureComp(by: -1) }
+} label: {
+Image(systemName: "minus").fSys(10.5, .black).foregroundStyle(Color.white).frame(width: 26, height: 26).background(Color.white.opacity(0.10), in: Circle())
+}
 Slider(value: $exposureCompEV, in: -2.0...2.0).tint(theme.accent)
-Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-withAnimation(.snappy) { stepExposureComp(by: 1) }} label: {
-Image(systemName: "plus").fSys(10.5, .black).foregroundStyle(Color.white).frame(width: 26, height: 26).background(Color.white.opacity(0.10), in: Circle()) }
-Button { feedback.zeroEVSnapFeedback(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-withAnimation(.snappy) { exposureCompEV = 0.0; lastSnappedEVComp = 0.0 }} label: {
-Text(abs(exposureCompEV) < 0.05 ? "0.0 EV" : String(format: "%+.1f EV", exposureCompEV)).fMono(11, .black).foregroundStyle(abs(exposureCompEV) < 0.05 ? Color.white.opacity(0.85) : Color.black).frame(width: 58, height: 26).background(abs(exposureCompEV) < 0.05 ? Color.white.opacity(0.10) : theme.accent, in: Capsule()) }
-}.padding(.horizontal, 12).padding(.vertical, 6).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)) }
+Button {
+feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+withAnimation(.snappy) { stepExposureComp(by: 1) }
+} label: {
+Image(systemName: "plus").fSys(10.5, .black).foregroundStyle(Color.white).frame(width: 26, height: 26).background(Color.white.opacity(0.10), in: Circle())
+}
+Button {
+feedback.zeroEVSnapFeedback(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+withAnimation(.snappy) { exposureCompEV = 0.0; lastSnappedEVComp = 0.0 }
+} label: {
+Text(abs(exposureCompEV) < 0.05 ? "0.0 EV" : String(format: "%+.1f EV", exposureCompEV)).fMono(11, .black).foregroundStyle(abs(exposureCompEV) < 0.05 ? Color.white.opacity(0.85) : Color.black).frame(width: 58, height: 26).background(abs(exposureCompEV) < 0.05 ? Color.white.opacity(0.10) : theme.accent, in: Capsule())
+}
+}.padding(.horizontal, 12).padding(.vertical, 6).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+}
 private var appleMusicMiniRollBar: some View {
 HStack(spacing: 8) {
-Button { feedback.tabSwitchHaptic(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-withAnimation(.spring(response: 0.36, dampingFraction: 0.74)) { selectedTab = (selectedTab == 1) ? 0 : 1 }} label: {
+Button {
+feedback.tabSwitchHaptic(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+withAnimation(.spring(response: 0.36, dampingFraction: 0.74)) { selectedTab = (selectedTab == 1) ? 0 : 1 }
+} label: {
 HStack(spacing: 7) {
 FilmBrandLogoBadge(brand: currentFilmBrand, compact: false)
 VStack(alignment: .leading, spacing: 1) {
 HStack(spacing: 4) {
 Text(selectedFilmStock?.name ?? "ISO \(Int(filmISO))").fSys(11, .black).foregroundStyle(Color.white).lineLimit(1)
-Text("· \(filmFormat.shortTag)").fMono(9.5, .bold).foregroundStyle(theme.accent) }
-Text(logSavedToast ?? String(format: "#%02d/%02d · %@ · 1/%ds · %@", Int(round(currentFrameNumber)), filmFormat.maxFrames, formatFStop(aperture), shutterDenom, powerMainAndTrim.main)).fMono(9.5, .semibold).foregroundStyle(logSavedToast != nil ? Color.green : Color.white.opacity(0.68)).lineLimit(1) }}
+Text("· \(filmFormat.shortTag)").fMono(9.5, .bold).foregroundStyle(theme.accent)
+}
+Text(logSavedToast ?? String(format: "#%02d/%02d · %@ · 1/%ds · %@", Int(round(currentFrameNumber)), filmFormat.maxFrames, formatFStop(aperture), shutterDenom, powerMainAndTrim.main)).fMono(9.5, .semibold).foregroundStyle(logSavedToast != nil ? Color.green : Color.white.opacity(0.68)).lineLimit(1)
+}
+}
 }.buttonStyle(.plain)
 Spacer(minLength: 2)
-Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-withAnimation(.snappy) { currentFrameNumber = max(1.0, currentFrameNumber - 1.0) }} label: {
-Image(systemName: "minus").fSys(10, .black).foregroundStyle(Color.white).frame(width: 24, height: 24).background(Color.white.opacity(0.10), in: Circle()) }
+Button {
+feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+withAnimation(.snappy) { currentFrameNumber = max(1.0, currentFrameNumber - 1.0) }
+} label: {
+Image(systemName: "minus").fSys(10, .black).foregroundStyle(Color.white).frame(width: 24, height: 24).background(Color.white.opacity(0.10), in: Circle())
+}
 Button { recordCurrentFrameToLog() } label: {
 HStack(spacing: 4) {
 Image(systemName: "camera.shutter.button.fill").fSys(10.5, .bold)
 Text(lang == .en ? "+1 Log" : "+1 快记").fSys(10.5, .black)
-}.foregroundStyle(Color.black).padding(.horizontal, 10).padding(.vertical, 5.5).background(theme.accent, in: Capsule()) }
-}.padding(.horizontal, 10).padding(.vertical, 5.5).background(.ultraThinMaterial, in: Capsule()) }
+}.foregroundStyle(Color.black).padding(.horizontal, 10).padding(.vertical, 5.5).background(theme.accent, in: Capsule())
+}
+}.padding(.horizontal, 10).padding(.vertical, 5.5).background(.ultraThinMaterial, in: Capsule())
+}
 private var currentDrumItems: [String] {
 switch selectedParameter {
 case .aperture: return apertureSteps.map { formatFStop($0) }
 case .distance: return distanceSteps.map { String(format: "%.1f m", $0) }
 case .shutter: return shutterSteps.map { "1/\($0)s" }
-case .flashPower: return powerDenominators.map { $0 == 1 ? "1/1" : "1/\($0)" }}}
+case .flashPower: return powerDenominators.map { $0 == 1 ? "1/1" : "1/\($0)" }
+}
+}
 private var currentDrumIndex: Int {
 switch selectedParameter {
 case .aperture: return apertureSteps.enumerated().min(by: { abs($0.element - aperture) < abs($1.element - aperture) })?.offset ?? 0
 case .distance: return distanceSteps.enumerated().min(by: { abs($0.element - distance) < abs($1.element - distance) })?.offset ?? 0
 case .shutter: return shutterSteps.enumerated().min(by: { abs($0.element - shutterDenom) < abs($1.element - shutterDenom) })?.offset ?? 0
-case .flashPower: return max(0, min(powerDenominators.count - 1, manualPowerIndex)) }}
+case .flashPower: return max(0, min(powerDenominators.count - 1, manualPowerIndex))
+}
+}
 private var liveOpticalViewfinderHUDCard: some View {
-VStack(spacing: 6) {
+VStack(spacing: 7) {
 ZStack {
-RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color.black.opacity(0.62), Color(white: 0.12)], startPoint: .top, endPoint: .bottom))
-RoundedRectangle(cornerRadius: 10).strokeBorder(style: StrokeStyle(lineWidth: 1.0, dash: [8, 6])).foregroundStyle(theme.accent.opacity(0.45)).padding(6)
-Circle().stroke(cameraEVReader.isRunning ? Color.green.opacity(0.55) : theme.accent.opacity(0.35), lineWidth: 1.0).frame(width: 68, height: 68)
-Circle().stroke(theme.accent.opacity(0.75), style: StrokeStyle(lineWidth: 1.2, dash: [3, 3])).frame(width: 34, height: 34)
-VStack(spacing: 3) {
-HStack {
-HStack(spacing: 3.5) {
-Circle().fill(cameraEVReader.isRunning ? Color.green : theme.accent).frame(width: 6, height: 6)
-Text(lang == .en ? "OPTICAL / LiDAR" : "实景光学取景 · 激光测距").fMono(8.5, .black).foregroundStyle(theme.accent) }
-Spacer()
-Image(systemName: "viewfinder").fSys(11, .bold).foregroundStyle(theme.accent) }
-Spacer(minLength: 0)
-HStack(alignment: .firstTextBaseline, spacing: 8) {
+RoundedRectangle(cornerRadius: 15).fill(LinearGradient(colors: [theme.accent.opacity(0.16), Color.white.opacity(0.06), theme.secondaryAccent.opacity(0.12)], startPoint: .topLeading, endPoint: .bottomTrailing))
+VStack(spacing: 5) {
+HStack(spacing: 7) {
+ZStack {
+Circle().fill(theme.accent.opacity(0.22)).frame(width: 32, height: 32)
+Image(systemName: "camera.fill").fSys(14, .black).foregroundStyle(theme.accent)
+}
 VStack(alignment: .leading, spacing: 1) {
-Text(lang == .en ? "SUBJECT DIST" : "中心主体距离").fMono(8, .bold).foregroundStyle(Color.white.opacity(0.55))
-Text(String(format: "🎯 %.1fm", distance)).font(.system(size: 18, weight: .black, design: .rounded)).foregroundStyle(Color.white).contentTransition(.numericText()) }
-Spacer(minLength: 2)
-VStack(alignment: .trailing, spacing: 1) {
-Text(lang == .en ? "AMBIENT EV" : "现场环境光").fMono(8, .bold).foregroundStyle(Color.white.opacity(0.55))
-Text(String(format: "☀️ EV %.1f", ambientEV100)).fMono(13, .black).foregroundStyle(theme.accent).contentTransition(.numericText()) }}
+HStack(spacing: 4) {
+Text(lang == .en ? "CAMERA METER" : "实景相机测光 · 测距").fSys(11.5, .black).foregroundStyle(Color.white).lineLimit(1)
+if cameraEVReader.isRunning {
+Circle().fill(Color.green).frame(width: 6, height: 6)
+}
+}
+Text(lang == .en ? "Tap to Measure EV & Distance" : "点击开启相机测光与激光测距").fSys(9, .medium).foregroundStyle(Color.white.opacity(0.65)).lineLimit(1)
+}
 Spacer(minLength: 0)
-HStack(spacing: 5) {
-Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-withAnimation(.snappy) { ambientEV100 = max(-2.0, ambientEV100 - 0.5) }} label: {
-Text("EV-").fMono(9, .black).foregroundStyle(Color.white).padding(.horizontal, 7).padding(.vertical, 3).background(Color.white.opacity(0.14), in: Capsule()) }
-Text(lang == .en ? "Tap Viewfinder" : "点取景框全屏实测").fSys(9, .bold).foregroundStyle(Color.black).frame(maxWidth: .infinity).padding(.vertical, 3.5).background(theme.accent, in: Capsule())
-Button { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-withAnimation(.snappy) { ambientEV100 = min(18.0, ambientEV100 + 0.5) }} label: {
-Text("EV+").fMono(9, .black).foregroundStyle(Color.white).padding(.horizontal, 7).padding(.vertical, 3).background(Color.white.opacity(0.14), in: Capsule()) }}
-}.padding(9) }.frame(maxHeight: .infinity)
-.contentShape(RoundedRectangle(cornerRadius: 14))
+}
+Spacer(minLength: 0)
+HStack(spacing: 6) {
+HStack(spacing: 4) {
+Image(systemName: "scope").fSys(10, .bold).foregroundStyle(theme.accent)
+Text(String(format: "%.1fm", distance)).fMono(13, .black).foregroundStyle(Color.white)
+}.padding(.horizontal, 8).padding(.vertical, 4).background(Color.white.opacity(0.08), in: Capsule())
+Spacer(minLength: 2)
+HStack(spacing: 3) {
+Button {
+feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+withAnimation(.snappy) { ambientEV100 = max(-2.0, ambientEV100 - 0.5) }
+} label: {
+Text("-").fMono(11, .black).foregroundStyle(Color.white).frame(width: 22, height: 22).background(Color.white.opacity(0.12), in: Circle())
+}
+Text(String(format: "EV %.1f", ambientEV100)).fMono(11.5, .black).foregroundStyle(theme.accent)
+Button {
+feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+withAnimation(.snappy) { ambientEV100 = min(18.0, ambientEV100 + 0.5) }
+} label: {
+Text("+").fMono(11, .black).foregroundStyle(Color.white).frame(width: 22, height: 22).background(Color.white.opacity(0.12), in: Circle())
+}
+}
+}
+}.padding(10)
+}
+.frame(maxHeight: .infinity)
+.contentShape(RoundedRectangle(cornerRadius: 15))
 .onTapGesture {
 feedback.tabSwitchHaptic(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-showCameraEVMeterSheet = true }
-VStack(alignment: .leading, spacing: 4) {
-Text(lang == .en ? "OUTPUT MODE (RIGHT-THUMB)" : "闪光输出模式 (右手拇指区)").fMono(8.5, .bold).foregroundStyle(Color.white.opacity(0.58))
-LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)], spacing: 5) {
-ForEach(FlashRoleMode.allCases) { role in flashRoleRightThumbTile(role) }}}
-}.frame(maxWidth: .infinity, maxHeight: .infinity) }
+showCameraEVMeterSheet = true
+}
+VStack(alignment: .leading, spacing: 5) {
+Text(lang == .en ? "FLASH MODE · 闪光补光模式" : "FLASH MODE · 闪光补光模式").fMono(9, .bold).foregroundStyle(Color.white.opacity(0.62))
+LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
+ForEach(FlashRoleMode.allCases) { role in flashRoleRightThumbTile(role) }
+}
+}
+}.frame(maxWidth: .infinity, maxHeight: .infinity)
+}
 private var bottomDrumAndRightThumbConsoleCard: some View {
 VStack(spacing: 6) {
 quickChipsBar
 HStack(alignment: .center, spacing: 8) {
 iOSClockDrumWheelView(
-items: currentDrumItems, selectedIndex: currentDrumIndex, parameterIcon: selectedParameter.icon, subtitleText: currentSelectedParameterSubtitle, theme: theme,
+items: currentDrumItems,
+selectedIndex: currentDrumIndex,
+parameterIcon: selectedParameter.icon,
+subtitleText: currentSelectedParameterSubtitle,
+theme: theme,
 onStepChange: { delta in
-withAnimation(.snappy) { stepSelectedParameter(by: delta) }}
+withAnimation(.snappy) { stepSelectedParameter(by: delta) }
+}
 ).frame(maxWidth: .infinity, maxHeight: .infinity)
 liveOpticalViewfinderHUDCard
 }.frame(maxHeight: .infinity)
-}.padding(.horizontal, 10).padding(.vertical, 8).frame(maxWidth: .infinity, maxHeight: .infinity).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22)) }
+}.padding(.horizontal, 10).padding(.vertical, 8).frame(maxWidth: .infinity, maxHeight: .infinity).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
+}
 private var ambientBalanceBadgeText: String {
 let diff = exposureResult.ambientDiffEV; let roleTag = flashRole.shortTag(for: lang)
 if diff < -1.8 { return "\(roleTag) · EV\(Int(ambientEV100))" }
@@ -2373,47 +2437,75 @@ Text(title).font(.system(size: 10.5, weight: isSelected ? .black : .semibold, de
 .animation(.spring(response: 0.34, dampingFraction: 0.72), value: isSelected)
 }.buttonStyle(.plain) }}
 struct iOSClockDrumWheelView: View {
-let items: [String]; let selectedIndex: Int; let parameterIcon: String; let subtitleText: String; let theme: AppTheme; let onStepChange: (Int) -> Void; @State private var dragAccumY: CGFloat = 0
+let items: [String]
+let selectedIndex: Int
+let parameterIcon: String
+let subtitleText: String
+let theme: AppTheme
+let onStepChange: (Int) -> Void
+@State private var dragAccumY: CGFloat = 0
 @ViewBuilder private func drumRowView(offset: Int) -> some View {
 let targetIdx = selectedIndex + offset
 if targetIdx >= 0 && targetIdx < items.count {
-let isCenter = (offset == 0); let absOff = abs(offset); let fontSz: CGFloat = isCenter ? 21.0 : (absOff == 1 ? 15.0 : 12.0); let rowAlpha: Double = isCenter ? 1.0 : (absOff == 1 ? 0.52 : 0.24); let rowScale: CGFloat = isCenter ? 1.0 : (absOff == 1 ? 0.88 : 0.76); let deg: Double = Double(offset) * -18.0
-Text(items[targetIdx]).font(.system(size: fontSz, weight: isCenter ? .black : .bold, design: .monospaced)).foregroundStyle(isCenter ? Color.white : Color.white.opacity(0.85)).lineLimit(1).minimumScaleFactor(0.75).frame(maxWidth: .infinity).frame(height: isCenter ? 36 : 25).scaleEffect(rowScale).opacity(rowAlpha).rotation3DEffect(.degrees(deg), axis: (x: 1, y: 0, z: 0), perspective: 0.4)
+let isCenter = (offset == 0)
+let absOff = abs(offset)
+let fontSz: CGFloat = isCenter ? 23.0 : (absOff == 1 ? 15.5 : 12.0)
+let rowAlpha: Double = isCenter ? 1.0 : (absOff == 1 ? 0.52 : 0.25)
+let rowScale: CGFloat = isCenter ? 1.0 : (absOff == 1 ? 0.88 : 0.76)
+let deg: Double = Double(offset) * -18.0
+Text(items[targetIdx])
+.font(.system(size: fontSz, weight: isCenter ? .black : .bold, design: .monospaced))
+.foregroundStyle(isCenter ? theme.accent : Color.white.opacity(0.88))
+.lineLimit(1).minimumScaleFactor(0.75)
+.frame(maxWidth: .infinity).frame(height: isCenter ? 38 : 25)
+.scaleEffect(rowScale)
+.opacity(rowAlpha)
+.rotation3DEffect(.degrees(deg), axis: (x: 1, y: 0, z: 0), perspective: 0.4)
 .contentShape(Rectangle())
 .onTapGesture {
-if offset != 0 { onStepChange(offset > 0 ? 1 : -1) }}} else {
-Color.clear.frame(height: offset == 0 ? 36 : 25) }}
+if offset != 0 { onStepChange(offset > 0 ? 1 : -1) }
+}
+} else {
+Color.clear.frame(height: offset == 0 ? 38 : 25)
+}
+}
 var body: some View {
 VStack(spacing: 4) {
 ZStack {
-RoundedRectangle(cornerRadius: 16).fill(LinearGradient(colors: [Color.black.opacity(0.55), Color(white: 0.10), Color.black.opacity(0.55)], startPoint: .top, endPoint: .bottom))
-RoundedRectangle(cornerRadius: 11).fill(Color.white.opacity(0.14)).overlay(RoundedRectangle(cornerRadius: 11).stroke(theme.accent.opacity(0.75), lineWidth: 1.2)).frame(height: 38).padding(.horizontal, 6)
+RoundedRectangle(cornerRadius: 15).fill(LinearGradient(colors: [theme.accent.opacity(0.08), Color.white.opacity(0.05), theme.secondaryAccent.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
+RoundedRectangle(cornerRadius: 11).fill(Color.white.opacity(0.14))
+.frame(height: 38).padding(.horizontal, 8)
 VStack(spacing: 1) {
 drumRowView(offset: -2)
 drumRowView(offset: -1)
 drumRowView(offset: 0)
 drumRowView(offset: 1)
-drumRowView(offset: 2) }.mask(LinearGradient(stops: [.init(color: .clear, location: 0.0), .init(color: .white, location: 0.18), .init(color: .white, location: 0.82), .init(color: .clear, location: 1.0)], startPoint: .top, endPoint: .bottom))
-HStack {
-Button { onStepChange(-1) } label: {
-Image(systemName: "minus").fSys(13, .black).foregroundStyle(Color.white).frame(width: 30, height: 30).background(Color.white.opacity(0.14), in: Circle()) }
-Spacer()
-Button { onStepChange(1) } label: {
-Image(systemName: "plus").fSys(13, .black).foregroundStyle(Color.black).frame(width: 30, height: 30).background(theme.accent, in: Circle()) }
-}.padding(.horizontal, 11) }.frame(maxHeight: .infinity)
+drumRowView(offset: 2)
+}
+.mask(LinearGradient(stops: [.init(color: .clear, location: 0.0), .init(color: .white, location: 0.16), .init(color: .white, location: 0.84), .init(color: .clear, location: 1.0)], startPoint: .top, endPoint: .bottom))
+}
+.frame(maxHeight: .infinity)
 .contentShape(Rectangle())
 .gesture(
 DragGesture(minimumDistance: 4)
 .onChanged { val in
-let dy = val.translation.height - dragAccumY; let stepH: CGFloat = 22.0
+let dy = val.translation.height - dragAccumY
+let stepH: CGFloat = 22.0
 if abs(dy) >= stepH {
 let steps = Int(dy / stepH)
 dragAccumY += CGFloat(steps) * stepH
-onStepChange(steps < 0 ? 1 : -1) }}
-.onEnded { _ in dragAccumY = 0 } )
+onStepChange(steps < 0 ? 1 : -1)
+}
+}
+.onEnded { _ in dragAccumY = 0 }
+)
 HStack(spacing: 4) {
 Image(systemName: parameterIcon).fSys(9.5, .bold).foregroundStyle(theme.accent)
-Text(subtitleText).fSys(9.5, .medium).foregroundStyle(Color.white.opacity(0.72)).lineLimit(1) }}}}
+Text(subtitleText).fSys(9.5, .medium).foregroundStyle(Color.white.opacity(0.72)).lineLimit(1)
+}
+}
+}
+}
 struct CameraAmbientMeterSheet: View {
 @Binding var ambientEV100: Double
 @Binding var subjectDistance: Double
