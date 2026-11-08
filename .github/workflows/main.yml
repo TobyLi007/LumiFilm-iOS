@@ -1655,7 +1655,7 @@ jobs:
     if lockPower { solveForLockedPower(changed: .aperture) }}} label: {
     Text(formatFStop(step)).fMono(11, .bold).foregroundStyle(active ? Color.black : Color.white).padding(.horizontal, 10).padding(.vertical, 5).background(active ? theme.accent : Color.white.opacity(0.12), in: Capsule())
     }.id(chipID) }
-    case .distance: ForEach(distanceSteps, id: \.self) { d in; let active = abs(distance - d) < 0.08; let chipID = "dist_\(Int(round(d * 10)))"
+    case .distance: ForEach(distanceSteps, id: \.self) { d in let active = abs(distance - d) < 0.08; let chipID = "dist_\(Int(round(d * 10)))"
     Button { guard !lockDistance else { return }
     lastEditedParameter = .distance
     feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true)
