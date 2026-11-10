@@ -898,7 +898,7 @@ jobs:
     private func formatShutter(_ s: Int) -> String { s < 0 ? "\(-s)\"" : (s == 1 ? "1\"" : "1/\(s)s") }
     private func shutterSeconds(_ s: Int) -> Double { s < 0 ? Double(-s) : (1.0 / Double(max(1, s))) }
     private func reciprocityAdjustedSeconds(for s: Int) -> Double? { let sec = shutterSeconds(s); guard sec >= 1.0 else { return nil }
-    let p: Double = (currentFilmBrand == .fujifilm) ? 1.18 : (currentFilmBrand == .ilford || currentFilmBrand == .lomoHarman ? 1.38 : 1.28); return pow(sec, p) }
+    let p: Double = (currentFilmBrand == .fujifilm) ? 1.18 : (currentFilmBrand == .ilford || currentFilmBrand == .lomoOther ? 1.38 : 1.28); return pow(sec, p) }
     private let isoSteps: [Double] = [
     50, 64, 100, 125, 160, 200, 250, 320, 400, 500, 800, 1600, 3200 ]
     private let evCompSteps: [Double] = [
@@ -1143,35 +1143,73 @@ jobs:
     : String(format: "已存 #%02d (%@ · 1/%ds · %@)", fNum, formatFStop(aperture), shutterDenom, exposureResult.powerTitle)
     if fNum < maxF { currentFrameNumber = Double(fNum + 1) }}}
     private var activeFilmMeshColors: (Color, Color) { (selectedFilmStock?.brand ?? .kodak).meshColors }
-    var body: some View { ZStack { LinearGradient(colors: theme.backgroundGradient, startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea().animation(.easeInOut(duration: 0.35), value: themeRaw)
+    private var syncStateSignature: String {
+    "\(aperture)_\(distance)_\(shutterDenom)_\(themeRaw)_\(modifierLossEV)_\(bounceLossEV)_\(filterLossEV)_\(pushPullEV)_\(filmISO)_\(filmFormatRaw)_\(flashGN)_\(maxSyncSpeed)_\(syncModeRaw)_\(flashZoomMM)_\(ambientEV100)"
+    }
+    private var mainScreenStack: some View {
+    ZStack {
+    LinearGradient(colors: theme.backgroundGradient, startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea().animation(.easeInOut(duration: 0.35), value: themeRaw)
     Circle().fill(activeFilmMeshColors.0.opacity(0.28)).frame(width: 280, height: 280).blur(radius: 72).offset(x: -105, y: -210).animation(.easeInOut(duration: 0.65), value: selectedFilmStockID)
     Circle().fill(activeFilmMeshColors.1.opacity(0.24)).frame(width: 260, height: 260).blur(radius: 72).offset(x: 115, y: 175).animation(.easeInOut(duration: 0.65), value: selectedFilmStockID)
-    VStack(spacing: 6) { headerBar.padding(.horizontal, 14).padding(.top, 2).frame(height: 44)
-    ZStack { if selectedTab == 0 { meterMainTab.transition(.opacity.combined(with: .scale(scale: 0.985)))
-    } else if selectedTab == 1 { modifiersTab.transition(.opacity.combined(with: .scale(scale: 0.985))) } else { settingsTab.transition(.opacity.combined(with: .scale(scale: 0.985)))
-    }}.animation(.spring(response: 0.34, dampingFraction: 0.82), value: selectedTab).padding(.horizontal, 14).frame(maxWidth: .infinity, maxHeight: .infinity)
-    VStack(spacing: 6) { appleMusicMiniRollBar.padding(.horizontal, 14).frame(height: 42)
+    VStack(spacing: 6) {
+    headerBar.padding(.horizontal, 14).padding(.top, 2).frame(height: 44)
+    ZStack {
+    if selectedTab == 0 { meterMainTab.transition(.opacity.combined(with: .scale(scale: 0.985))) }
+    else if selectedTab == 1 { modifiersTab.transition(.opacity.combined(with: .scale(scale: 0.985))) }
+    else { settingsTab.transition(.opacity.combined(with: .scale(scale: 0.985))) }
+    }.animation(.spring(response: 0.34, dampingFraction: 0.82), value: selectedTab).padding(.horizontal, 14).frame(maxWidth: .infinity, maxHeight: .infinity)
+    VStack(spacing: 6) {
+    appleMusicMiniRollBar.padding(.horizontal, 14).frame(height: 42)
     appleMusicLiquidGlassBottomBar.padding(.horizontal, 16).frame(height: 58)
     }.frame(height: 106).padding(.bottom, 2)
-    }.ignoresSafeArea(.keyboard, edges: .bottom) }.onAppear { if aperture < maxLensAperture { aperture = maxLensAperture }
+    }.ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+    .onAppear {
+    if aperture < maxLensAperture { aperture = maxLensAperture }
     setExposureCompClean(exposureCompEV)
-    feedback.refreshVoiceQualityStatus(persona: voicePersona, lang: lang); syncWidgetDefaults(); if !hasCompletedOnboarding { showOnboardingSheet = true } else { checkPendingShortcutTriggers() }}.onOpenURL { url in handleIncomingURL(url) }.onReceive(NotificationCenter.default.publisher(for: Notification.Name("LumiFilmActionVoiceTrigger"))) { _ in UserDefaults.standard.set(false, forKey: "lf_shortcut_trigger_voice")
-    triggerActionButtonVoiceFlow() }.onReceive(NotificationCenter.default.publisher(for: Notification.Name("LumiFilmActionSpeakTrigger"))) { _ in UserDefaults.standard.set(false, forKey: "lf_shortcut_trigger_speak")
-    speakCurrentExposureOnce() }.onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in LocalLoopbackSyncBridge.shared.startServerIfNeeded()
-    pullFromWidgetStoreIfNewer()
-    checkPendingShortcutTriggers() }.onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in syncWidgetDefaults() }.onReceive(NotificationCenter.default.publisher(for: Notification.Name("LumiFilmWidgetRemoteSet"))) { note in if let dict = note.userInfo as? [String: Double] { applyRemoteWidgetDict(dict) }}.onChange(of: aperture) { _, _ in if lastEditedParameter == .aperture && lockPower { solveForLockedPower(changed: .aperture) }
-    syncWidgetDefaults() }.onChange(of: distance) { _, _ in if lastEditedParameter == .distance && lockPower { solveForLockedPower(changed: .distance) }
-    syncWidgetDefaults() }.onChange(of: shutterDenom) { _, _ in if lastEditedParameter == .shutter && lockPower { solveForLockedPower(changed: .shutter) }
-    syncWidgetDefaults() }.onChange(of: themeRaw) { _, _ in syncWidgetDefaults() }.onChange(of: modifierLossEV) { _, _ in syncWidgetDefaults() }.onChange(of: bounceLossEV) { _, _ in syncWidgetDefaults() }.onChange(of: filterLossEV) { _, _ in syncWidgetDefaults() }.onChange(of: pushPullEV) { _, _ in syncWidgetDefaults() }.onChange(of: flashZoomMM) { _, _ in syncWidgetDefaults() }.onChange(of: ambientEV100) { _, _ in syncWidgetDefaults() }.onChange(of: filmISO) { _, _ in syncWidgetDefaults() }.onChange(of: filmFormatRaw) { _, _ in if currentFrameNumber > Double(filmFormat.maxFrames) { currentFrameNumber = Double(filmFormat.maxFrames) }
-    syncWidgetDefaults() }.onChange(of: flashGN) { _, _ in syncWidgetDefaults() }.onChange(of: maxSyncSpeed) { _, _ in syncWidgetDefaults() }.onChange(of: syncModeRaw) { _, _ in syncWidgetDefaults() }.onChange(of: manualPowerIndex) { _, _ in if lockPower { solveForLockedPower(changed: .flashPower) }}.onChange(of: exposureCompEV) { _, newVal in let cleanVal: Double; if abs(newVal) < 0.14 { cleanVal = 0.0 } else { cleanVal = evCompSteps.min(by: { abs($0 - newVal) < abs($1 - newVal) }) ?? 0.0 }
+    feedback.refreshVoiceQualityStatus(persona: voicePersona, lang: lang); syncWidgetDefaults()
+    if !hasCompletedOnboarding { showOnboardingSheet = true } else { checkPendingShortcutTriggers() }
+    }
+    .onOpenURL { url in handleIncomingURL(url) }
+    .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LumiFilmActionVoiceTrigger"))) { _ in
+    UserDefaults.standard.set(false, forKey: "lf_shortcut_trigger_voice"); triggerActionButtonVoiceFlow()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LumiFilmActionSpeakTrigger"))) { _ in
+    UserDefaults.standard.set(false, forKey: "lf_shortcut_trigger_speak"); speakCurrentExposureOnce()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+    LocalLoopbackSyncBridge.shared.startServerIfNeeded(); pullFromWidgetStoreIfNewer(); checkPendingShortcutTriggers()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in syncWidgetDefaults() }
+    .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LumiFilmWidgetRemoteSet"))) { note in
+    if let dict = note.userInfo as? [String: Double] { applyRemoteWidgetDict(dict) }
+    }
+    }
+    var body: some View {
+    mainScreenStack
+    .onChange(of: syncStateSignature) { _, _ in
+    if currentFrameNumber > Double(filmFormat.maxFrames) { currentFrameNumber = Double(filmFormat.maxFrames) }
+    syncWidgetDefaults()
+    }
+    .onChange(of: aperture) { _, _ in if lastEditedParameter == .aperture && lockPower { solveForLockedPower(changed: .aperture) } }
+    .onChange(of: distance) { _, _ in if lastEditedParameter == .distance && lockPower { solveForLockedPower(changed: .distance) } }
+    .onChange(of: shutterDenom) { _, _ in if lastEditedParameter == .shutter && lockPower { solveForLockedPower(changed: .shutter) } }
+    .onChange(of: manualPowerIndex) { _, _ in if lockPower { solveForLockedPower(changed: .flashPower) } }
+    .onChange(of: exposureCompEV) { _, newVal in
+    let cleanVal: Double = abs(newVal) < 0.14 ? 0.0 : (evCompSteps.min(by: { abs($0 - newVal) < abs($1 - newVal) }) ?? 0.0)
     if abs(cleanVal - newVal) > 0.005 { exposureCompEV = cleanVal }
-    if abs(cleanVal - lastSnappedEVComp) >= 0.15 { if abs(cleanVal) < 0.05 { feedback.zeroEVSnapFeedback(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled) } else { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: false) }
-    lastSnappedEVComp = cleanVal }
+    if abs(cleanVal - lastSnappedEVComp) >= 0.15 {
+    if abs(cleanVal) < 0.05 { feedback.zeroEVSnapFeedback(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled) }
+    else { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: false) }
+    lastSnappedEVComp = cleanVal
+    }
     if lockPower { solveForLockedPower(changed: .flashPower) }
-    syncWidgetDefaults() }.sheet(isPresented: $showGuideSheet) { LumiFilmManualAndVoiceSheet(
-    initialTab: guideInitialSection, lang: lang, theme: theme ).presentationDetents([.large]) }.sheet(isPresented: $showCameraEVMeterSheet) { CameraAmbientMeterSheet(
-    ambientEV100: $ambientEV100, subjectDistance: $distance, lang: lang, theme: theme ).presentationDetents([.large]) }.sheet(isPresented: $showOnboardingSheet) { OnboardingSetupSheet(
-    filmISO: $filmISO, selectedFilmStockID: $selectedFilmStockID, filmFormatRaw: $filmFormatRaw, flashGN: $flashGN, selectedFlashID: $selectedFlashID, maxLensAperture: $maxLensAperture, maxSyncSpeed: $maxSyncSpeed, syncModeRaw: $syncModeRaw, cameraPresetID: $cameraPresetID, aperture: $aperture, themeRaw: $themeRaw, hasCompletedOnboarding: $hasCompletedOnboarding, lang: lang, theme: theme ).presentationDetents([.large]).interactiveDismissDisabled(!hasCompletedOnboarding) }}
+    syncWidgetDefaults()
+    }
+    .sheet(isPresented: $showGuideSheet) { LumiFilmManualAndVoiceSheet(initialTab: guideInitialSection, lang: lang, theme: theme).presentationDetents([.large]) }
+    .sheet(isPresented: $showCameraEVMeterSheet) { CameraAmbientMeterSheet(ambientEV100: $ambientEV100, subjectDistance: $distance, lang: lang, theme: theme).presentationDetents([.large]) }
+    .sheet(isPresented: $showOnboardingSheet) { OnboardingSetupSheet(filmISO: $filmISO, selectedFilmStockID: $selectedFilmStockID, filmFormatRaw: $filmFormatRaw, flashGN: $flashGN, selectedFlashID: $selectedFlashID, maxLensAperture: $maxLensAperture, maxSyncSpeed: $maxSyncSpeed, syncModeRaw: $syncModeRaw, cameraPresetID: $cameraPresetID, aperture: $aperture, themeRaw: $themeRaw, hasCompletedOnboarding: $hasCompletedOnboarding, lang: lang, theme: theme).presentationDetents([.large]).interactiveDismissDisabled(!hasCompletedOnboarding) }
+    }
     private var currentFilmBrand: FilmBrandCategory { selectedFilmStock?.brand ?? .customISO }
     private var headerBar: some View { HStack(spacing: 6) { Button { feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
     withAnimation(.snappy) { selectedTab = 2 }} label: { HStack(spacing: 5) { FilmBrandLogoBadge(brand: currentFilmBrand, compact: true)
@@ -1322,7 +1360,7 @@ jobs:
     Button { lastEditedParameter = .evBias
     if abs(ev) < 0.05 { feedback.zeroEVSnapFeedback(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled) } else { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true) }
     withAnimation(.snappy) { exposureCompEV = ev; if lockPower { solveForLockedPower(changed: .evBias) }}} label: { Text(label).fMono(11, .bold).foregroundStyle(active ? Color.black : Color.white).padding(.horizontal, 10).padding(.vertical, 5).background(active ? theme.accent : Color.white.opacity(0.12), in: Capsule())
-    }.id(chipID) }}}}.onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { withAnimation(.snappy) { proxy.scrollTo(activeQuickChipID, anchor: .center) }}}.onChange(of: selectedParameter) { _, _ in DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) { withAnimation(.snappy) { proxy.scrollTo(activeQuickChipID, anchor: .center) }}}.onChange(of: aperture) { _, _ in withAnimation(.snappy) { proxy.scrollTo(activeQuickChipID, anchor: .center) }}.onChange(of: distance) { _, _ in withAnimation(.snappy) { proxy.scrollTo(activeQuickChipID, anchor: .center) }}.onChange(of: shutterDenom) { _, _ in withAnimation(.snappy) { proxy.scrollTo(activeQuickChipID, anchor: .center) }}.onChange(of: manualPowerIndex) { _, _ in withAnimation(.snappy) { proxy.scrollTo(activeQuickChipID, anchor: .center) }}.onChange(of: exposureCompEV) { _, _ in withAnimation(.snappy) { proxy.scrollTo(activeQuickChipID, anchor: .center) }}}}
+    }.id(chipID) }}}}.onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { withAnimation(.snappy) { proxy.scrollTo(activeQuickChipID, anchor: .center) }}}.onChange(of: activeQuickChipID) { _, newID in DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { withAnimation(.snappy) { proxy.scrollTo(newID, anchor: .center) }}}}}
     private var currentSelectedParameterSubtitle: String { switch selectedParameter { case .aperture: return lockAperture
     ? (lang == .en ? "🔒 Aperture Locked" : "🔒 光圈已锁定 (点卡片解锁)")
     : (lang == .en ? "Lens Limit ≥ \(formatFStop(maxLensAperture))" : "镜头限制 ≥ \(formatFStop(maxLensAperture))")
