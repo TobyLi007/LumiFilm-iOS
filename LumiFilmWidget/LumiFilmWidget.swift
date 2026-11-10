@@ -15,7 +15,8 @@ case .threadsMinimal: return Color(red: 0.13, green: 0.13, blue: 0.15).opacity(0
 struct FlashCalculator { static let apertureSteps: [Double] = [
 1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6, 8.0, 11.0, 16.0, 22.0 ]
 static let shutterSteps: [Int] = [
-1, 2, 4, 8, 15, 30, 50, 60, 90, 100, 125, 200, 250, 500, 1000, 2000, 4000 ]
+-15, -8, -4, -2, 1, 2, 4, 8, 15, 30, 50, 60, 90, 100, 125, 200, 250, 500, 1000, 2000, 4000 ]
+static func formatShutter(_ s: Int) -> String { s < 0 ? "\(-s)\"" : (s == 1 ? "1\"" : "1/\(s)s") }
 static let distanceSteps: [Double] = [
 0.5, 0.7, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0 ]
 static let isoSteps: [Double] = [
@@ -29,8 +30,7 @@ static func powerComponents(gnAt100: Double, iso: Double, distance: Double, aper
 if syncModeRaw == 0 && isOverSync { return ("帘幕黑边!", "≤1/\(effMaxSync)s", "🚨 机械幕帘遮挡! 请降至 ≤1/\(effMaxSync)s 或换LS镜间镜头", true) }
 if power > 1.05 { return ("OVER", ">1/1", "欠曝·请开大光圈或靠近", true) }
 if power < (1.0 / 256.0) { return ("LOW", "<1/128", "过曝·请收小光圈或后退", true) }
-let stops = round(log2(1.0 / max(power, 0.001)) * 3.0) / 3.0; let whole = max(0, min(7, Int(round(stops)))); let trimEV = Double(whole) - stops; let denom = 1 << whole; let fracStr = denom == 1 ? "1/1" : "1/\(denom)"; let syncTag = syncModeRaw == 1 ? (isOverSync ? "超出镜间上限" : "LS镜间全同步") : (isOverSync ? "HSS高速同步" : "安全同步")
-if abs(trimEV) < 0.14 { return (fracStr, nil, "整档输出 · \(syncTag)", isOverSync) }
+let stops = round(log2(1.0 / max(power, 0.001)) * 3.0) / 3.0; let whole = max(0, min(7, Int(round(stops)))); let trimEV = Double(whole) - stops; let denom = 1 << whole; let fracStr = denom == 1 ? "1/1" : "1/\(denom)"; let syncTag = syncModeRaw == 1 ? (isOverSync ? "超出镜间上限" : "LS镜间全同步") : (isOverSync ? "HSS高速同步" : "安全同步"); if abs(trimEV) < 0.14 { return (fracStr, nil, "整档输出 · \(syncTag)", isOverSync) }
 return (fracStr, String(format: "%+.1fEV", trimEV), "1/3档微调 · \(syncTag)", isOverSync) }
 static func formatFStop(_ val: Double) -> String { if abs(val - round(val)) < 0.05 { return String(format: "f/%.0f", round(val)) }
 return String(format: "f/%.1f", val) }}
@@ -40,8 +40,7 @@ static let discoveredGroups: [String] = { var groups: [String] = ["group.com.lum
 if let bid = Bundle.main.bundleIdentifier { var base = bid
 if base.hasSuffix(".widget") { base = String(base.dropLast(7)) }
 if base.hasSuffix(".LumiFilmWidget") { base = String(base.dropLast(15)) }
-let g = "group.\(base)"
-if !groups.contains(g) { groups.insert(g, at: 0) }}
+let g = "group.\(base)"; if !groups.contains(g) { groups.insert(g, at: 0) }}
 let urls = [
 Bundle.main.bundleURL.appendingPathComponent("embedded.mobileprovision"), Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("embedded.mobileprovision") ]
 for u in urls { if let data = try? Data(contentsOf: u) { let text = String(decoding: data, as: UTF8.self)
@@ -68,8 +67,7 @@ return Data(buf[0..<n]) }
 static func loadSharedDict() -> [String: Double] { var best: [String: Double] = [:]
 var bestTS: Double = -1.0
 func check(_ d: [String: Double]?) { guard let d = d, !d.isEmpty else { return }
-let ts = d["lf_sync_ts"] ?? 0.0
-if ts >= bestTS { bestTS = ts
+let ts = d["lf_sync_ts"] ?? 0.0; if ts >= bestTS { bestTS = ts
 best = d }}
 if let udpData = sendLoopbackUDP("GET"), let udpDict = try? JSONDecoder().decode([String: Double].self, from: udpData) { check(udpDict)
 UserDefaults.standard.set(udpData, forKey: localBlobKey) }
