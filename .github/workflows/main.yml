@@ -615,6 +615,8 @@ jobs:
     private var isConfigured: Bool = false
     private var smoothedEV: Double = 9.0
     private var smoothedDist: Double = 2.0
+    private var forceInstantSample: Bool = true
+    private var lastTapTime: TimeInterval = 0
     private var lastUIUpdateTime: TimeInterval = 0
     private var lastDepthTime: TimeInterval = 0
     var onLiveEVUpdated: ((Double) -> Void)?
@@ -643,7 +645,7 @@ jobs:
     depthOutput.setDelegate(self, callbackQueue: videoQueue)
     if session.canAddOutput(depthOutput) { session.addOutput(depthOutput) }
     isConfigured = true }
-    if let depthConn = depthOutput.connection(with: .depthData) { depthConn.isEnabled = supportsDepth }
+    if let depthConn = depthOutput.connection(with: .depthData) { depthConn.isEnabled = supportsDepth; if depthConn.isVideoOrientationSupported { depthConn.videoOrientation = .portrait } }
     session.commitConfiguration()
     recenterExposurePoint() }
     private func setupAndStartSession(lang: AppLanguage) { if !isConfigured { configureCameraInput(useUltraWide: useUltraWideLens, lang: lang) }
@@ -656,39 +658,55 @@ jobs:
     DispatchQueue.main.async { self.isRunning = false }}} else { isRunning = false }}
     func recenterExposurePoint() { setSpotPoint(CGPoint(x: 0.5, y: 0.5)) }
     func setSpotPoint(_ normPt: CGPoint) { let cx = max(0.08, min(0.92, normPt.x)); let cy = max(0.08, min(0.92, normPt.y))
+    self.forceInstantSample = true; self.lastTapTime = Date().timeIntervalSinceReferenceDate
     DispatchQueue.main.async { self.spotNormalizedPoint = CGPoint(x: cx, y: cy) }
     guard let cam = device else { return }
+    let devPt = CGPoint(x: cy, y: 1.0 - cx)
     do { try cam.lockForConfiguration()
-    if cam.isExposurePointOfInterestSupported { cam.exposurePointOfInterest = CGPoint(x: cy, y: 1.0 - cx) }
-    if cam.isExposureModeSupported(.continuousAutoExposure) { cam.exposureMode = .continuousAutoExposure }
-    if cam.isFocusPointOfInterestSupported { cam.focusPointOfInterest = CGPoint(x: cy, y: 1.0 - cx) }
-    if cam.isFocusModeSupported(.continuousAutoFocus) { cam.focusMode = .continuousAutoFocus }
-    cam.unlockForConfiguration() } catch {} }
+    if cam.isExposurePointOfInterestSupported { cam.exposurePointOfInterest = devPt }
+    if cam.isExposureModeSupported(.autoExpose) { cam.exposureMode = .autoExpose } else if cam.isExposureModeSupported(.continuousAutoExposure) { cam.exposureMode = .continuousAutoExposure }
+    if cam.isFocusPointOfInterestSupported { cam.focusPointOfInterest = devPt }
+    if cam.isFocusModeSupported(.autoFocus) { cam.focusMode = .autoFocus } else if cam.isFocusModeSupported(.continuousAutoFocus) { cam.focusMode = .continuousAutoFocus }
+    cam.unlockForConfiguration() } catch {}
+    videoQueue.asyncAfter(deadline: .now() + 0.55) { [weak self] in
+    guard let self = self, let c = self.device, Date().timeIntervalSinceReferenceDate - self.lastTapTime >= 0.50 else { return }
+    do { try c.lockForConfiguration()
+    if c.isExposureModeSupported(.continuousAutoExposure) { c.exposureMode = .continuousAutoExposure }
+    if c.isFocusModeSupported(.continuousAutoFocus) { c.focusMode = .continuousAutoFocus }
+    c.unlockForConfiguration() } catch {} } }
     func depthDataOutput(_ output: AVCaptureDepthDataOutput, didOutput depthData: AVDepthData, timestamp: CMTime, connection: AVCaptureConnection) { guard !isHoldLocked else { return }; let converted = depthData.converting(toDepthDataType: kCVPixelFormatType_DepthFloat32); let buf = converted.depthDataMap
     CVPixelBufferLockBaseAddress(buf, .readOnly)
     defer { CVPixelBufferUnlockBaseAddress(buf, .readOnly) }
     let w = CVPixelBufferGetWidth(buf); let h = CVPixelBufferGetHeight(buf); let rowBytes = CVPixelBufferGetBytesPerRow(buf)
     guard let base = CVPixelBufferGetBaseAddress(buf), w > 4, h > 4 else { return }
-    var validSamples: [Float] = []; let cxMin = max(0, w * 45 / 100); let cxMax = min(w - 1, w * 55 / 100); let cyMin = max(0, h * 45 / 100); let cyMax = min(h - 1, h * 55 / 100)
-    for y in stride(from: cyMin, through: cyMax, by: 2) { let rowPtr = base.advanced(by: y * rowBytes).assumingMemoryBound(to: Float32.self)
-    for x in stride(from: cxMin, through: cxMax, by: 2) { let d = rowPtr[x]
+    let sp = spotNormalizedPoint
+    let normX: Double = (w > h) ? Double(sp.y) : Double(sp.x)
+    let normY: Double = (w > h) ? Double(1.0 - sp.x) : Double(sp.y)
+    let centerX = Int(Double(w) * normX); let centerY = Int(Double(h) * normY)
+    let radX = max(3, w * 6 / 100); let radY = max(3, h * 6 / 100)
+    let cxMin = max(0, min(w - 1, centerX - radX)); let cxMax = max(0, min(w - 1, centerX + radX))
+    let cyMin = max(0, min(h - 1, centerY - radY)); let cyMax = max(0, min(h - 1, centerY + radY))
+    var validSamples: [Float] = []
+    for y in stride(from: cyMin, through: cyMax, by: 1) { let rowPtr = base.advanced(by: y * rowBytes).assumingMemoryBound(to: Float32.self)
+    for x in stride(from: cxMin, through: cxMax, by: 1) { let d = rowPtr[x]
     if d.isFinite && d >= 0.25 && d <= 15.0 { validSamples.append(d) }}}
     guard !validSamples.isEmpty else { return }
     validSamples.sort()
-    let medianMeters = Double(validSamples[validSamples.count / 2])
-    smoothedDist = smoothedDist * 0.65 + medianMeters * 0.35
+    let p25 = Double(validSamples[max(0, validSamples.count * 35 / 100)])
+    if forceInstantSample || (Date().timeIntervalSinceReferenceDate - lastTapTime < 0.45) { smoothedDist = p25; forceInstantSample = false }
+    else { smoothedDist = smoothedDist * 0.50 + p25 * 0.50 }
     let roundedDist = max(0.4, min(15.0, (smoothedDist * 10.0).rounded() / 10.0))
     lastDepthTime = Date().timeIntervalSinceReferenceDate
     DispatchQueue.main.async { self.hasLiDARDepth = true
     self.liveDistanceMeters = roundedDist }}
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) { guard !isHoldLocked, let cam = device else { return }
     let now = Date().timeIntervalSinceReferenceDate
-    guard now - lastUIUpdateTime >= 0.10 else { return }
+    guard now - lastUIUpdateTime >= 0.08 else { return }
     lastUIUpdateTime = now
     let ap = Double(max(cam.lensAperture, 1.2)); let dur = max(CMTimeGetSeconds(cam.exposureDuration), 0.00005); let isoVal = Double(max(cam.iso, 20.0)); let targetOffset = Double(cam.exposureTargetOffset); let rawEV100 = log2((ap * ap) / dur) - log2(isoVal / 100.0) - targetOffset + calibrationTrimEV; let clampedEV = max(-2.0, min(18.0, rawEV100))
-    smoothedEV = (smoothedEV * 0.72) + (clampedEV * 0.28)
-    let roundedEV = (smoothedEV * 10.0).rounded() / 10.0; let denom = max(1, Int((1.0 / dur).rounded())); var fallbackDist: Double? = nil; if now - lastDepthTime > 0.6 { let lp = Double(max(0.02, min(0.98, cam.lensPosition))); let est = 0.35 / pow(1.0 - lp, 0.82); let clampedD = max(0.5, min(12.0, (est * 10.0).rounded() / 10.0))
-    smoothedDist = smoothedDist * 0.78 + clampedD * 0.22
+    if now - lastTapTime < 0.45 { smoothedEV = clampedEV } else { smoothedEV = (smoothedEV * 0.65) + (clampedEV * 0.35) }
+    let roundedEV = (smoothedEV * 10.0).rounded() / 10.0; let denom = max(1, Int((1.0 / dur).rounded())); var fallbackDist: Double? = nil; if now - lastDepthTime > 0.45 { let lp = Double(max(0.02, min(0.98, cam.lensPosition))); let est = 0.35 / pow(1.0 - lp, 0.82); let clampedD = max(0.5, min(12.0, (est * 10.0).rounded() / 10.0))
+    if forceInstantSample || (now - lastTapTime < 0.45) { smoothedDist = clampedD; forceInstantSample = false } else { smoothedDist = smoothedDist * 0.60 + clampedD * 0.40 }
     fallbackDist = (smoothedDist * 10.0).rounded() / 10.0 }
     DispatchQueue.main.async { self.liveEV100 = roundedEV
     self.cameraISO = Float(isoVal); self.cameraShutterDenom = denom; self.cameraAperture = Float(ap); self.cameraTargetOffset = Float(targetOffset); if let fd = fallbackDist { self.liveDistanceMeters = fd }
@@ -1263,14 +1281,14 @@ jobs:
     }.foregroundStyle(isSel ? Color.black : Color.white).padding(.horizontal, 8).padding(.vertical, 3).frame(maxWidth: .infinity, maxHeight: .infinity).background(isSel ? theme.accent : Color.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 10))
     }.buttonStyle(.plain) }
     private var evBiasMetricTile: some View { let isSelected = (selectedParameter == .evBias); let hasBias = abs(exposureCompEV) >= 0.05
-    let strokeColor: Color = isSelected ? theme.accent : Color.clear; let textColor: Color = isSelected ? theme.accent : (hasBias ? theme.accent : Color.white); let valSize: CGFloat = isSelected ? 19.5 : 17.5; let valText: String = hasBias ? String(format: "%+.1f EV", exposureCompEV) : "0.0 EV"; return VStack(alignment: .leading, spacing: 3) { HStack { Text(lang == .en ? "5. EV BIAS" : "曝光补偿 EV").fMono(9.0, .bold).foregroundStyle(isSelected ? theme.accent.opacity(0.9) : Color.white.opacity(0.58)).lineLimit(1)
+    let strokeColor: Color = isSelected ? theme.accent : Color.clear; let textColor: Color = isSelected ? theme.accent : (hasBias ? theme.accent : Color.white); let valText: String = hasBias ? String(format: "%+.1f EV", exposureCompEV) : "0.0 EV"; return VStack(alignment: .leading, spacing: 2) { HStack { Text(lang == .en ? "5. EV BIAS" : "曝光补偿 EV").fMono(9.5, .bold).foregroundStyle(isSelected ? theme.accent.opacity(0.9) : Color.white.opacity(0.58)).lineLimit(1)
     Spacer(minLength: 2)
     Button { feedback.zeroEVSnapFeedback(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
     withAnimation(.snappy) { exposureCompEV = 0.0; lastSnappedEVComp = 0.0 }
-    } label: { Image(systemName: "arrow.counterclockwise").fSys(9.5, .bold).foregroundStyle(hasBias ? theme.accent : Color.white.opacity(0.38)).padding(4).background(Color.white.opacity(0.08), in: Circle()) }}
-    HStack { Text(valText).font(.system(size: valSize, weight: .black, design: .rounded)).foregroundStyle(textColor).lineLimit(1).minimumScaleFactor(0.72).contentTransition(.numericText())
-    Spacer(minLength: 0) }}.padding(.horizontal, 10).padding(.vertical, 6).background(isSelected ? Color.white.opacity(0.14) : Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(strokeColor, lineWidth: isSelected ? 1.6 : 0)).contentShape(Rectangle()).onTapGesture { feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-    withAnimation(.snappy) { selectedParameter = .evBias; lastEditedParameter = .evBias }} }
+    } label: { Image(systemName: "arrow.counterclockwise").fSys(10.0, .bold).foregroundStyle(hasBias ? theme.accent : Color.white.opacity(0.42)).frame(width: 20, height: 20).background(Color.white.opacity(0.08), in: Circle()) }.buttonStyle(.plain) }.frame(height: 20)
+    HStack { Text(valText).font(.system(size: 19.0, weight: .black, design: .rounded)).foregroundStyle(textColor).lineLimit(1).minimumScaleFactor(0.72).contentTransition(.numericText())
+    Spacer(minLength: 0) }.frame(height: 22) }.padding(.horizontal, 10).frame(maxWidth: .infinity).frame(height: 54).background(isSelected ? Color.white.opacity(0.14) : Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(strokeColor, lineWidth: isSelected ? 1.6 : 0)).contentShape(Rectangle()).onTapGesture { feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+    selectedParameter = .evBias; lastEditedParameter = .evBias } }
     private var parameterLockGridCard: some View { VStack(spacing: 6) { HStack(spacing: 6) { lockableMetricTile(param: .distance, label: lang == .en ? "1. DISTANCE (∝ d²)" : "★ 距离 DISTANCE (最敏感)", value: String(format: "%.1f m", distance), isLocked: $lockDistance)
     lockableMetricTile(param: .aperture, label: lang == .en ? "2. APERTURE (f/)" : "★ 光圈 APERTURE (控景深)", value: formatFStop(aperture), isLocked: $lockAperture) }
     HStack(spacing: 6) { lockableMetricTile(param: .shutter, label: lang == .en ? "3. SHUTTER" : "快门 SHUTTER", value: formatShutter(shutterDenom), isLocked: $lockShutter)
@@ -1327,14 +1345,15 @@ jobs:
     if diff < -1.8 { return "\(roleTag) · EV\(Int(ambientEV100))" }
     if diff <= 0.4 { return String(format: "%@(%+.1fEV)", roleTag, diff) }
     return String(format: "%@(%+.1fEV)", lang == .en ? "Amb.High" : "环境亮", diff) }
-    private func lockableMetricTile(param: DialParameter, label: String, value: String, isLocked: Binding<Bool>) -> some View { let isSelected = (selectedParameter == param); let strokeColor: Color = isSelected ? theme.accent : Color.clear; let iconColor: Color = isLocked.wrappedValue ? theme.accent : Color.white.opacity(0.42); let textColor: Color = isSelected ? theme.accent : Color.white; let valSize: CGFloat = isSelected ? 21.0 : 18.5
-    return VStack(alignment: .leading, spacing: 3) { HStack { Text(label).fMono(9.5, .bold).foregroundStyle(isSelected ? theme.accent.opacity(0.9) : Color.white.opacity(0.58)).lineLimit(1)
-    Spacer()
+    private func lockableMetricTile(param: DialParameter, label: String, value: String, isLocked: Binding<Bool>) -> some View { let isSelected = (selectedParameter == param); let strokeColor: Color = isSelected ? theme.accent : Color.clear; let iconColor: Color = isLocked.wrappedValue ? theme.accent : Color.white.opacity(0.42); let textColor: Color = isSelected ? theme.accent : Color.white
+    return VStack(alignment: .leading, spacing: 2) { HStack { Text(label).fMono(9.5, .bold).foregroundStyle(isSelected ? theme.accent.opacity(0.9) : Color.white.opacity(0.58)).lineLimit(1)
+    Spacer(minLength: 2)
     Button { feedback.lockToggleFeedback(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-    withAnimation(.snappy) { isLocked.wrappedValue.toggle(); if param == .flashPower && isLocked.wrappedValue { selectedParameter = .flashPower; lastEditedParameter = .flashPower; solveForLockedPower(changed: .flashPower) }}} label: { Image(systemName: isLocked.wrappedValue ? "lock.fill" : "lock.open").fSys(10.5, .bold).foregroundStyle(iconColor).padding(4).background(Color.white.opacity(0.08), in: Circle()) }}
-    HStack { Text(value).font(.system(size: valSize, weight: .black, design: .rounded)).foregroundStyle(textColor).lineLimit(1).minimumScaleFactor(0.75).contentTransition(.numericText())
-    Spacer() }} .padding(.horizontal, 12).padding(.vertical, 7.5).background(isSelected ? Color.white.opacity(0.14) : Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 15)).overlay(RoundedRectangle(cornerRadius: 15).stroke(strokeColor, lineWidth: isSelected ? 1.6 : 0)).contentShape(Rectangle()).onTapGesture { feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
-    withAnimation(.snappy) { selectedParameter = param; lastEditedParameter = param }}}
+    isLocked.wrappedValue.toggle(); if param == .flashPower && isLocked.wrappedValue { selectedParameter = .flashPower; lastEditedParameter = .flashPower; solveForLockedPower(changed: .flashPower) }
+    } label: { Image(systemName: isLocked.wrappedValue ? "lock.fill" : "lock.open").fSys(10.0, .bold).foregroundStyle(iconColor).frame(width: 20, height: 20).background(Color.white.opacity(0.08), in: Circle()) }.buttonStyle(.plain) }.frame(height: 20)
+    HStack { Text(value).font(.system(size: 19.0, weight: .black, design: .rounded)).foregroundStyle(textColor).lineLimit(1).minimumScaleFactor(0.72).contentTransition(.numericText())
+    Spacer(minLength: 0) }.frame(height: 22) }.padding(.horizontal, 10).frame(maxWidth: .infinity).frame(height: 54).background(isSelected ? Color.white.opacity(0.14) : Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(strokeColor, lineWidth: isSelected ? 1.6 : 0)).contentShape(Rectangle()).onTapGesture { feedback.buttonTap(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled)
+    selectedParameter = param; lastEditedParameter = param } }
     private var activeQuickChipID: String { switch selectedParameter { case .aperture: let closest = apertureSteps.min(by: { abs($0 - aperture) < abs($1 - aperture) }) ?? aperture; return "ap_\(Int(round(closest * 10)))"
     case .distance: let closest = distanceSteps.min(by: { abs($0 - distance) < abs($1 - distance) }) ?? distance; return "dist_\(Int(round(closest * 10)))"
     case .shutter: return "sh_\(shutterDenom)"
@@ -1360,7 +1379,7 @@ jobs:
     Button { lastEditedParameter = .evBias
     if abs(ev) < 0.05 { feedback.zeroEVSnapFeedback(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled) } else { feedback.dialTick(soundEnabled: soundEnabled, hapticEnabled: hapticEnabled, magneticSnap: true) }
     withAnimation(.snappy) { exposureCompEV = ev; if lockPower { solveForLockedPower(changed: .evBias) }}} label: { Text(label).fMono(11, .bold).foregroundStyle(active ? Color.black : Color.white).padding(.horizontal, 10).padding(.vertical, 5).background(active ? theme.accent : Color.white.opacity(0.12), in: Capsule())
-    }.id(chipID) }}}}.onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { withAnimation(.snappy) { proxy.scrollTo(activeQuickChipID, anchor: .center) }}}.onChange(of: activeQuickChipID) { _, newID in DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { withAnimation(.snappy) { proxy.scrollTo(newID, anchor: .center) }}}}}
+    }.id(chipID) }}}}.onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { withAnimation(.snappy) { proxy.scrollTo(activeQuickChipID, anchor: .center) }}}.frame(height: 28).onChange(of: activeQuickChipID) { _, newID in DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { withAnimation(.snappy) { proxy.scrollTo(newID, anchor: .center) }}}}}
     private var currentSelectedParameterSubtitle: String { switch selectedParameter { case .aperture: return lockAperture
     ? (lang == .en ? "🔒 Aperture Locked" : "🔒 光圈已锁定 (点卡片解锁)")
     : (lang == .en ? "Lens Limit ≥ \(formatFStop(maxLensAperture))" : "镜头限制 ≥ \(formatFStop(maxLensAperture))")
