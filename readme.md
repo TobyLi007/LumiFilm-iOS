@@ -1,7 +1,7 @@
-# ⚡ LumiFilm v10.6 — Pro Analog Flash & Ambient Light Meter for iOS
+# ⚡ LumiFilm v10.6.2 — Pro Analog Flash & Ambient Light Meter for iOS
 
-**Professional Manual Flash Calculator, 5-Parameter 3D Drum Wheel (with 1/3-Stop EV Bias), 1×4 Flash Mode Console, Tap-Spot Camera EV100 & LiDAR Hold Meter, Slow-Sync Reciprocity Engine, Interactive Home Screen Widgets & GPS Film Roll Logger for 135 & 120 Medium Format Cameras**  
-**专业 135 / 120 胶片摄影闪光测光表 · 48pt 聚光功率主屏 · 5维 3D 滚轮（含曝光补偿） · 1×4 闪光模式 · 实景任意点测光+HOLD锁定 · 慢门倒易律 · 机顶小组件 · GPS 胶片手账**
+**Professional Manual Flash Calculator, 5-Parameter 3D Drum Wheel (with Zero-Bounce 1/3-Stop EV Bias), 1×4 Flash Mode Console, Instant Tap-Spot Camera EV100 & LiDAR Hold Meter, Slow-Sync Reciprocity Engine, Interactive Home Screen Widgets & GPS Film Roll Logger for 135 & 120 Medium Format Cameras**  
+**专业 135 / 120 胶片摄影闪光测光表 · 48pt 聚光功率主屏 · 5维零跳动 3D 滚轮（含曝光补偿） · 1×4 闪光模式 · 实景静止即时点测光测距+HOLD锁定 · 慢门倒易律 · 机顶小组件 · GPS 胶片手账**
 
 [Build Unsigned IPA](https://www.google.com/search?q=https://github.com/TobyLi007/LumiFilm-iOS/actions)
 [Latest Release](https://www.google.com/search?q=https://github.com/TobyLi007/LumiFilm-iOS/releases/latest)
@@ -19,7 +19,7 @@
 | Main Mechanical Dial Meter<br>机械转盘测光主界面 | Segmented Modifiers & GPS Log<br>分段附件四宫格与 GPS 手账 | Tap-Spot EV100 & LiDAR Hold Meter<br>全屏任意点测光与激光测距锁定 |
 | :---: | :---: | :---: |
 | &lt;img src=&quot;Screenshots/Main%20page.jpg&quot; width=&quot;250&quot; alt=&quot;Main Meter Page&quot; /&gt; | &lt;img src=&quot;Screenshots/Second%20Page.jpeg&quot; width=&quot;250&quot; alt=&quot;Modifiers and GPS Log Page&quot; /&gt; | &lt;img src=&quot;Screenshots/Real-time%20ambient%20light%20Measure.jpg&quot; width=&quot;250&quot; alt=&quot;Live Camera EV100 Meter&quot; /&gt; |
-| **48pt Hero Output · 5-Tile Grid · 3D Wheel EV Bias**<br>48pt 聚光主屏 · 5卡片参数阵 · 3D滚轮调EV | **Segmented Switcher · Auto Frame Rollback**<br>附件/手账一键切换 · 删帧自动回退帧号 | **Tap-Anywhere Spot Reticle · ❄️ HOLD Lock**<br>点击任意位置点测光/对焦 · ❄️ HOLD 读数锁定 |
+| **48pt Hero Output · 5-Tile Grid · 3D Wheel EV Bias**<br>48pt 聚光主屏 · 5卡片定高参数阵 · 3D滚轮调EV | **Segmented Switcher · Auto Frame Rollback**<br>附件/手账一键切换 · 删帧自动回退帧号 | **Stationary Tap-Spot LiDAR/AF · ❄️ HOLD Lock**<br>静止点击即刻精准测距 · ❄️ HOLD 读数锁定 |
 
 ### 2. Three-Size Home Screen Widgets / 三尺寸复古相机桌面小组件 (`2×2` · `4×2` · `4×4`)
 
@@ -30,12 +30,12 @@
 
 ## 🌐 English Documentation
 
-**LumiFilm** is a native iOS utility crafted for analog film photographers shooting with mechanical 35mm (`135`) and Medium Format (`120`: `645`, `6×6`, `6×7`, `6×9`) cameras (Leica M, Hasselblad 500C/M, Rolleiflex, Pentax 67, Mamiya RB67/7, Contax G/TLA, Nikon FM2, Canon FD) paired with manual hot-shoe flashes. See [**`WHATS_NEW.md`**](WHATS_NEW.md) for the complete version evolution from `v1.0.0` to `v10.6.0`.
+**LumiFilm** is a native iOS utility crafted for analog film photographers shooting with mechanical 35mm (`135`) and Medium Format (`120`: `645`, `6×6`, `6×7`, `6×9`) cameras (Leica M, Hasselblad 500C/M, Rolleiflex, Pentax 67, Mamiya RB67/7, Contax G/TLA, Nikon FM2, Canon FD) paired with manual hot-shoe flashes. See [**`WHATS_NEW.md`**](WHATS_NEW.md) for the complete version evolution from `v1.0.0` to `v10.6.2`.
 
-### ✨ Key Features (v10.6.0)
+### ✨ Key Features (v10.6.2)
 * **Decoupled Optical Physics & Creative Bias Engine**: Strictly separates physical optical light loss (`Diffuser + Bounce + Filter + HSS + Bellows`) from creative flash bias (`-1.3 EV Fill`, `-2.0 EV Catchlight`, and `±2.0 EV Bias`), guaranteeing 100% accurate inverse aperture/distance solving when flash power is locked.
-* **5-Parameter 3D Drum Wheel (including `1/3`-Stop EV Bias)**: Removes the cluttered horizontal EV slider row and integrates **`5. EV BIAS`** directly into the parameter card grid (with a 1-tap `↺` zero-reset button), allowing crisp `1/3`-stop EV Bias adjustment via the 5-row illuminated 3D Drum Wheel and Quick Chips Bar.
-* **Tap-Anywhere Spot Metering & `❄️ HOLD` Freeze in Live Camera Viewfinder**: Tap anywhere on the full-screen camera preview to move the spot metering & AF reticle to your subject, and tap **`❄️ HOLD`** to freeze live `EV100` & LiDAR distance readings.
+* **Zero-Bounce 5-Parameter Grid & 3D Drum Wheel (including `1/3`-Stop EV Bias)**: All 5 parameter cards (`Distance`, `Aperture`, `Shutter`, `Power`, `EV Bias`) share a rock-solid `54pt` height and constant `19pt` typography so switching to `EV Bias` never bounces or shifts the UI.
+* **Instant Stationary Tap-Spot LiDAR/AF Distance & `❄️ HOLD` Freeze**: Tapping any spot on the viewfinder dynamically samples the LiDAR depth map at the exact tapped coordinate, triggers an immediate active `.autoFocus` + `.autoExpose` sweep (even when the phone is held completely still), and bypasses smoothing inertia for instant distance & EV lock.
 * **Slow-Sync Shutter Speeds (`15"`–`1"`) & Film Reciprocity Compensation**: Supports multi-second slow-sync exposures (`15"`, `8"`, `4"`, `2"`, `1"`) and automatically computes brand-specific Schwarzschild film reciprocity compensation seconds for Kodak, Fujifilm, CineStill, and Ilford/Lomo stocks.
 * **100% Synchronized Home Screen Widgets**: Syncs effective pushed/pulled `EI`, zoom-adjusted `GN`, flash role bias, and ambient auto-sum factors via `127.0.0.1` UDP so Home Screen widgets match the main app's power readout to the exact `1/3` stop.
 * **Segmented Tab 2 (`🎛️ Optical Modifiers` / `🎞️ GPS Roll Log`) & Auto Frame Rollback**: Switch between the 2×2 modifier grid and GPS roll logger without long scrolling; deleting the latest logged frame automatically rolls back the next frame counter.
@@ -47,16 +47,14 @@
 
 ## 🇨🇳 中文说明文档 (Chinese Documentation)
 
-**LumiFilm** 是一款专为 **135 全画幅 (36张)** 与 **120 中画幅（645 16张 / 6×6 12张 / 6×7 10张 / 6×9 8张）** 机械胶片相机与手动闪光灯打造的 iOS 原生测光与手账工具。从 `v1.0.0` 到 `v10.6.0` 的完整历史记录请查阅 [**`WHATS_NEW.md`**](WHATS_NEW.md)。
+**LumiFilm** 是一款专为 **135 全画幅 (36张)** 与 **120 中画幅（645 16张 / 6×6 12张 / 6×7 10张 / 6×9 8张）** 机械胶片相机与手动闪光灯打造的 iOS 原生测光与手账工具。从 `v1.0.0` 到 `v10.6.2` 的完整历史记录请查阅 [**`WHATS_NEW.md`**](WHATS_NEW.md)。
 
-### 🌟 v10.6.0 七大核心升级亮点
-* **物理光损与创意闪光偏置解耦算法**：将物理光损（柔光罩/跳闪/滤镜/皮腔）与创意闪光偏置（`-1.3 EV` 逆光补光、`-2.0 EV` 眼神光、`±2.0 EV` 曝光补偿）严格解耦，彻底修复「锁定功率反推光圈/距离」时的耦合偏差。
-* **桌面小组件全链路 100% 同步**：`syncWidgetDefaults()` 完整汇总迫冲折算 `EI`、灯头变焦有效 `GN`、闪光补光模式偏置与环境光扣减比例，确保桌面小组件与主程序功率读数分毫不差。
-* **移除独立滑块行，曝光补偿整合进参数卡片并由 3D 滚轮精准驱动**：取消占用纵向空间的水平滑块行，在参数区新增 **`曝光补偿 EV`** 卡片（右上角配 `↺` 一键归零键），点选后直接用 5 档可视 3D 滚轮与快捷胶囊条进行 `1/3` 档精准咔哒调节。
-* **实景相机「点按任意位置点测光/对焦」+「❄️ HOLD 读数锁定」**：在全屏实景取景器中点击任意位置即可将靶心移至主体进行点测光与对焦测距，并新增 **`❄️ HOLD`** 锁定键一键冻结当前 `EV100` 与距离读数。
-* **夜景慢门同步档位 (`15"`～`1"`) 与胶卷倒易律失效提示**：快门扩展支持 `15"`、`8"`、`4"`、`2"`、`1"` 慢门同步，并根据当前所选胶卷品牌（富士/柯达/电影卷/依尔福）自动计算并提示背景慢门倒易律补偿秒数。
-* **第二页「🎛️ 光学附件 / 🎞️ 胶片手账」分段切换 + 删帧自动回退帧号**：免去上下长距离滚动，且删除最新记录的一帧时自动将待拍帧号回退 `-1`。
-* **首次向导第 5 步「器材通行证与快门红线总览卡」**：在完成首次配置前直观展示所选画幅、胶卷、最大光圈与机身快门同步红线警示。
+### 🌟 v10.6.2 核心亮点
+* **实景相机「静止点击即时精准测距」+「❄️ HOLD 读数锁定」**：点击画面任意位置时，LiDAR 深度图自动映射并采样点击处坐标，同时强制触发硬件单次主动对焦（`.autoFocus`）与零惯性即时采样，无需晃动手机即可瞬间测准点击处物距与 `EV100`。
+* **零跳动定高 5 卡片参数阵 + 3D 滚轮调曝光补偿**：统一锁定 5 张参数卡片（距离、光圈、快门、功率、曝光补偿）为固定 `54pt` 高度与 `19pt` 恒定字号，并锁定快捷胶囊条 `28pt` 高度，点击切换至「曝光补偿 EV」时界面稳如磐石、绝不弹跳错位。
+* **物理光损与创意闪光偏置解耦算法 + 小组件 100% 同步**：彻底修复锁定功率反推光圈/距离时的耦合偏差，并实时将迫冲折算 `EI`、灯头变焦有效 `GN`、闪光模式偏置与环境光扣减同步至桌面小组件。
+* **夜景慢门同步档位 (`15"`～`1"`) 与胶卷倒易律失效提示**：支持多秒慢门同步并按胶卷品牌自动提示背景倒易律补偿秒数。
+* **第二页「🎛️ 光学附件 / 🎞️ 胶片手账」分段切换 + 删帧自动回退帧号**。
 
 ### 🎞️ 135 / 120 画幅联动表
 
