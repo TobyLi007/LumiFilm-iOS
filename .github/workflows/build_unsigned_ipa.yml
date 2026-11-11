@@ -551,10 +551,10 @@ jobs:
         DispatchQueue.main.async { NotificationCenter.default.post(name: Notification.Name("LumiFilmActionSpeakTrigger"), object: nil) }
         return .result() }}
         struct LumiFilmShortcutsProvider: AppShortcutsProvider {
-        static var appShortcuts: [AppShortcut] { [
-        AppShortcut(intent: LumiFilmVoiceMeterIntent(), phrases: ["用 \(.applicationName) 语音测光", "Start \(.applicationName) voice meter"], shortTitle: "语音闪光测光", systemImageName: "mic.fill"),
+        static var appShortcuts: [AppShortcut] {
+        AppShortcut(intent: LumiFilmVoiceMeterIntent(), phrases: ["用 \(.applicationName) 语音测光", "Start \(.applicationName) voice meter"], shortTitle: "语音闪光测光", systemImageName: "mic.fill")
         AppShortcut(intent: LumiFilmSpeakPowerIntent(), phrases: ["用 \(.applicationName) 播报功率", "Speak \(.applicationName) flash power"], shortTitle: "播报闪光功率", systemImageName: "speaker.wave.2.fill")
-        ] }}
+        }}
         @main struct LumiFilmApp: App {
         init() { LocalLoopbackSyncBridge.shared.startServerIfNeeded() }
         var body: some Scene { WindowGroup { ContentView().preferredColorScheme(.dark) }}}
@@ -682,7 +682,7 @@ jobs:
         isConfigured = true }
         if let depthConn = depthOutput.connection(with: .depthData) {
         depthConn.isEnabled = supportsDepth
-        if depthConn.isVideoOrientationSupported { depthConn.videoOrientation = .portrait } }
+        if depthConn.isVideoRotationAngleSupported(90) { depthConn.videoRotationAngle = 90 } }
         session.commitConfiguration()
         recenterExposurePoint() }
         private func setupAndStartSession(lang: AppLanguage) {
@@ -1108,7 +1108,7 @@ jobs:
         }
         pushStateToWidget()
         }
-        .onChange(of: syncSignature) { _ in pushStateToWidget() }
+        .onChange(of: syncSignature) { pushStateToWidget() }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LumiFilmWidgetRemoteSet"))) { note in
         if let d = note.userInfo as? [String: Double] {
         if let ap = d["lf_aperture"] { aperture = ap }
@@ -1234,12 +1234,12 @@ jobs:
         } label: {
         Text(lang == .en ? "Mods/Log" : "附件/手账").fSys(10.5, .bold)
         .padding(.horizontal, 8).padding(.vertical, 4.5)
+        .background(currentTabPage == 1 ? theme.accent : Color.clear, in: Capsule())
         EOF
 
     - name: Generate LumiFilmApp.swift (Part 7/11)
       run: |
         cat << 'EOF' >> LumiFilmBuild/LumiFilm/LumiFilmApp.swift
-        .background(currentTabPage == 1 ? theme.accent : Color.clear, in: Capsule())
         .foregroundStyle(currentTabPage == 1 ? Color.black : Color.white.opacity(0.75))
         }
         }
@@ -1600,13 +1600,13 @@ jobs:
         HStack(spacing: 6) {
         Image(systemName: param.icon)
         .font(.system(size: 11.5, weight: .bold))
+        .foregroundStyle(isSelected ? Color.black : theme.accent)
+        .frame(width: 22, height: 22)
         EOF
 
     - name: Generate LumiFilmApp.swift (Part 8/11)
       run: |
         cat << 'EOF' >> LumiFilmBuild/LumiFilm/LumiFilmApp.swift
-        .foregroundStyle(isSelected ? Color.black : theme.accent)
-        .frame(width: 22, height: 22)
         .background(isSelected ? theme.accent : Color.white.opacity(0.09), in: Circle())
 
         Text(param.title(for: lang))
