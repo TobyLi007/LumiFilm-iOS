@@ -16,11 +16,7 @@ DispatchQueue.global(qos: .userInteractive).async { [weak self] in let fd = sock
 guard fd >= 0 else { return }
 var yes: Int32 = 1
 setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, socklen_t(MemoryLayout<Int32>.size))
-var addr = sockaddr_in()
-addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
-addr.sin_family = sa_family_t(AF_INET)
-addr.sin_port = UInt16(49188).bigEndian
-addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+var addr = sockaddr_in(); addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size); addr.sin_family = sa_family_t(AF_INET); addr.sin_port = UInt16(49188).bigEndian; addr.sin_addr.s_addr = inet_addr("127.0.0.1")
 let b = withUnsafePointer(to: &addr) { ptr -> Int32 in ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in bind(fd, sa, socklen_t(MemoryLayout<sockaddr_in>.size)) }}
 guard b == 0 else { close(fd); return }
 var buf = [UInt8](repeating: 0, count: 2048)
@@ -36,9 +32,7 @@ _ = withUnsafePointer(to: &cAddr) { ptr in ptr.withMemoryRebound(to: sockaddr.se
 DispatchQueue.main.async { NotificationCenter.default.post(name: Notification.Name("LumiFilmWidgetRemoteSet"), object: nil, userInfo: dict) }}}}}}}
 func publishState(_ dict: [String: Double]) { startServerIfNeeded()
 guard let data = try? JSONEncoder().encode(dict) else { return }
-lock.lock()
-currentPayload = data
-lock.unlock()
+lock.lock(); currentPayload = data; lock.unlock()
 UserDefaults.standard.set(data, forKey: "lf_widget_cached_v93")
 for gid in discoveredGroups { UserDefaults(suiteName: gid)?.set(data, forKey: "lf_widget_cached_v93")
 if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: gid)?.appendingPathComponent("lumifilm_v93.json") { try? data.write(to: url, options: .atomic) }}
@@ -138,8 +132,7 @@ Text(brand.logoCode).fMono(compact ? 8.5 : 9.5, .black).foregroundStyle(fg) }.pa
 private var bg: Bool { brand == .kodak || brand == .ilford }}
 struct FilmStockModel: Identifiable, Equatable { let id: String; let brand: FilmBrandCategory; let name: String; let iso: Double; let tagZh: String; let tagEn: String
 func subtitle(for lang: AppLanguage) -> String { lang == .en ? tagEn : tagZh }
-static let catalog: [FilmStockModel] = [
-FilmStockModel(id: "kodak_portra_400", brand: .kodak, name: "Kodak Portra 400", iso: 400, tagZh: "专业人像负片 · 极高宽容度", tagEn: "Pro Color Neg · Wide Latitude"), FilmStockModel(id: "kodak_portra_160", brand: .kodak, name: "Kodak Portra 160", iso: 160, tagZh: "专业人像负片 · 细腻肤色", tagEn: "Pro Color Neg · Fine Skin Tone"), FilmStockModel(id: "kodak_portra_800", brand: .kodak, name: "Kodak Portra 800", iso: 800, tagZh: "高感人像负片 · 弱光质感", tagEn: "High-Speed Pro Color Neg"), FilmStockModel(id: "kodak_gold_200", brand: .kodak, name: "Kodak Gold 200", iso: 200, tagZh: "经典暖调日常彩色负片", tagEn: "Warm Classic Color Neg"), FilmStockModel(id: "kodak_colorplus_200", brand: .kodak, name: "Kodak ColorPlus 200", iso: 200, tagZh: "复古暖黄街拍彩色负片", tagEn: "Vintage Warm Street Neg"), FilmStockModel(id: "kodak_ultramax_400", brand: .kodak, name: "Kodak UltraMax 400", iso: 400, tagZh: "高饱和全能日常彩色负片", tagEn: "Vibrant All-Round Color Neg"), FilmStockModel(id: "kodak_ektar_100", brand: .kodak, name: "Kodak Ektar 100", iso: 100, tagZh: "风光负片 · 超细颗粒高饱和", tagEn: "Ultra-Fine Vivid Color Neg"), FilmStockModel(id: "kodak_proimage_100", brand: .kodak, name: "Kodak Pro Image 100", iso: 100, tagZh: "清透人像阳光彩色负片", tagEn: "Natural Portrait Color Neg"), FilmStockModel(id: "kodak_vision3_50d", brand: .kodak, name: "Kodak Vision3 50D", iso: 50, tagZh: "5203 日光超细电影负片", tagEn: "5203 Daylight Cinema Neg"), FilmStockModel(id: "kodak_vision3_250d", brand: .kodak, name: "Kodak Vision3 250D", iso: 250, tagZh: "5207 日光中感电影负片", tagEn: "5207 Daylight Cinema Neg"), FilmStockModel(id: "kodak_vision3_500t", brand: .kodak, name: "Kodak Vision3 500T", iso: 500, tagZh: "5219 灯光夜景电影负片", tagEn: "5219 Tungsten Cinema Neg"), FilmStockModel(id: "kodak_e100", brand: .kodak, name: "Kodak Ektachrome E100", iso: 100, tagZh: "专业彩色反转片 · 纯净正片", tagEn: "Color Slide Reversal Film"), FilmStockModel(id: "kodak_trix_400", brand: .kodak, name: "Kodak Tri-X 400", iso: 400, tagZh: "传奇人文纪实黑白负片", tagEn: "Classic Documentary B&W"), FilmStockModel(id: "kodak_tmax_400", brand: .kodak, name: "Kodak T-Max 400", iso: 400, tagZh: "扁平结晶高锐度黑白负片", tagEn: "T-Grain Fine B&W"), FilmStockModel(id: "kodak_tmax_3200", brand: .kodak, name: "Kodak T-Max P3200", iso: 3200, tagZh: "暗夜舞台超高感黑白负片", tagEn: "Ultra High-Speed B&W"), FilmStockModel(id: "fuji_c200", brand: .fujifilm, name: "Fujifilm C200", iso: 200, tagZh: "日系清新日常彩色负片", tagEn: "Classic Fresh Color Neg"), FilmStockModel(id: "fuji_superia_400", brand: .fujifilm, name: "Fujifilm Superia X-TRA 400", iso: 400, tagZh: "富士经典青绿暗部彩色负片", tagEn: "Iconic Fuji 400 Color Neg"), FilmStockModel(id: "fuji_pro_400h", brand: .fujifilm, name: "Fujifilm Pro 400H", iso: 400, tagZh: "第四感色层 · 青碧空气感人像", tagEn: "4th Layer Pastel Portrait"), FilmStockModel(id: "fuji_fujicolor_100", brand: .fujifilm, name: "Fujifilm Fujicolor 100", iso: 100, tagZh: "日版阳光细腻低感彩色负片", tagEn: "Daylight Fine Color Neg"), FilmStockModel(id: "fuji_natura_1600", brand: .fujifilm, name: "Fujifilm Natura 1600", iso: 1600, tagZh: "月光卷 · 室内弱光高感传奇", tagEn: "High-Speed Low-Light Neg"), FilmStockModel(id: "fuji_velvia_50", brand: .fujifilm, name: "Fujichrome Velvia 50", iso: 50, tagZh: "RVP50 极致高饱和风光反转片", tagEn: "Vivid Landscape Slide Film"), FilmStockModel(id: "fuji_provia_100f", brand: .fujifilm, name: "Fujichrome Provia 100F", iso: 100, tagZh: "RDPIII 忠实色彩专业反转片", tagEn: "Neutral Professional Slide"), FilmStockModel(id: "fuji_acros_100", brand: .fujifilm, name: "Fujifilm Acros 100 II", iso: 100, tagZh: "超细腻黑白 · 优异长曝表现", tagEn: "Ultra-Fine Ortho-Panchro B&W"), FilmStockModel(id: "cinestill_800t", brand: .cinestill, name: "CineStill 800T", iso: 800, tagZh: "去碳夜景电影卷 · 霓虹红晕", tagEn: "Tungsten Halation Night Film"), FilmStockModel(id: "cinestill_400d", brand: .cinestill, name: "CineStill 400D", iso: 400, tagZh: "全能日光电影卷 · 柔和红晕", tagEn: "Dynamic Daylight Cinema Film"), FilmStockModel(id: "cinestill_50d", brand: .cinestill, name: "CineStill 50D", iso: 50, tagZh: "超细日光电影卷 · 纯净高光", tagEn: "Fine Grain Daylight Cinema"), FilmStockModel(id: "cinestill_bwxx", brand: .cinestill, name: "CineStill BwXX (Double-X)", iso: 250, tagZh: "5222 经典好莱坞黑白电影卷", tagEn: "Classic Cinema B&W 5222"), FilmStockModel(id: "ilford_hp5_400", brand: .ilford, name: "Ilford HP5 Plus 400", iso: 400, tagZh: "经典人文黑白 · 迫冲潜力极佳", tagEn: "Versatile Street B&W"), FilmStockModel(id: "ilford_fp4_125", brand: .ilford, name: "Ilford FP4 Plus 125", iso: 125, tagZh: "细腻中感黑白 · 丰富灰阶过渡", tagEn: "Fine Grain Medium Speed B&W"), FilmStockModel(id: "ilford_panf_50", brand: .ilford, name: "Ilford Pan F Plus 50", iso: 50, tagZh: "极细颗粒高反差静物人像黑白", tagEn: "Ultra-Sharp High Contrast B&W"), FilmStockModel(id: "ilford_delta_400", brand: .ilford, name: "Ilford Delta 400", iso: 400, tagZh: "核心壳层晶体现代高锐黑白", tagEn: "Core-Shell Modern B&W"), FilmStockModel(id: "ilford_delta_3200", brand: .ilford, name: "Ilford Delta 3200", iso: 3200, tagZh: "弱光夜景浓郁颗粒超感黑白", tagEn: "Expressive Low-Light B&W"), FilmStockModel(id: "harman_phoenix_200", brand: .lomoOther, name: "Harman Phoenix 200", iso: 200, tagZh: "高反差复古暖调特色彩色负片", tagEn: "Characterful Warm Color Neg"), FilmStockModel(id: "lomo_color_400", brand: .lomoOther, name: "Lomography Color 400", iso: 400, tagZh: "浓郁街拍复古色彩负片", tagEn: "Punchy Vintage Color Neg"), FilmStockModel(id: "lomo_color_800", brand: .lomoOther, name: "Lomography Color 800", iso: 800, tagZh: "高感夜拍低光彩色负片", tagEn: "High-Speed Night Color Neg"), FilmStockModel(id: "fomapan_100", brand: .lomoOther, name: "Fomapan 100 Classic", iso: 100, tagZh: "捷克古典银盐黑白负片", tagEn: "Czech Classic Vintage B&W"), FilmStockModel(id: "fomapan_400", brand: .lomoOther, name: "Fomapan 400 Action", iso: 400, tagZh: "捷克复古颗粒感黑白负片", tagEn: "Czech Classic Grain B&W") ] }
+static let catalog: [FilmStockModel] = [FilmStockModel(id: "kodak_portra_400", brand: .kodak, name: "Kodak Portra 400", iso: 400, tagZh: "专业人像负片 · 极高宽容度", tagEn: "Pro Color Neg · Wide Latitude"), FilmStockModel(id: "kodak_portra_160", brand: .kodak, name: "Kodak Portra 160", iso: 160, tagZh: "专业人像负片 · 细腻肤色", tagEn: "Pro Color Neg · Fine Skin Tone"), FilmStockModel(id: "kodak_portra_800", brand: .kodak, name: "Kodak Portra 800", iso: 800, tagZh: "高感人像负片 · 弱光质感", tagEn: "High-Speed Pro Color Neg"), FilmStockModel(id: "kodak_gold_200", brand: .kodak, name: "Kodak Gold 200", iso: 200, tagZh: "经典暖调日常彩色负片", tagEn: "Warm Classic Color Neg"), FilmStockModel(id: "kodak_colorplus_200", brand: .kodak, name: "Kodak ColorPlus 200", iso: 200, tagZh: "复古暖黄街拍彩色负片", tagEn: "Vintage Warm Street Neg"), FilmStockModel(id: "kodak_ultramax_400", brand: .kodak, name: "Kodak UltraMax 400", iso: 400, tagZh: "高饱和全能日常彩色负片", tagEn: "Vibrant All-Round Color Neg"), FilmStockModel(id: "kodak_ektar_100", brand: .kodak, name: "Kodak Ektar 100", iso: 100, tagZh: "风光负片 · 超细颗粒高饱和", tagEn: "Ultra-Fine Vivid Color Neg"), FilmStockModel(id: "kodak_proimage_100", brand: .kodak, name: "Kodak Pro Image 100", iso: 100, tagZh: "清透人像阳光彩色负片", tagEn: "Natural Portrait Color Neg"), FilmStockModel(id: "kodak_vision3_50d", brand: .kodak, name: "Kodak Vision3 50D", iso: 50, tagZh: "5203 日光超细电影负片", tagEn: "5203 Daylight Cinema Neg"), FilmStockModel(id: "kodak_vision3_250d", brand: .kodak, name: "Kodak Vision3 250D", iso: 250, tagZh: "5207 日光中感电影负片", tagEn: "5207 Daylight Cinema Neg"), FilmStockModel(id: "kodak_vision3_500t", brand: .kodak, name: "Kodak Vision3 500T", iso: 500, tagZh: "5219 灯光夜景电影负片", tagEn: "5219 Tungsten Cinema Neg"), FilmStockModel(id: "kodak_e100", brand: .kodak, name: "Kodak Ektachrome E100", iso: 100, tagZh: "专业彩色反转片 · 纯净正片", tagEn: "Color Slide Reversal Film"), FilmStockModel(id: "kodak_trix_400", brand: .kodak, name: "Kodak Tri-X 400", iso: 400, tagZh: "传奇人文纪实黑白负片", tagEn: "Classic Documentary B&W"), FilmStockModel(id: "kodak_tmax_400", brand: .kodak, name: "Kodak T-Max 400", iso: 400, tagZh: "扁平结晶高锐度黑白负片", tagEn: "T-Grain Fine B&W"), FilmStockModel(id: "kodak_tmax_3200", brand: .kodak, name: "Kodak T-Max P3200", iso: 3200, tagZh: "暗夜舞台超高感黑白负片", tagEn: "Ultra High-Speed B&W"), FilmStockModel(id: "fuji_c200", brand: .fujifilm, name: "Fujifilm C200", iso: 200, tagZh: "日系清新日常彩色负片", tagEn: "Classic Fresh Color Neg"), FilmStockModel(id: "fuji_superia_400", brand: .fujifilm, name: "Fujifilm Superia X-TRA 400", iso: 400, tagZh: "富士经典青绿暗部彩色负片", tagEn: "Iconic Fuji 400 Color Neg"), FilmStockModel(id: "fuji_pro_400h", brand: .fujifilm, name: "Fujifilm Pro 400H", iso: 400, tagZh: "第四感色层 · 青碧空气感人像", tagEn: "4th Layer Pastel Portrait"), FilmStockModel(id: "fuji_fujicolor_100", brand: .fujifilm, name: "Fujifilm Fujicolor 100", iso: 100, tagZh: "日版阳光细腻低感彩色负片", tagEn: "Daylight Fine Color Neg"), FilmStockModel(id: "fuji_natura_1600", brand: .fujifilm, name: "Fujifilm Natura 1600", iso: 1600, tagZh: "月光卷 · 室内弱光高感传奇", tagEn: "High-Speed Low-Light Neg"), FilmStockModel(id: "fuji_velvia_50", brand: .fujifilm, name: "Fujichrome Velvia 50", iso: 50, tagZh: "RVP50 极致高饱和风光反转片", tagEn: "Vivid Landscape Slide Film"), FilmStockModel(id: "fuji_provia_100f", brand: .fujifilm, name: "Fujichrome Provia 100F", iso: 100, tagZh: "RDPIII 忠实色彩专业反转片", tagEn: "Neutral Professional Slide"), FilmStockModel(id: "fuji_acros_100", brand: .fujifilm, name: "Fujifilm Acros 100 II", iso: 100, tagZh: "超细腻黑白 · 优异长曝表现", tagEn: "Ultra-Fine Ortho-Panchro B&W"), FilmStockModel(id: "cinestill_800t", brand: .cinestill, name: "CineStill 800T", iso: 800, tagZh: "去碳夜景电影卷 · 霓虹红晕", tagEn: "Tungsten Halation Night Film"), FilmStockModel(id: "cinestill_400d", brand: .cinestill, name: "CineStill 400D", iso: 400, tagZh: "全能日光电影卷 · 柔和红晕", tagEn: "Dynamic Daylight Cinema Film"), FilmStockModel(id: "cinestill_50d", brand: .cinestill, name: "CineStill 50D", iso: 50, tagZh: "超细日光电影卷 · 纯净高光", tagEn: "Fine Grain Daylight Cinema"), FilmStockModel(id: "cinestill_bwxx", brand: .cinestill, name: "CineStill BwXX (Double-X)", iso: 250, tagZh: "5222 经典好莱坞黑白电影卷", tagEn: "Classic Cinema B&W 5222"), FilmStockModel(id: "ilford_hp5_400", brand: .ilford, name: "Ilford HP5 Plus 400", iso: 400, tagZh: "经典人文黑白 · 迫冲潜力极佳", tagEn: "Versatile Street B&W"), FilmStockModel(id: "ilford_fp4_125", brand: .ilford, name: "Ilford FP4 Plus 125", iso: 125, tagZh: "细腻中感黑白 · 丰富灰阶过渡", tagEn: "Fine Grain Medium Speed B&W"), FilmStockModel(id: "ilford_panf_50", brand: .ilford, name: "Ilford Pan F Plus 50", iso: 50, tagZh: "极细颗粒高反差静物人像黑白", tagEn: "Ultra-Sharp High Contrast B&W"), FilmStockModel(id: "ilford_delta_400", brand: .ilford, name: "Ilford Delta 400", iso: 400, tagZh: "核心壳层晶体现代高锐黑白", tagEn: "Core-Shell Modern B&W"), FilmStockModel(id: "ilford_delta_3200", brand: .ilford, name: "Ilford Delta 3200", iso: 3200, tagZh: "弱光夜景浓郁颗粒超感黑白", tagEn: "Expressive Low-Light B&W"), FilmStockModel(id: "harman_phoenix_200", brand: .lomoOther, name: "Harman Phoenix 200", iso: 200, tagZh: "高反差复古暖调特色彩色负片", tagEn: "Characterful Warm Color Neg"), FilmStockModel(id: "lomo_color_400", brand: .lomoOther, name: "Lomography Color 400", iso: 400, tagZh: "浓郁街拍复古色彩负片", tagEn: "Punchy Vintage Color Neg"), FilmStockModel(id: "lomo_color_800", brand: .lomoOther, name: "Lomography Color 800", iso: 800, tagZh: "高感夜拍低光彩色负片", tagEn: "High-Speed Night Color Neg"), FilmStockModel(id: "fomapan_100", brand: .lomoOther, name: "Fomapan 100 Classic", iso: 100, tagZh: "捷克古典银盐黑白负片", tagEn: "Czech Classic Vintage B&W"), FilmStockModel(id: "fomapan_400", brand: .lomoOther, name: "Fomapan 400 Action", iso: 400, tagZh: "捷克复古颗粒感黑白负片", tagEn: "Czech Classic Grain B&W")] }
 @available(iOS 17.0, *)
 struct LumiFilmVoiceMeterIntent: AppIntent { static var title: LocalizedStringResource = "Voice Flash Meter (语音调参)"
 static var description = IntentDescription("Wake up LumiFilm voice recognition via iPhone Action Button and auto-speak calculated flash power.")
@@ -156,13 +149,9 @@ DispatchQueue.main.async { NotificationCenter.default.post(name: Notification.Na
 return .result() }}
 @available(iOS 17.0, *)
 struct LumiFilmShortcutsProvider: AppShortcutsProvider { static var appShortcuts: [AppShortcut] { AppShortcut(
-intent: LumiFilmVoiceMeterIntent(), phrases: [
-"Start \(.applicationName) voice meter", "Voice meter in \(.applicationName)"
-], shortTitle: "Voice Meter", systemImageName: "mic.fill" )
+intent: LumiFilmVoiceMeterIntent(), phrases: ["Start \(.applicationName) voice meter", "Voice meter in \(.applicationName)"], shortTitle: "Voice Meter", systemImageName: "mic.fill" )
 AppShortcut(
-intent: LumiFilmSpeakPowerIntent(), phrases: [
-"Speak \(.applicationName) flash power", "Read flash power in \(.applicationName)"
-], shortTitle: "Speak Power", systemImageName: "bolt.circle.fill" ) }}
+intent: LumiFilmSpeakPowerIntent(), phrases: ["Speak \(.applicationName) flash power", "Read flash power in \(.applicationName)"], shortTitle: "Speak Power", systemImageName: "bolt.circle.fill" ) }}
 @main
 struct LumiFilmApp: App { var body: some Scene { WindowGroup { ContentView().preferredColorScheme(.dark) }}}
 enum AppLanguage: Int, CaseIterable, Identifiable { case zh = 0
@@ -178,14 +167,11 @@ var id: Int { rawValue }
 func shortTag(for lang: AppLanguage) -> String { switch self { case .keyAutoSum: return lang == .en ? "⚡ Key+Amb" : "⚡ 主光联动"
 case .fillNatural: return lang == .en ? "🌤️ Fill -1.3" : "🌤️ 补光 -1.3"; case .catchlightSoft: return lang == .en ? "✨ Fill -2.0" : "✨ 眼神 -2.0"; case .pureFlash: return lang == .en ? "🌑 Pure GN" : "🌑 纯闪光" }}}
 struct FlashUnitModel: Identifiable, Equatable { let id: String; let brand: FlashBrandCategory; let nameZh: String; let nameEn: String; let shortBadge: String; let gnAtISO100: Double; let ratedZoomMM: Int; let minPowerDenominator: Int
-init(
-id: String, brand: FlashBrandCategory, nameZh: String, nameEn: String, shortBadge: String, gnAtISO100: Double, ratedZoomMM: Int = 50, minPowerDenominator: Int = 128
-) { self.id = id
+init(id: String, brand: FlashBrandCategory, nameZh: String, nameEn: String, shortBadge: String, gnAtISO100: Double, ratedZoomMM: Int = 50, minPowerDenominator: Int = 128) { self.id = id
 self.brand = brand; self.nameZh = nameZh; self.nameEn = nameEn; self.shortBadge = shortBadge; self.gnAtISO100 = gnAtISO100; self.ratedZoomMM = ratedZoomMM; self.minPowerDenominator = minPowerDenominator }
 func displayName(for lang: AppLanguage) -> String { let base = (lang == .en) ? nameEn : nameZh; if id == "custom" { return base }
 return "\(base) (GN\(Int(gnAtISO100)) · 1/\(minPowerDenominator))" }
-static let catalog: [FlashUnitModel] = [
-FlashUnitModel(id: "godox_lux_cadet", brand: .godox, nameZh: "神牛 Lux Cadet 复古小闪", nameEn: "Godox Lux Cadet", shortBadge: "Lux Cadet", gnAtISO100: 10, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_lux_jr", brand: .godox, nameZh: "神牛 Lux Junior 复古街拍灯", nameEn: "Godox Lux Junior", shortBadge: "Lux Jr", gnAtISO100: 12, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_lux_sr", brand: .godox, nameZh: "神牛 Lux Senior 复古折叠扇", nameEn: "Godox Lux Senior", shortBadge: "Lux Sr", gnAtISO100: 14, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_im30", brand: .godox, nameZh: "神牛 iM30 / iM20 迷你机顶灯", nameEn: "Godox iM30 Mini", shortBadge: "Godox iM30", gnAtISO100: 15, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_lux_master", brand: .godox, nameZh: "神牛 Lux Master 复古手柄灯", nameEn: "Godox Lux Master", shortBadge: "Lux Master", gnAtISO100: 25, ratedZoomMM: 28, minPowerDenominator: 256), FlashUnitModel(id: "godox_v350", brand: .godox, nameZh: "神牛 V350 / TT350 便携主力灯", nameEn: "Godox V350 / TT350", shortBadge: "Godox V350", gnAtISO100: 36, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "godox_v1", brand: .godox, nameZh: "神牛 V1 / V1Pro 圆头旗舰灯", nameEn: "Godox V1 / V1Pro", shortBadge: "Godox V1", gnAtISO100: 42, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "godox_ad100", brand: .godox, nameZh: "神牛 AD100Pro 口袋外拍灯", nameEn: "Godox AD100Pro", shortBadge: "AD100Pro", gnAtISO100: 44, ratedZoomMM: 85, minPowerDenominator: 256), FlashUnitModel(id: "godox_ad200", brand: .godox, nameZh: "神牛 AD200Pro II 外拍灯", nameEn: "Godox AD200Pro II", shortBadge: "AD200Pro", gnAtISO100: 52, ratedZoomMM: 35, minPowerDenominator: 256), FlashUnitModel(id: "godox_v860iii", brand: .godox, nameZh: "神牛 V860III / TT685II / TT600", nameEn: "Godox V860III / TT685II", shortBadge: "Godox V860", gnAtISO100: 60, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "contax_tla140", brand: .contax, nameZh: "Contax TLA 140 (G1/G2 便携灯)", nameEn: "Contax TLA 140", shortBadge: "TLA 140", gnAtISO100: 14, ratedZoomMM: 28, minPowerDenominator: 16), FlashUnitModel(id: "contax_tla200", brand: .contax, nameZh: "Contax TLA 200 (G2 经典饼干灯)", nameEn: "Contax TLA 200", shortBadge: "TLA 200", gnAtISO100: 20, ratedZoomMM: 28, minPowerDenominator: 16), FlashUnitModel(id: "contax_tla280", brand: .contax, nameZh: "Contax TLA 280 胶片闪光灯", nameEn: "Contax TLA 280", shortBadge: "TLA 280", gnAtISO100: 28, ratedZoomMM: 50, minPowerDenominator: 64), FlashUnitModel(id: "contax_tla360", brand: .contax, nameZh: "Contax TLA 360 专业胶片灯", nameEn: "Contax TLA 360", shortBadge: "TLA 360", gnAtISO100: 36, ratedZoomMM: 85, minPowerDenominator: 64), FlashUnitModel(id: "canon_270ex2", brand: .canon, nameZh: "佳能 Speedlite 270EX II / EL-100", nameEn: "Canon 270EX II / EL-100", shortBadge: "Canon 270EX", gnAtISO100: 27, ratedZoomMM: 50, minPowerDenominator: 64), FlashUnitModel(id: "canon_380ex", brand: .canon, nameZh: "佳能 Speedlite 380EX / 420EX", nameEn: "Canon 380EX / 420EX", shortBadge: "Canon 380EX", gnAtISO100: 38, ratedZoomMM: 105, minPowerDenominator: 64), FlashUnitModel(id: "canon_430ex3", brand: .canon, nameZh: "佳能 Speedlite 430EX III-RT", nameEn: "Canon 430EX III-RT", shortBadge: "Canon 430EX", gnAtISO100: 43, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "canon_580ex2", brand: .canon, nameZh: "佳能 Speedlite 580EX II", nameEn: "Canon 580EX II", shortBadge: "Canon 580EX", gnAtISO100: 58, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "canon_600ex2", brand: .canon, nameZh: "佳能 Speedlite 600EX II / EL-5 / EL-1", nameEn: "Canon 600EX II / EL-5", shortBadge: "Canon 600EX", gnAtISO100: 60, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "nikon_sb30", brand: .nikon, nameZh: "尼康 SB-30 / SB-400 超薄机顶灯", nameEn: "Nikon SB-30 / SB-400", shortBadge: "Nikon SB-30", gnAtISO100: 18, ratedZoomMM: 28, minPowerDenominator: 32), FlashUnitModel(id: "nikon_sb20", brand: .nikon, nameZh: "尼康 SB-20 / SB-22s / SB-700", nameEn: "Nikon SB-20 / SB-700", shortBadge: "Nikon SB-700", gnAtISO100: 28, ratedZoomMM: 85, minPowerDenominator: 128), FlashUnitModel(id: "nikon_sb28", brand: .nikon, nameZh: "尼康 SB-24 / SB-26 / SB-28 经典胶片灯", nameEn: "Nikon SB-24 / SB-26 / SB-28", shortBadge: "Nikon SB-28", gnAtISO100: 36, ratedZoomMM: 85, minPowerDenominator: 64), FlashUnitModel(id: "nikon_sb800", brand: .nikon, nameZh: "尼康 SB-800 / SB-900 / SB-910", nameEn: "Nikon SB-800 / SB-910", shortBadge: "Nikon SB-800", gnAtISO100: 38, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "nikon_sb5000", brand: .nikon, nameZh: "尼康 SB-5000 旗舰闪光灯", nameEn: "Nikon SB-5000", shortBadge: "Nikon SB5000", gnAtISO100: 55, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "fuji_efx20", brand: .leicaFuji, nameZh: "富士 EF-X20 / 徕卡 SF 20 金属饼干灯", nameEn: "Fuji EF-X20 / Leica SF 20", shortBadge: "EF-X20/SF20", gnAtISO100: 20, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "leica_sf24d", brand: .leicaFuji, nameZh: "徕卡 Leica SF 24D / SF 26", nameEn: "Leica SF 24D / SF 26", shortBadge: "Leica SF24D", gnAtISO100: 24, ratedZoomMM: 35, minPowerDenominator: 64), FlashUnitModel(id: "metz_32ct3", brand: .leicaFuji, nameZh: "美兹 Metz 32 CT-3 / 32 MZ-3", nameEn: "Metz 32 CT-3", shortBadge: "Metz 32", gnAtISO100: 32, ratedZoomMM: 50, minPowerDenominator: 64), FlashUnitModel(id: "leica_sf40", brand: .leicaFuji, nameZh: "徕卡 Leica SF 40 / Profoto A10", nameEn: "Leica SF 40 / Profoto A10", shortBadge: "SF40 / A10", gnAtISO100: 40, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "metz_45cl4", brand: .leicaFuji, nameZh: "美兹 Metz 45 CL-4 手柄灯", nameEn: "Metz 45 CL-4 Hammerhead", shortBadge: "Metz 45", gnAtISO100: 45, ratedZoomMM: 35, minPowerDenominator: 64), FlashUnitModel(id: "leica_sf60", brand: .leicaFuji, nameZh: "徕卡 Leica SF 60 / 富士 EF-60", nameEn: "Leica SF 60 / Fuji EF-60", shortBadge: "Leica SF60", gnAtISO100: 60, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "custom", brand: .custom, nameZh: "用户自定义闪光灯 GN", nameEn: "User Custom Flash GN", shortBadge: "Custom", gnAtISO100: 36, ratedZoomMM: 50, minPowerDenominator: 128) ] }
+static let catalog: [FlashUnitModel] = [FlashUnitModel(id: "godox_lux_cadet", brand: .godox, nameZh: "神牛 Lux Cadet 复古小闪", nameEn: "Godox Lux Cadet", shortBadge: "Lux Cadet", gnAtISO100: 10, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_lux_jr", brand: .godox, nameZh: "神牛 Lux Junior 复古街拍灯", nameEn: "Godox Lux Junior", shortBadge: "Lux Jr", gnAtISO100: 12, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_lux_sr", brand: .godox, nameZh: "神牛 Lux Senior 复古折叠扇", nameEn: "Godox Lux Senior", shortBadge: "Lux Sr", gnAtISO100: 14, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_im30", brand: .godox, nameZh: "神牛 iM30 / iM20 迷你机顶灯", nameEn: "Godox iM30 Mini", shortBadge: "Godox iM30", gnAtISO100: 15, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_lux_master", brand: .godox, nameZh: "神牛 Lux Master 复古手柄灯", nameEn: "Godox Lux Master", shortBadge: "Lux Master", gnAtISO100: 25, ratedZoomMM: 28, minPowerDenominator: 256), FlashUnitModel(id: "godox_v350", brand: .godox, nameZh: "神牛 V350 / TT350 便携主力灯", nameEn: "Godox V350 / TT350", shortBadge: "Godox V350", gnAtISO100: 36, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "godox_v1", brand: .godox, nameZh: "神牛 V1 / V1Pro 圆头旗舰灯", nameEn: "Godox V1 / V1Pro", shortBadge: "Godox V1", gnAtISO100: 42, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "godox_ad100", brand: .godox, nameZh: "神牛 AD100Pro 口袋外拍灯", nameEn: "Godox AD100Pro", shortBadge: "AD100Pro", gnAtISO100: 44, ratedZoomMM: 85, minPowerDenominator: 256), FlashUnitModel(id: "godox_ad200", brand: .godox, nameZh: "神牛 AD200Pro II 外拍灯", nameEn: "Godox AD200Pro II", shortBadge: "AD200Pro", gnAtISO100: 52, ratedZoomMM: 35, minPowerDenominator: 256), FlashUnitModel(id: "godox_v860iii", brand: .godox, nameZh: "神牛 V860III / TT685II / TT600", nameEn: "Godox V860III / TT685II", shortBadge: "Godox V860", gnAtISO100: 60, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "contax_tla140", brand: .contax, nameZh: "Contax TLA 140 (G1/G2 便携灯)", nameEn: "Contax TLA 140", shortBadge: "TLA 140", gnAtISO100: 14, ratedZoomMM: 28, minPowerDenominator: 16), FlashUnitModel(id: "contax_tla200", brand: .contax, nameZh: "Contax TLA 200 (G2 经典饼干灯)", nameEn: "Contax TLA 200", shortBadge: "TLA 200", gnAtISO100: 20, ratedZoomMM: 28, minPowerDenominator: 16), FlashUnitModel(id: "contax_tla280", brand: .contax, nameZh: "Contax TLA 280 胶片闪光灯", nameEn: "Contax TLA 280", shortBadge: "TLA 280", gnAtISO100: 28, ratedZoomMM: 50, minPowerDenominator: 64), FlashUnitModel(id: "contax_tla360", brand: .contax, nameZh: "Contax TLA 360 专业胶片灯", nameEn: "Contax TLA 360", shortBadge: "TLA 360", gnAtISO100: 36, ratedZoomMM: 85, minPowerDenominator: 64), FlashUnitModel(id: "canon_270ex2", brand: .canon, nameZh: "佳能 Speedlite 270EX II / EL-100", nameEn: "Canon 270EX II / EL-100", shortBadge: "Canon 270EX", gnAtISO100: 27, ratedZoomMM: 50, minPowerDenominator: 64), FlashUnitModel(id: "canon_380ex", brand: .canon, nameZh: "佳能 Speedlite 380EX / 420EX", nameEn: "Canon 380EX / 420EX", shortBadge: "Canon 380EX", gnAtISO100: 38, ratedZoomMM: 105, minPowerDenominator: 64), FlashUnitModel(id: "canon_430ex3", brand: .canon, nameZh: "佳能 Speedlite 430EX III-RT", nameEn: "Canon 430EX III-RT", shortBadge: "Canon 430EX", gnAtISO100: 43, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "canon_580ex2", brand: .canon, nameZh: "佳能 Speedlite 580EX II", nameEn: "Canon 580EX II", shortBadge: "Canon 580EX", gnAtISO100: 58, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "canon_600ex2", brand: .canon, nameZh: "佳能 Speedlite 600EX II / EL-5 / EL-1", nameEn: "Canon 600EX II / EL-5", shortBadge: "Canon 600EX", gnAtISO100: 60, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "nikon_sb30", brand: .nikon, nameZh: "尼康 SB-30 / SB-400 超薄机顶灯", nameEn: "Nikon SB-30 / SB-400", shortBadge: "Nikon SB-30", gnAtISO100: 18, ratedZoomMM: 28, minPowerDenominator: 32), FlashUnitModel(id: "nikon_sb20", brand: .nikon, nameZh: "尼康 SB-20 / SB-22s / SB-700", nameEn: "Nikon SB-20 / SB-700", shortBadge: "Nikon SB-700", gnAtISO100: 28, ratedZoomMM: 85, minPowerDenominator: 128), FlashUnitModel(id: "nikon_sb28", brand: .nikon, nameZh: "尼康 SB-24 / SB-26 / SB-28 经典胶片灯", nameEn: "Nikon SB-24 / SB-26 / SB-28", shortBadge: "Nikon SB-28", gnAtISO100: 36, ratedZoomMM: 85, minPowerDenominator: 64), FlashUnitModel(id: "nikon_sb800", brand: .nikon, nameZh: "尼康 SB-800 / SB-900 / SB-910", nameEn: "Nikon SB-800 / SB-910", shortBadge: "Nikon SB-800", gnAtISO100: 38, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "nikon_sb5000", brand: .nikon, nameZh: "尼康 SB-5000 旗舰闪光灯", nameEn: "Nikon SB-5000", shortBadge: "Nikon SB5000", gnAtISO100: 55, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "fuji_efx20", brand: .leicaFuji, nameZh: "富士 EF-X20 / 徕卡 SF 20 金属饼干灯", nameEn: "Fuji EF-X20 / Leica SF 20", shortBadge: "EF-X20/SF20", gnAtISO100: 20, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "leica_sf24d", brand: .leicaFuji, nameZh: "徕卡 Leica SF 24D / SF 26", nameEn: "Leica SF 24D / SF 26", shortBadge: "Leica SF24D", gnAtISO100: 24, ratedZoomMM: 35, minPowerDenominator: 64), FlashUnitModel(id: "metz_32ct3", brand: .leicaFuji, nameZh: "美兹 Metz 32 CT-3 / 32 MZ-3", nameEn: "Metz 32 CT-3", shortBadge: "Metz 32", gnAtISO100: 32, ratedZoomMM: 50, minPowerDenominator: 64), FlashUnitModel(id: "leica_sf40", brand: .leicaFuji, nameZh: "徕卡 Leica SF 40 / Profoto A10", nameEn: "Leica SF 40 / Profoto A10", shortBadge: "SF40 / A10", gnAtISO100: 40, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "metz_45cl4", brand: .leicaFuji, nameZh: "美兹 Metz 45 CL-4 手柄灯", nameEn: "Metz 45 CL-4 Hammerhead", shortBadge: "Metz 45", gnAtISO100: 45, ratedZoomMM: 35, minPowerDenominator: 64), FlashUnitModel(id: "leica_sf60", brand: .leicaFuji, nameZh: "徕卡 Leica SF 60 / 富士 EF-60", nameEn: "Leica SF 60 / Fuji EF-60", shortBadge: "Leica SF60", gnAtISO100: 60, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "custom", brand: .custom, nameZh: "用户自定义闪光灯 GN", nameEn: "User Custom Flash GN", shortBadge: "Custom", gnAtISO100: 36, ratedZoomMM: 50, minPowerDenominator: 128)] }
 final class CameraAmbientEVReader: NSObject, ObservableObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureDepthDataOutputDelegate { static let shared = CameraAmbientEVReader()
 @Published var liveEV100: Double = 9.0; @Published var liveDistanceMeters: Double = 2.0; @Published var hasLiDARDepth: Bool = false; @Published var distanceSensorLabel: String = "1x LiDAR"
 @Published var cameraISO: Float = 200; @Published var cameraShutterDenom: Int = 125; @Published var cameraAperture: Float = 1.8; @Published var cameraTargetOffset: Float = 0.0; @Published var calibrationTrimEV: Double = 0.0
@@ -290,23 +276,16 @@ if self.continuousSyncToMeter { self.onLiveEVUpdated?(roundedEV) }}}}
 struct CameraPreviewLayerView: UIViewRepresentable { let session: AVCaptureSession
 final class PreviewUIView: UIView { override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
 var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }}
-func makeUIView(context: Context) -> PreviewUIView { let view = PreviewUIView()
-view.backgroundColor = UIColor.black
-view.previewLayer.session = session
-view.previewLayer.videoGravity = .resizeAspectFill
-return view }
+func makeUIView(context: Context) -> PreviewUIView { let view = PreviewUIView(); view.backgroundColor = UIColor.black; view.previewLayer.session = session; view.previewLayer.videoGravity = .resizeAspectFill; return view }
 func updateUIView(_ uiView: PreviewUIView, context: Context) { if uiView.previewLayer.session !== session { uiView.previewLayer.session = session }}}
 enum AppTheme: Int, CaseIterable, Identifiable { case instagramGlow = 0
 case threadsMinimal = 1; case leicaBrushedBrass = 2; var id: Int { rawValue }
 func name(for lang: AppLanguage) -> String { switch self { case .instagramGlow: return lang == .en ? "Sakura Mist" : "雾粉微光 (淡雅)"
 case .threadsMinimal: return "Threads Obsidian"; case .leicaBrushedBrass: return lang == .en ? "Film Brass" : "Film Brass (露铜)" }}
 var icon: String { switch self { case .instagramGlow: return "sparkles.rectangle.stack.fill"
-case .threadsMinimal: return "at.circle.fill"; case .leicaBrushedBrass: return "camera.aperture" }}; var backgroundGradient: [Color] { switch self { case .instagramGlow: return [
-Color(red: 0.17, green: 0.16, blue: 0.20), Color(red: 0.24, green: 0.20, blue: 0.23), Color(red: 0.22, green: 0.19, blue: 0.21), Color(red: 0.14, green: 0.14, blue: 0.17) ]
-case .threadsMinimal: return [
-Color(red: 0.03, green: 0.03, blue: 0.04), Color(red: 0.09, green: 0.09, blue: 0.11), Color(red: 0.04, green: 0.04, blue: 0.05) ]
-case .leicaBrushedBrass: return [
-Color(red: 0.09, green: 0.08, blue: 0.07), Color(red: 0.19, green: 0.14, blue: 0.09), Color(red: 0.28, green: 0.20, blue: 0.11), Color(red: 0.08, green: 0.07, blue: 0.06) ] }}
+case .threadsMinimal: return "at.circle.fill"; case .leicaBrushedBrass: return "camera.aperture" }}; var backgroundGradient: [Color] { switch self { case .instagramGlow: return [Color(red: 0.17, green: 0.16, blue: 0.20), Color(red: 0.24, green: 0.20, blue: 0.23), Color(red: 0.22, green: 0.19, blue: 0.21), Color(red: 0.14, green: 0.14, blue: 0.17)]
+case .threadsMinimal: return [Color(red: 0.03, green: 0.03, blue: 0.04), Color(red: 0.09, green: 0.09, blue: 0.11), Color(red: 0.04, green: 0.04, blue: 0.05)]
+case .leicaBrushedBrass: return [Color(red: 0.09, green: 0.08, blue: 0.07), Color(red: 0.19, green: 0.14, blue: 0.09), Color(red: 0.28, green: 0.20, blue: 0.11), Color(red: 0.08, green: 0.07, blue: 0.06)] }}
 var accent: Color { switch self { case .instagramGlow: return Color(red: 0.94, green: 0.79, blue: 0.82); case .threadsMinimal: return Color(red: 0.96, green: 0.96, blue: 0.98)
 case .leicaBrushedBrass: return Color(red: 0.90, green: 0.68, blue: 0.32) }}; var secondaryAccent: Color { switch self { case .instagramGlow: return Color(red: 0.86, green: 0.82, blue: 0.78)
 case .threadsMinimal: return Color(red: 0.58, green: 0.62, blue: 0.70); case .leicaBrushedBrass: return Color(red: 0.78, green: 0.48, blue: 0.22) }}}
@@ -327,13 +306,7 @@ final class FeedbackEngine: NSObject, ObservableObject, AVSpeechSynthesizerDeleg
 private let synthesizer = AVSpeechSynthesizer(); private let impactLight = UIImpactFeedbackGenerator(style: .light); private let impactMedium = UIImpactFeedbackGenerator(style: .medium); private let impactRigid = UIImpactFeedbackGenerator(style: .rigid); private let impactHeavy = UIImpactFeedbackGenerator(style: .heavy); private let selectionGen = UISelectionFeedbackGenerator(); private let notifyGen = UINotificationFeedbackGenerator()
 @Published var isSpeaking: Bool = false; @Published var isListening: Bool = false; @Published var recognizedTranscript: String = ""; @Published var voiceStatusHint: String = ""; @Published var activeVoiceQualityLabel: String = "Enhanced Voice"
 private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?; private var recognitionTask: SFSpeechRecognitionTask?; private let audioEngine = AVAudioEngine(); private var onCommandRecognized: ((String) -> Void)?; private var onAutoStopAfterActionTrigger: (() -> Void)?; private var silenceTimerWorkItem: DispatchWorkItem?; private var currentLanguage: AppLanguage = .zh
-override init() { super.init()
-synthesizer.delegate = self
-impactLight.prepare()
-impactMedium.prepare()
-impactRigid.prepare()
-selectionGen.prepare()
-refreshVoiceQualityStatus(persona: .magneticMale, lang: .zh) }
+override init() { super.init(); synthesizer.delegate = self; impactLight.prepare(); impactMedium.prepare(); impactRigid.prepare(); selectionGen.prepare(); refreshVoiceQualityStatus(persona: .magneticMale, lang: .zh) }
 func dialTick(soundEnabled: Bool, hapticEnabled: Bool, magneticSnap: Bool = false) { if hapticEnabled { if magneticSnap { impactRigid.impactOccurred(intensity: 1.0) } else { impactLight.impactOccurred(intensity: 0.75) }}
 if soundEnabled { AudioServicesPlaySystemSound(magneticSnap ? 1156 : 1157) }}
 func buttonTap(soundEnabled: Bool, hapticEnabled: Bool) { if hapticEnabled { impactMedium.impactOccurred() }
@@ -380,10 +353,7 @@ utterance.rate = 0.49
 case .gentleFemale: utterance.pitchMultiplier = 1.03
 utterance.rate = 0.50 }} else { utterance.pitchMultiplier = persona.pitch
 utterance.rate = persona.rate }
-utterance.preUtteranceDelay = 0.03
-utterance.postUtteranceDelay = 0.06
-isSpeaking = true
-synthesizer.speak(utterance) }
+utterance.preUtteranceDelay = 0.03; utterance.postUtteranceDelay = 0.06; isSpeaking = true; synthesizer.speak(utterance) }
 func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) { DispatchQueue.main.async { FeedbackEngine.shared.isSpeaking = false }}
 func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) { DispatchQueue.main.async { FeedbackEngine.shared.isSpeaking = false }}
 private func scheduleSilenceAutoStop(after seconds: Double) { silenceTimerWorkItem?.cancel()
@@ -402,25 +372,19 @@ SFSpeechRecognizer.requestAuthorization { authStatus in DispatchQueue.main.async
 default: FeedbackEngine.shared.voiceStatusHint = lang == .en
 ? "Please allow Speech Recognition in Settings"
 : "请在系统设置中允许语音识别权限" }}}}
-private func startRecordingSession(lang: AppLanguage) { recognitionTask?.cancel()
-recognitionTask = nil
-silenceTimerWorkItem?.cancel()
-let audioSession = AVAudioSession.sharedInstance()
+private func startRecordingSession(lang: AppLanguage) { recognitionTask?.cancel(); recognitionTask = nil; silenceTimerWorkItem?.cancel(); let audioSession = AVAudioSession.sharedInstance()
 do { try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .allowBluetooth])
 try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 } catch { voiceStatusHint = lang == .en ? "Audio session error" : "音频通道启动失败"
 return }
 let req = SFSpeechAudioBufferRecognitionRequest()
 req.shouldReportPartialResults = true
-req.contextualStrings = [
-"f3", "f/3", "f2.8", "f4", "f5.6", "f8", "f11", "f16", "f1.4", "f1.8", "f2", "光圈3", "光圈2.8", "光圈4", "光圈5.6", "光圈8", "快门200", "快门速度200分之一秒", "200分之一秒", "快门125", "快门60", "快门250", "快门500", "快门1000", "距离0.7米", "距离1.2米", "距离1.5米", "距离2米", "距离2.5米", "距离3米", "纯闪光", "主光联动", "自然补光", "逆光补光", "眼神光", "大太阳天", "大太阳", "晴天", "阴天", "多云", "树荫", "逆光", "明亮室内", "办公室", "室内", "咖啡馆", "酒吧", "昏暗", "夜景", "夜晚", "加一档", "减一档", "归零", "肥皂盒", "柔光箱", "跳闪", "天花板", "shutter 200", "shutter 125", "aperture 2.8", "aperture 4", "2 meters", "pure flash", "fill flash", "sunny", "shade", "indoor", "night" ]
+req.contextualStrings = ["f3", "f/3", "f2.8", "f4", "f5.6", "f8", "f11", "f16", "f1.4", "f1.8", "f2", "光圈3", "光圈2.8", "光圈4", "光圈5.6", "光圈8", "快门200", "快门速度200分之一秒", "200分之一秒", "快门125", "快门60", "快门250", "快门500", "快门1000", "距离0.7米", "距离1.2米", "距离1.5米", "距离2米", "距离2.5米", "距离3米", "纯闪光", "主光联动", "自然补光", "逆光补光", "眼神光", "大太阳天", "大太阳", "晴天", "阴天", "多云", "树荫", "逆光", "明亮室内", "办公室", "室内", "咖啡馆", "酒吧", "昏暗", "夜景", "夜晚", "加一档", "减一档", "归零", "肥皂盒", "柔光箱", "跳闪", "天花板", "shutter 200", "shutter 125", "aperture 2.8", "aperture 4", "2 meters", "pure flash", "fill flash", "sunny", "shade", "indoor", "night"]
 self.recognitionRequest = req; let inputNode = audioEngine.inputNode; let recordingFormat = inputNode.outputFormat(forBus: 0)
 inputNode.removeTap(onBus: 0)
 inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in req.append(buffer) }
 audioEngine.prepare()
-do { try audioEngine.start()
-isListening = true
-recognizedTranscript = ""
+do { try audioEngine.start(); isListening = true; recognizedTranscript = ""
 voiceStatusHint = lang == .en
 ? "Listening (auto-stops)... Say e.g. 'f3', 'shutter 200'"
 : "正在聆听(静音自动停止)... 请说“f3”、“快门200”"
@@ -436,13 +400,8 @@ engine.scheduleSilenceAutoStop(after: 1.6) }
 if error != nil || (result?.isFinal ?? false) { if engine.isListening { engine.stopListening() }}}}}
 func stopListening() { silenceTimerWorkItem?.cancel()
 silenceTimerWorkItem = nil
-if audioEngine.isRunning { audioEngine.stop()
-audioEngine.inputNode.removeTap(onBus: 0) }
-recognitionRequest?.endAudio()
-recognitionTask?.cancel()
-recognitionRequest = nil
-recognitionTask = nil
-isListening = false
+if audioEngine.isRunning { audioEngine.stop(); audioEngine.inputNode.removeTap(onBus: 0) }
+recognitionRequest?.endAudio(); recognitionTask?.cancel(); recognitionRequest = nil; recognitionTask = nil; isListening = false
 if !recognizedTranscript.isEmpty { voiceStatusHint = currentLanguage == .en
 ? "Synced: \"\(recognizedTranscript)\""
 : "已识别同步：“\(recognizedTranscript)”"
@@ -450,9 +409,7 @@ if let speakAfter = onAutoStopAfterActionTrigger { onAutoStopAfterActionTrigger 
 DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) { speakAfter() }}} else { onAutoStopAfterActionTrigger = nil
 voiceStatusHint = "" }}
 func startVoiceFromShortcut(lang: AppLanguage, onRecognized: @escaping (String) -> Void, onAutoStoppedSpeak: @escaping () -> Void) { self.currentLanguage = lang
-if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate)
-isSpeaking = false }
-if isListening { stopListening() }
+if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate); isSpeaking = false }; if isListening { stopListening() }
 self.onCommandRecognized = onRecognized; self.onAutoStopAfterActionTrigger = onAutoStoppedSpeak
 SFSpeechRecognizer.requestAuthorization { authStatus in DispatchQueue.main.async { if authStatus == .authorized { AVAudioApplication.requestRecordPermission { granted in DispatchQueue.main.async { if granted { FeedbackEngine.shared.startRecordingSession(lang: lang) }}}}}}}}
 struct ContentView: View {
@@ -463,18 +420,14 @@ struct ContentView: View {
 @State private var selectedParameter: DialParameter = .aperture; @State private var lastEditedParameter: DialParameter = .aperture; @State private var showOnboardingSheet: Bool = false; @State private var showCameraEVMeterSheet: Bool = false; @State private var showGuideSheet: Bool = false; @State private var guideInitialSection: Int = 0; @State private var lastSnappedEVComp: Double = 0.0
 @StateObject private var cameraEVReader = CameraAmbientEVReader.shared
 @State private var selectedTab: Int = 0; @State private var modifiersSubTab: Int = 0; @State private var logSavedToast: String? = nil; @State private var expandedSettingsSection: Int = -1
-private let allApertureSteps: [Double] = [
-1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6, 8.0, 11.0, 16.0, 22.0 ]
-private let shutterSteps: [Int] = [
--15, -8, -4, -2, 1, 2, 4, 8, 15, 30, 50, 60, 90, 100, 125, 200, 250, 500, 1000, 2000, 4000 ]
+private let allApertureSteps: [Double] = [1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6, 8.0, 11.0, 16.0, 22.0]
+private let shutterSteps: [Int] = [-15, -8, -4, -2, 1, 2, 4, 8, 15, 30, 50, 60, 90, 100, 125, 200, 250, 500, 1000, 2000, 4000]
 private func formatShutter(_ s: Int) -> String { s < 0 ? "\(-s)\"" : (s == 1 ? "1\"" : "1/\(s)s") }
 private func shutterSeconds(_ s: Int) -> Double { s < 0 ? Double(-s) : (1.0 / Double(max(1, s))) }
 private func reciprocityAdjustedSeconds(for s: Int) -> Double? { let sec = shutterSeconds(s); guard sec >= 1.0 else { return nil }
 let p: Double = (currentFilmBrand == .fujifilm) ? 1.18 : (currentFilmBrand == .ilford || currentFilmBrand == .lomoOther ? 1.38 : 1.28); return pow(sec, p) }
-private let isoSteps: [Double] = [
-50, 64, 100, 125, 160, 200, 250, 320, 400, 500, 800, 1600, 3200 ]
-private let evCompSteps: [Double] = [
--2.0, -1.7, -1.3, -1.0, -0.7, -0.3, 0.0, 0.3, 0.7, 1.0, 1.3, 1.7, 2.0 ]
+private let isoSteps: [Double] = [50, 64, 100, 125, 160, 200, 250, 320, 400, 500, 800, 1600, 3200]
+private let evCompSteps: [Double] = [-2.0, -1.7, -1.3, -1.0, -0.7, -0.3, 0.0, 0.3, 0.7, 1.0, 1.3, 1.7, 2.0]
 private let maxAperturePresets: [Double] = [1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6]
 private let syncPresets: [Int] = [30, 50, 60, 90, 100, 125, 200, 250, 400, 500]
 private var syncModeEnum: ShutterSyncMode { ShutterSyncMode(rawValue: syncModeRaw) ?? .focalPlaneMechanical }
@@ -482,8 +435,7 @@ private var cameraPresetEnum: CameraShutterPreset { CameraShutterPreset(rawValue
 private var effectiveMaxSyncSpeed: Int { syncModeEnum == .leafShutterLens ? max(maxSyncSpeed, 500) : maxSyncSpeed }
 private let allPowerDenominators: [Int] = [1, 2, 4, 8, 16, 32, 64, 128, 256]
 private let flashZoomPresets: [Int] = [0, 24, 28, 35, 50, 85, 105]
-private let distanceSteps: [Double] = [
-0.5, 0.7, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0 ]
+private let distanceSteps: [Double] = [0.5, 0.7, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0]
 private var flashRole: FlashRoleMode { FlashRoleMode(rawValue: flashRoleRaw) ?? .keyAutoSum }
 private var powerDenominators: [Int] { let limit = selectedFlashModel.minPowerDenominator
 let filtered = allPowerDenominators.filter { $0 <= limit }; return filtered.isEmpty ? [1, 2, 4, 8, 16, 32, 64, 128] : filtered }
@@ -577,17 +529,14 @@ if let closestDist = distanceSteps.min(by: { abs($0 - idealDist) < abs($1 - idea
 let validSteps = shutterSteps.filter { $0 > 0 && $0 <= maxAllowed }
 if let closest = (validSteps.isEmpty ? shutterSteps : validSteps).min(by: { abs((1.0 / shutterSeconds($0)) - targetShutterDouble) < abs((1.0 / shutterSeconds($1)) - targetShutterDouble) }) { shutterDenom = closest }}}
 private func normalizeChineseNumbers(_ raw: String) -> String { var s = raw.lowercased()
-let phraseReplacements: [(String, String)] = [
-("四千", "4000"), ("两千", "2000"), ("二千", "2000"), ("一千六百", "1600"), ("一千", "1000"), ("八百", "800"), ("五百", "500"), ("四百", "400"), ("三百二", "320"), ("两百五", "250"), ("二百五", "250"), ("两百", "200"), ("二百", "200"), ("一百六", "160"), ("一百二十五", "125"), ("一百二", "125"), ("一百", "100"), ("六十", "60"), ("五十", "50"), ("三十", "30"), ("二十二", "22"), ("十六", "16"), ("十五", "15"), ("十三", "13"), ("十一", "11"), ("五点六", "5.6"), ("二点八", "2.8"), ("一点四", "1.4"), ("一点八", "1.8"), ("一点二", "1.2"), ("一点六", "1.6"), ("二点二", "2.2"), ("二点五", "2.5"), ("一点五", "1.5"), ("三点五", "3.5"), ("三点二", "3.2"), ("四点五", "4.5"), ("六点三", "6.3"), ("七点一", "7.1"), ("零点五", "0.5"), ("半米", "0.5米"), ("艾弗", "f"), ("エフ", "f") ]
+let phraseReplacements: [(String, String)] = [("四千", "4000"), ("两千", "2000"), ("二千", "2000"), ("一千六百", "1600"), ("一千", "1000"), ("八百", "800"), ("五百", "500"), ("四百", "400"), ("三百二", "320"), ("两百五", "250"), ("二百五", "250"), ("两百", "200"), ("二百", "200"), ("一百六", "160"), ("一百二十五", "125"), ("一百二", "125"), ("一百", "100"), ("六十", "60"), ("五十", "50"), ("三十", "30"), ("二十二", "22"), ("十六", "16"), ("十五", "15"), ("十三", "13"), ("十一", "11"), ("五点六", "5.6"), ("二点八", "2.8"), ("一点四", "1.4"), ("一点八", "1.8"), ("一点二", "1.2"), ("一点六", "1.6"), ("二点二", "2.2"), ("二点五", "2.5"), ("一点五", "1.5"), ("三点五", "3.5"), ("三点二", "3.2"), ("四点五", "4.5"), ("六点三", "6.3"), ("七点一", "7.1"), ("零点五", "0.5"), ("半米", "0.5米"), ("艾弗", "f"), ("エフ", "f")]
 for (k, v) in phraseReplacements { s = s.replacingOccurrences(of: k, with: v) }
-let singleDigits: [(String, String)] = [
-("一", "1"), ("二", "2"), ("两", "2"), ("三", "3"), ("四", "4"), ("五", "5"), ("六", "6"), ("七", "7"), ("八", "8"), ("九", "9"), ("十", "10") ]
+let singleDigits: [(String, String)] = [("一", "1"), ("二", "2"), ("两", "2"), ("三", "3"), ("四", "4"), ("五", "5"), ("六", "6"), ("七", "7"), ("八", "8"), ("九", "9"), ("十", "10")]
 for (k, v) in singleDigits { s = s.replacingOccurrences(of: k, with: v) }
 s = s.replacingOccurrences(of: "点", with: ".")
 return s }
 private func applyVoiceCommand(_ transcript: String) { let text = normalizeChineseNumbers(transcript)
-var matchedAny = false; var lastChanged: DialParameter? = nil; let shutterPatterns = [
-"(?:快门速度|快门|shutter(?:\\s*speed)?)\\s*(?:1/)?(\\d{2,4})(?:\\s*分之一秒|\\s*秒)?", "(\\d{2,4})\\s*分之一秒?", "1/(\\d{2,4})\\s*秒?" ]
+var matchedAny = false; var lastChanged: DialParameter? = nil; let shutterPatterns = ["(?:快门速度|快门|shutter(?:\\s*speed)?)\\s*(?:1/)?(\\d{2,4})(?:\\s*分之一秒|\\s*秒)?", "(\\d{2,4})\\s*分之一秒?", "1/(\\d{2,4})\\s*秒?"]
 for pat in shutterPatterns { if let regex = try? NSRegularExpression(pattern: pat), let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)), let r = Range(match.range(at: 1), in: text), let val = Int(text[r]), val >= 10 && val <= 8000 { if let closest = shutterSteps.min(by: { abs($0 - val) < abs($1 - val) }) { withAnimation(.snappy) { shutterDenom = closest
 selectedParameter = .shutter }
 lastChanged = .shutter
@@ -661,8 +610,7 @@ if lockPower { solveForLockedPower(changed: changed) }
 } else if lockPower { solveForLockedPower(changed: .flashPower) }
 syncWidgetDefaults() }}
 private func syncWidgetDefaults() { let effISO = max(filmISO * pow(2.0, pushPullEV), 25.0)
-let leafLoss = (syncModeEnum == .leafShutterLens && shutterDenom >= 250 && aperture <= 4.0) ? 0.35 : 0.0; let camEV = log2((aperture * aperture) / shutterSeconds(shutterDenom)) - log2(effISO / 100.0) + leafLoss; let ambDiff = (ambientEV100 - filterLossEV) - camEV; let ambFactor: Double = (flashRole == .keyAutoSum && ambDiff > -2.6) ? max(0.22, 1.0 - min(0.78, pow(2.0, ambDiff) * 0.75)) : 1.0; let roleBias: Double = (flashRole == .fillNatural) ? -1.3 : (flashRole == .catchlightSoft ? -2.0 : 0.0); let auxLoss = modifierLossEV + bounceLossEV + filterLossEV + roleBias + log2(ambFactor); let dict: [String: Double] = [
-"lf_iso": effISO, "lf_gn": zoomAdjustedGNAtISO100, "lf_distance": distance, "lf_aperture": aperture, "lf_shutter": Double(max(1, shutterDenom)), "lf_sync_speed": Double(maxSyncSpeed), "lf_theme": Double(themeRaw), "lf_film_format": Double(filmFormatRaw), "lf_sync_mode": Double(syncModeRaw), "lf_max_aperture": maxLensAperture, "lf_exp_comp_ev": exposureCompEV, "lf_aux_loss": auxLoss, "lf_sync_ts": Date().timeIntervalSince1970 ]
+let leafLoss = (syncModeEnum == .leafShutterLens && shutterDenom >= 250 && aperture <= 4.0) ? 0.35 : 0.0; let camEV = log2((aperture * aperture) / shutterSeconds(shutterDenom)) - log2(effISO / 100.0) + leafLoss; let ambDiff = (ambientEV100 - filterLossEV) - camEV; let ambFactor: Double = (flashRole == .keyAutoSum && ambDiff > -2.6) ? max(0.22, 1.0 - min(0.78, pow(2.0, ambDiff) * 0.75)) : 1.0; let roleBias: Double = (flashRole == .fillNatural) ? -1.3 : (flashRole == .catchlightSoft ? -2.0 : 0.0); let auxLoss = modifierLossEV + bounceLossEV + filterLossEV + roleBias + log2(ambFactor); let dict: [String: Double] = ["lf_iso": effISO, "lf_gn": zoomAdjustedGNAtISO100, "lf_distance": distance, "lf_aperture": aperture, "lf_shutter": Double(max(1, shutterDenom)), "lf_sync_speed": Double(maxSyncSpeed), "lf_theme": Double(themeRaw), "lf_film_format": Double(filmFormatRaw), "lf_sync_mode": Double(syncModeRaw), "lf_max_aperture": maxLensAperture, "lf_exp_comp_ev": exposureCompEV, "lf_aux_loss": auxLoss, "lf_sync_ts": Date().timeIntervalSince1970]
 LocalLoopbackSyncBridge.shared.publishState(dict) }
 private func applyRemoteWidgetDict(_ dict: [String: Double]) { if let t = dict["lf_theme"] { let ti = max(0, min(2, Int(round(t))))
 if themeRaw != ti { themeRaw = ti }}
@@ -1203,42 +1151,39 @@ Text(title).font(.system(size: 10.5, weight: isSelected ? .black : .semibold, de
 }.buttonStyle(.plain) }}
 struct iOSClockDrumWheelView: View { let items: [String]; let selectedIndex: Int; let parameterIcon: String; let subtitleText: String; let theme: AppTheme; let onStepChange: (Int) -> Void
 @State private var dragAccumY: CGFloat = 0; @State private var liveDragY: CGFloat = 0
-@ViewBuilder private func drumCylinderSlot(offset: Int, radius: CGFloat, totalW: CGFloat) -> some View { let targetIdx = selectedIndex + offset
-if targetIdx >= 0 && targetIdx < items.count { let cOff = CGFloat(offset) - (liveDragY / 22.0); let norm = max(-1.0, min(1.0, cOff / 3.15)); let deg = Double(norm) * 76.0; let rad = deg * .pi / 180.0; let yArc = CGFloat(sin(rad)) * radius; let cosVal = max(0.32, CGFloat(cos(rad))); let isCenter = abs(cOff) < 0.45; let absOff = abs(offset); let fontSz: CGFloat = isCenter ? 24.5 : (absOff == 1 ? 17.5 : (absOff == 2 ? 14.5 : 12.5)); let tickW: CGFloat = isCenter ? 12.0 : (absOff == 1 ? 8.0 : (absOff == 2 ? 5.5 : 3.5))
-HStack(spacing: 6) { RoundedRectangle(cornerRadius: 1).fill(isCenter ? theme.accent : Color.white.opacity(Double(cosVal) * 0.42)).frame(width: tickW, height: isCenter ? 2.4 : 1.4)
-Text(items[targetIdx]).font(.system(size: fontSz, weight: isCenter ? .black : .bold, design: .monospaced)).foregroundStyle(isCenter ? Color.white : Color.white.opacity(0.92)).shadow(color: isCenter ? theme.accent.opacity(0.80) : Color.clear, radius: isCenter ? 8 : 0).contentTransition(.numericText()).lineLimit(1).minimumScaleFactor(0.72).frame(maxWidth: .infinity)
-RoundedRectangle(cornerRadius: 1).fill(isCenter ? theme.accent : Color.white.opacity(Double(cosVal) * 0.42)).frame(width: tickW, height: isCenter ? 2.4 : 1.4)
-}.padding(.horizontal, 8).frame(width: totalW, height: 34).scaleEffect(x: 0.88 + 0.12 * cosVal, y: cosVal).rotation3DEffect(.degrees(-deg * 0.68), axis: (x: 1, y: 0, z: 0), perspective: 0.48).opacity(Double(pow(cosVal, 1.75))).offset(y: yArc).contentShape(Rectangle()).onTapGesture { if offset != 0 { onStepChange(offset) } } } }
-var body: some View { GeometryReader { geo in let w = geo.size.width; let h = geo.size.height; let footerH: CGFloat = 16.0; let drumH = max(96.0, h - footerH); let radius = drumH * 0.49
-VStack(spacing: 2) { ZStack { RoundedRectangle(cornerRadius: 15, style: .continuous).fill(LinearGradient(colors: [Color.black.opacity(0.72), Color.white.opacity(0.05), Color.white.opacity(0.05), Color.black.opacity(0.72)], startPoint: .top, endPoint: .bottom))
-RadialGradient(colors: [theme.accent.opacity(0.30), theme.secondaryAccent.opacity(0.08), Color.clear], center: .center, startRadius: 6, endRadius: drumH * 0.55)
-VStack(spacing: 5.5) { ForEach(0..<18, id: \.self) { _ in Rectangle().fill(Color.white.opacity(0.028)).frame(height: 1) } }.padding(.horizontal, 10)
-ZStack { RoundedRectangle(cornerRadius: 12, style: .continuous).fill(LinearGradient(colors: [theme.accent.opacity(0.28), Color.white.opacity(0.16), theme.accent.opacity(0.22)], startPoint: .leading, endPoint: .trailing))
-RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(LinearGradient(colors: [Color.white.opacity(0.60), theme.accent.opacity(0.90), Color.white.opacity(0.35)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.3)
-}.frame(height: 36).padding(.horizontal, 4).shadow(color: theme.accent.opacity(0.38), radius: 9, x: 0, y: 0)
-ZStack { ForEach(-3...3, id: \.self) { off in drumCylinderSlot(offset: off, radius: radius, totalW: w) }
-}.frame(width: w, height: drumH).clipped().mask(LinearGradient(stops: [.init(color: .clear, location: 0.00), .init(color: .white.opacity(0.18), location: 0.12), .init(color: .white.opacity(0.82), location: 0.30), .init(color: .white, location: 0.50), .init(color: .white.opacity(0.82), location: 0.70), .init(color: .white.opacity(0.18), location: 0.88), .init(color: .clear, location: 1.00)], startPoint: .top, endPoint: .bottom))
-VStack(spacing: 0) { LinearGradient(colors: [Color.black.opacity(0.68), Color.black.opacity(0.18), Color.clear], startPoint: .top, endPoint: .bottom)
-.frame(height: drumH * 0.25)
-Spacer(minLength: 0)
-LinearGradient(colors: [Color.clear, Color.black.opacity(0.18), Color.black.opacity(0.68)], startPoint: .top, endPoint: .bottom)
-.frame(height: drumH * 0.25) }.allowsHitTesting(false)
-}.frame(width: w, height: drumH).clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous)).overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 0.9)).contentShape(Rectangle()).gesture(
-DragGesture(minimumDistance: 3).onChanged { val in let dy = val.translation.height - dragAccumY
-withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.75)) { liveDragY = max(-14, min(14, dy)) }
-let stepH: CGFloat = 20.0; if abs(dy) >= stepH { let steps = Int(dy / stepH); dragAccumY += CGFloat(steps) * stepH; liveDragY = 0
-onStepChange(steps < 0 ? 1 : -1) }
+@ViewBuilder private func crownTicks(left: Bool, isCenter: Bool, absOff: Int, majW: CGFloat, minW: CGFloat) -> some View { VStack(alignment: left ? .leading : .trailing, spacing: 2.5) { Capsule().fill(Color.white.opacity(isCenter ? 0.45 : 0.16)).frame(width: minW, height: 1.0)
+HStack(spacing: 2) { if !left && isCenter { Circle().fill(theme.accent).frame(width: 3.5, height: 3.5) }
+Capsule().fill(isCenter ? theme.accent : Color.white.opacity(absOff == 1 ? 0.42 : 0.22)).frame(width: majW, height: isCenter ? 2.2 : 1.3)
+if left && isCenter { Circle().fill(theme.accent).frame(width: 3.5, height: 3.5) } }
+Capsule().fill(Color.white.opacity(isCenter ? 0.45 : 0.16)).frame(width: minW, height: 1.0) } }
+@ViewBuilder private func watchCrownRow(offset: Int, rowH: CGFloat) -> some View { let targetIdx = selectedIndex + offset; let isCenter = (offset == 0); let absOff = abs(offset)
+if targetIdx >= 0 && targetIdx < items.count { let fontSz: CGFloat = isCenter ? 24.0 : (absOff == 1 ? 16.5 : (absOff == 2 ? 13.5 : 11.5)); let rowAlpha: Double = isCenter ? 1.0 : (absOff == 1 ? 0.78 : (absOff == 2 ? 0.46 : 0.20)); let scaleX: CGFloat = isCenter ? 1.04 : (absOff == 1 ? 0.93 : (absOff == 2 ? 0.83 : 0.74)); let scaleY: CGFloat = isCenter ? 1.00 : (absOff == 1 ? 0.88 : (absOff == 2 ? 0.72 : 0.55)); let deg: Double = Double(offset) * -16.5 + Double(liveDragY * 0.35); let blurRad: CGFloat = isCenter ? 0.0 : (absOff == 1 ? 0.2 : (absOff == 2 ? 0.85 : 1.6)); let majW: CGFloat = isCenter ? 11.0 : (absOff == 1 ? 7.5 : (absOff == 2 ? 5.0 : 3.2)); let minW: CGFloat = max(2.0, majW * 0.55)
+HStack(spacing: 5) { crownTicks(left: true, isCenter: isCenter, absOff: absOff, majW: majW, minW: minW)
+Text(items[targetIdx]).font(.system(size: fontSz, weight: isCenter ? .black : .semibold, design: .monospaced)).foregroundStyle(isCenter ? Color.white : Color.white.opacity(0.92)).shadow(color: isCenter ? theme.accent.opacity(0.75) : Color.clear, radius: isCenter ? 8 : 0).lineLimit(1).minimumScaleFactor(0.72).frame(maxWidth: .infinity)
+crownTicks(left: false, isCenter: isCenter, absOff: absOff, majW: majW, minW: minW)
+}.padding(.horizontal, 7).frame(height: rowH).scaleEffect(x: scaleX, y: scaleY).opacity(rowAlpha).blur(radius: blurRad).rotation3DEffect(.degrees(deg), axis: (x: 1, y: 0, z: 0), perspective: 0.42).offset(y: liveDragY * (isCenter ? 0.32 : 0.20)).contentShape(Rectangle()).onTapGesture { if offset != 0 { onStepChange(offset) } }
+} else { Color.clear.frame(height: rowH) } }
+var body: some View { GeometryReader { geo in let w = geo.size.width; let h = geo.size.height; let footerH: CGFloat = 15.0; let drumH = max(98.0, h - footerH); let rowH = drumH / 7.0; let phase = Double(selectedIndex) * 0.68 + Double(liveDragY) * 0.04
+VStack(spacing: 2) { ZStack { ZStack { Circle().fill(theme.accent.opacity(0.26)).frame(width: w * 0.85, height: drumH * 0.78).blur(radius: 28).offset(x: CGFloat(cos(phase)) * 24.0, y: CGFloat(sin(phase)) * 18.0)
+Circle().fill(theme.secondaryAccent.opacity(0.22)).frame(width: w * 0.78, height: drumH * 0.72).blur(radius: 26).offset(x: CGFloat(-sin(phase * 0.85)) * 26.0, y: CGFloat(cos(phase * 0.85)) * 20.0)
+Circle().fill(Color.white.opacity(0.10)).frame(width: w * 0.60, height: drumH * 0.50).blur(radius: 22).offset(x: CGFloat(sin(phase * 1.2)) * 16.0, y: CGFloat(-cos(phase * 1.2)) * 14.0)
+}.animation(.easeInOut(duration: 0.48), value: selectedIndex)
+RoundedRectangle(cornerRadius: 16, style: .continuous).fill(LinearGradient(colors: [Color.white.opacity(0.03), Color.white.opacity(0.09), Color.white.opacity(0.03)], startPoint: .top, endPoint: .bottom))
+ZStack { RoundedRectangle(cornerRadius: 11, style: .continuous).fill(LinearGradient(colors: [theme.accent.opacity(0.24), Color.white.opacity(0.14), theme.accent.opacity(0.20)], startPoint: .leading, endPoint: .trailing))
+RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(LinearGradient(colors: [Color.white.opacity(0.65), theme.accent.opacity(0.90), Color.white.opacity(0.35)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.2)
+}.frame(height: max(30.0, rowH + 6.0)).padding(.horizontal, 4).shadow(color: theme.accent.opacity(0.32), radius: 8, x: 0, y: 0)
+VStack(spacing: 0) { ForEach(-3...3, id: \.self) { off in watchCrownRow(offset: off, rowH: rowH) }
+}.frame(width: w, height: drumH).mask(LinearGradient(stops: [.init(color: .clear, location: 0.00), .init(color: .white.opacity(0.22), location: 0.12), .init(color: .white.opacity(0.82), location: 0.28), .init(color: .white, location: 0.50), .init(color: .white.opacity(0.82), location: 0.72), .init(color: .white.opacity(0.22), location: 0.88), .init(color: .clear, location: 1.00)], startPoint: .top, endPoint: .bottom))
+}.frame(width: w, height: drumH).clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous)).overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(LinearGradient(colors: [Color.white.opacity(0.26), theme.accent.opacity(0.32), Color.white.opacity(0.10)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.9)).contentShape(Rectangle()).gesture(
+DragGesture(minimumDistance: 2).onChanged { val in let dy = val.translation.height - dragAccumY
+liveDragY = max(-14, min(14, dy))
+let stepH: CGFloat = 19.0
+if abs(dy) >= stepH { let dir = dy < 0 ? 1 : -1; dragAccumY += (dy < 0 ? -stepH : stepH); liveDragY = 0; onStepChange(dir) }
 }.onEnded { _ in dragAccumY = 0
-withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) { liveDragY = 0 } })
+withAnimation(.spring(response: 0.26, dampingFraction: 0.76)) { liveDragY = 0 } })
 HStack(spacing: 4) { Image(systemName: parameterIcon).fSys(9.5, .bold).foregroundStyle(theme.accent)
 Text(subtitleText).fSys(9.5, .medium).foregroundStyle(Color.white.opacity(0.72)).lineLimit(1) }.frame(height: footerH - 2) } } } }
-struct CameraAmbientMeterSheet: View {
-@Binding var ambientEV100: Double
-@Binding var subjectDistance: Double
-let lang: AppLanguage; let theme: AppTheme
-@Environment(\.dismiss) private var dismiss
-@ObservedObject private var reader = CameraAmbientEVReader.shared
-@State private var keepRunningInBackground: Bool = false
+struct CameraAmbientMeterSheet: View { @Binding var ambientEV100: Double; @Binding var subjectDistance: Double; let lang: AppLanguage; let theme: AppTheme; @Environment(\.dismiss) private var dismiss; @ObservedObject private var reader = CameraAmbientEVReader.shared; @State private var keepRunningInBackground: Bool = false
 private let distSteps: [Double] = [0.5, 0.7, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0]
 private func snapDistance(_ raw: Double) -> Double { distSteps.min(by: { abs($0 - raw) < abs($1 - raw) }) ?? max(0.5, min(15.0, (raw * 2.0).rounded() / 2.0)) }
 var body: some View { ZStack { Color.black.ignoresSafeArea()
@@ -1284,12 +1229,9 @@ if !keepRunningInBackground { reader.stopReading() }
 dismiss() } label: { Text(lang == .en ? String(format: "Apply EV %.1f Only (Keep Distance)", reader.liveEV100) : String(format: "仅填入环境光 EV %.1f（保持原距离不变）", reader.liveEV100)).fSys(11.5, .bold).foregroundStyle(Color.white.opacity(0.9)).frame(maxWidth: .infinity).padding(.vertical, 9).background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12)) }
 }.padding(16).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24)).padding(.horizontal, 12).padding(.bottom, 10) }}.onAppear { keepRunningInBackground = reader.isRunning
 reader.startReading(lang: lang) { newEV in ambientEV100 = newEV }}.onDisappear { if !keepRunningInBackground { reader.stopReading() }}}}
-struct LumiFilmManualAndVoiceSheet: View { let initialTab: Int; let lang: AppLanguage; let theme: AppTheme
-@Environment(\.dismiss) private var dismiss
-@State private var activeTab: Int = 0
+struct LumiFilmManualAndVoiceSheet: View { let initialTab: Int; let lang: AppLanguage; let theme: AppTheme; @Environment(\.dismiss) private var dismiss; @State private var activeTab: Int = 0
 var body: some View { ZStack { LinearGradient(colors: theme.backgroundGradient, startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
-VStack(spacing: 12) { HStack { Label(
-lang == .en ? "LumiFilm Guide & Voice Dictionary" : "LumiFilm 语音口令词典与核心算法手册", systemImage: "book.pages.fill" ).fSys(15, .black).foregroundStyle(Color.white)
+VStack(spacing: 12) { HStack { Label(lang == .en ? "LumiFilm Guide & Voice Dictionary" : "LumiFilm 语音口令词典与核心算法手册", systemImage: "book.pages.fill").fSys(15, .black).foregroundStyle(Color.white)
 Spacer()
 Button { dismiss() } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 22)).foregroundStyle(Color.white.opacity(0.68)) }}
 Picker("Section", selection: $activeTab) { Text(lang == .en ? "🎙️ Voice Keywords" : "🎙️ 语音识别关键字指引").tag(0)
@@ -1302,13 +1244,7 @@ guideSectionCard(title: lang == .en ? "2. Optical Formula & Reciprocity" : "2. �
 private func guideSectionCard(title: String, icon: String, rows: [(String, String)]) -> some View { VStack(alignment: .leading, spacing: 8) { Label(title, systemImage: icon).fSys(12.5, .black).foregroundStyle(theme.accent)
 ForEach(0..<rows.count, id: \.self) { idx in VStack(alignment: .leading, spacing: 2) { Text(rows[idx].0).font(.system(size: 11.5, weight: .bold, design: .rounded)).foregroundStyle(Color.white)
 Text(rows[idx].1).fSys(10.5, .medium).foregroundStyle(Color.white.opacity(0.75)).fixedSize(horizontal: false, vertical: true) } .padding(.vertical, 3) }} .frame(maxWidth: .infinity, alignment: .leading).padding(13).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16)) }}
-struct OnboardingSetupSheet: View {
-@Binding var filmISO: Double; @Binding var selectedFilmStockID: String; @Binding var filmFormatRaw: Int
-@Binding var flashGN: Double; @Binding var selectedFlashID: String; @Binding var maxLensAperture: Double
-@Binding var maxSyncSpeed: Int; @Binding var syncModeRaw: Int; @Binding var cameraPresetID: String
-@Binding var aperture: Double; @Binding var themeRaw: Int; @Binding var hasCompletedOnboarding: Bool
-let lang: AppLanguage; let theme: AppTheme
-@Environment(\.dismiss) private var dismiss
+struct OnboardingSetupSheet: View { @Binding var filmISO: Double; @Binding var selectedFilmStockID: String; @Binding var filmFormatRaw: Int; @Binding var flashGN: Double; @Binding var selectedFlashID: String; @Binding var maxLensAperture: Double; @Binding var maxSyncSpeed: Int; @Binding var syncModeRaw: Int; @Binding var cameraPresetID: String; @Binding var aperture: Double; @Binding var themeRaw: Int; @Binding var hasCompletedOnboarding: Bool; let lang: AppLanguage; let theme: AppTheme; @Environment(\.dismiss) private var dismiss
 @AppStorage("lf_lang_v8") private var langRaw: Int = 0; @State private var stepIndex: Int = 0; @State private var autoAdvanceEnabled: Bool = true; @State private var selectedBrandFilter: FlashBrandCategory = .godox; @State private var onboardingFilmBrand: FilmBrandCategory = .kodak
 private let isoPresets: [Double] = [50, 100, 125, 160, 200, 250, 320, 400, 500, 800, 1600, 3200]
 private let maxAperturePresets: [Double] = [1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6]
@@ -1320,8 +1256,7 @@ private var meshPair: (Color, Color) { onboardingFilmBrand.meshColors }
 private var filteredFlashModels: [FlashUnitModel] { if selectedBrandFilter == .all { return FlashUnitModel.catalog.filter { $0.id != "custom" }}
 if selectedBrandFilter == .custom { return FlashUnitModel.catalog.filter { $0.id == "custom" }}
 return FlashUnitModel.catalog.filter { $0.brand == selectedBrandFilter }}
-private var lyricsStepLines: [(badge: String, title: String, sub: String)] { [
-(lang == .en ? "STEP 1 / 5 · FORMAT" : "第 1 / 5 步 · 胶片画幅", lang == .en ? "1. What film format are you shooting?" : "1. 您使用的是什么胶片画幅？", lang == .en ? "Tap format to auto-set roll exposures & bellows compensation." : "点选画幅自动匹配每卷张数上限与 120 近摄皮腔补偿，并自动进入第 2 步。"), (lang == .en ? "STEP 2 / 5 · SHUTTER SYNC" : "第 2 / 5 步 · 快门同步限制", lang == .en ? "2. Which camera shutter system?" : "2. 您的机身快门与同步上限是？", lang == .en ? "Prevents focal-plane curtain blackout (e.g. 67II 1/30s vs LS 1/500s)." : "核对机身快门限制（如 67II 幕帘 1/30s vs LS 镜间 1/500s），点击橙色确认条进入第 3 步。"), (lang == .en ? "STEP 3 / 5 · FILM STOCK" : "第 3 / 5 步 · 装入胶卷", lang == .en ? "3. Which film roll is loaded?" : "3. 相机里现在装的是哪一卷胶片？", lang == .en ? "Tap stock to auto-set ISO & fluid background." : "先选厂商再点选胶卷型号，自动设定感光度 ISO 并进入第 4 步。"), (lang == .en ? "STEP 4 / 5 · LENS MAX f/" : "第 4 / 5 步 · 镜头光圈上限", lang == .en ? "4. What is your lens max aperture?" : "4. 您挂机镜头的最大光圈是多少？", lang == .en ? "Tap f-stop to lock physical lens ceiling." : "点选光圈锁定物理上限（防止反推越界），自动进入最后一步。"), (lang == .en ? "STEP 5 / 5 · FLASH & READY" : "第 5 / 5 步 · 闪光灯与确认", lang == .en ? "5. Select flash unit & start metering" : "5. 选择热靴闪光灯并开启测光", lang == .en ? "Pick flash GN and tap Start Metering below." : "点选闪光灯型号或微调 GN 指数，确认下方器材通行证后即可开拍。") ] }
+private var lyricsStepLines: [(badge: String, title: String, sub: String)] { [(lang == .en ? "STEP 1 / 5 · FORMAT" : "第 1 / 5 步 · 胶片画幅", lang == .en ? "1. What film format are you shooting?" : "1. 您使用的是什么胶片画幅？", lang == .en ? "Tap format to auto-set roll exposures & bellows compensation." : "点选画幅自动匹配每卷张数上限与 120 近摄皮腔补偿，并自动进入第 2 步。"), (lang == .en ? "STEP 2 / 5 · SHUTTER SYNC" : "第 2 / 5 步 · 快门同步限制", lang == .en ? "2. Which camera shutter system?" : "2. 您的机身快门与同步上限是？", lang == .en ? "Prevents focal-plane curtain blackout (e.g. 67II 1/30s vs LS 1/500s)." : "核对机身快门限制（如 67II 幕帘 1/30s vs LS 镜间 1/500s），点击橙色确认条进入第 3 步。"), (lang == .en ? "STEP 3 / 5 · FILM STOCK" : "第 3 / 5 步 · 装入胶卷", lang == .en ? "3. Which film roll is loaded?" : "3. 相机里现在装的是哪一卷胶片？", lang == .en ? "Tap stock to auto-set ISO & fluid background." : "先选厂商再点选胶卷型号，自动设定感光度 ISO 并进入第 4 步。"), (lang == .en ? "STEP 4 / 5 · LENS MAX f/" : "第 4 / 5 步 · 镜头光圈上限", lang == .en ? "4. What is your lens max aperture?" : "4. 您挂机镜头的最大光圈是多少？", lang == .en ? "Tap f-stop to lock physical lens ceiling." : "点选光圈锁定物理上限（防止反推越界），自动进入最后一步。"), (lang == .en ? "STEP 5 / 5 · FLASH & READY" : "第 5 / 5 步 · 闪光灯与确认", lang == .en ? "5. Select flash unit & start metering" : "5. 选择热靴闪光灯并开启测光", lang == .en ? "Pick flash GN and tap Start Metering below." : "点选闪光灯型号或微调 GN 指数，确认下方器材通行证后即可开拍。")] }
 private func triggerAutoAdvance(from step: Int) { guard autoAdvanceEnabled, stepIndex == step, stepIndex < 4 else { return }
 FeedbackEngine.shared.buttonTap(soundEnabled: true, hapticEnabled: true)
 DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) { if self.stepIndex == step && self.stepIndex < 4 { withAnimation(.snappy) { self.stepIndex += 1 }}}}
@@ -1421,9 +1356,7 @@ Text(lang == .en ? "Back" : "上一步").fSys(13, .bold)
 }.foregroundStyle(Color.white).padding(.horizontal, 16).padding(.vertical, 12.5).background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 14)) }}
 Button { if stepIndex < 4 { withAnimation(.snappy) { stepIndex += 1 }} else { if aperture < maxLensAperture { aperture = maxLensAperture }
 hasCompletedOnboarding = true
-LocalLoopbackSyncBridge.shared.publishState([
-"lf_iso": filmISO, "lf_gn": flashGN, "lf_distance": 2.0, "lf_aperture": aperture, "lf_shutter": Double(min(125, maxSyncSpeed)), "lf_sync_speed": Double(maxSyncSpeed), "lf_sync_mode": Double(syncModeRaw), "lf_film_format": Double(filmFormatRaw), "lf_theme": Double(themeRaw), "lf_max_aperture": maxLensAperture, "lf_exp_comp_ev": 0.0, "lf_aux_loss": 0.0, "lf_sync_ts": Date().timeIntervalSince1970
-])
+LocalLoopbackSyncBridge.shared.publishState(["lf_iso": filmISO, "lf_gn": flashGN, "lf_distance": 2.0, "lf_aperture": aperture, "lf_shutter": Double(min(125, maxSyncSpeed)), "lf_sync_speed": Double(maxSyncSpeed), "lf_sync_mode": Double(syncModeRaw), "lf_film_format": Double(filmFormatRaw), "lf_theme": Double(themeRaw), "lf_max_aperture": maxLensAperture, "lf_exp_comp_ev": 0.0, "lf_aux_loss": 0.0, "lf_sync_ts": Date().timeIntervalSince1970])
 dismiss() }} label: { HStack(spacing: 6) { Text(stepIndex < 4 ? (lang == .en ? "Next (Step \(stepIndex + 1)/5) →" : "下一步 · 当前第 \(stepIndex + 1)/5 步 →") : (lang == .en ? "Start Metering (5/5)" : "完成配置 · 进入测光表 (5/5)")).fSys(14, .black)
 Image(systemName: stepIndex < 4 ? "arrow.right" : "bolt.fill").fSys(12.5, .bold)
 }.foregroundStyle(Color.black).frame(maxWidth: .infinity).padding(.vertical, 12.5).background(theme.accent, in: RoundedRectangle(cornerRadius: 14)) }

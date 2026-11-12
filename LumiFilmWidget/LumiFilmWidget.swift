@@ -3,26 +3,18 @@ enum WidgetTheme: Int { case sakuraMist = 0
 case threadsMinimal = 1; case leicaBrushedBrass = 2; var nameText: String { switch self { case .sakuraMist: return "雾粉微光"
 case .threadsMinimal: return "曜石纯黑"; case .leicaBrushedBrass: return "黑漆露铜" }}; var accent: Color { switch self { case .sakuraMist: return Color(red: 0.94, green: 0.79, blue: 0.82)
 case .threadsMinimal: return Color(red: 0.96, green: 0.96, blue: 0.98); case .leicaBrushedBrass: return Color(red: 0.90, green: 0.68, blue: 0.32) }}; var secondaryAccent: Color { switch self { case .sakuraMist: return Color(red: 0.86, green: 0.82, blue: 0.78)
-case .threadsMinimal: return Color(red: 0.58, green: 0.62, blue: 0.70); case .leicaBrushedBrass: return Color(red: 0.78, green: 0.48, blue: 0.22) }}; var backgroundGradient: [Color] { switch self { case .sakuraMist: return [
-Color(red: 0.17, green: 0.16, blue: 0.20), Color(red: 0.24, green: 0.20, blue: 0.23), Color(red: 0.22, green: 0.19, blue: 0.21), Color(red: 0.14, green: 0.14, blue: 0.17) ]
-case .threadsMinimal: return [
-Color(red: 0.03, green: 0.03, blue: 0.04), Color(red: 0.09, green: 0.09, blue: 0.11), Color(red: 0.04, green: 0.04, blue: 0.05) ]
-case .leicaBrushedBrass: return [
-Color(red: 0.09, green: 0.08, blue: 0.07), Color(red: 0.19, green: 0.14, blue: 0.09), Color(red: 0.28, green: 0.20, blue: 0.11), Color(red: 0.08, green: 0.07, blue: 0.06) ] }}
+case .threadsMinimal: return Color(red: 0.58, green: 0.62, blue: 0.70); case .leicaBrushedBrass: return Color(red: 0.78, green: 0.48, blue: 0.22) }}; var backgroundGradient: [Color] { switch self { case .sakuraMist: return [Color(red: 0.17, green: 0.16, blue: 0.20), Color(red: 0.24, green: 0.20, blue: 0.23), Color(red: 0.22, green: 0.19, blue: 0.21), Color(red: 0.14, green: 0.14, blue: 0.17)]
+case .threadsMinimal: return [Color(red: 0.03, green: 0.03, blue: 0.04), Color(red: 0.09, green: 0.09, blue: 0.11), Color(red: 0.04, green: 0.04, blue: 0.05)]
+case .leicaBrushedBrass: return [Color(red: 0.09, green: 0.08, blue: 0.07), Color(red: 0.19, green: 0.14, blue: 0.09), Color(red: 0.28, green: 0.20, blue: 0.11), Color(red: 0.08, green: 0.07, blue: 0.06)] }}
 var lcdBg: Color { switch self { case .sakuraMist: return Color(red: 0.12, green: 0.11, blue: 0.15).opacity(0.88); case .threadsMinimal: return Color(red: 0.02, green: 0.02, blue: 0.03).opacity(0.90)
 case .leicaBrushedBrass: return Color(red: 0.06, green: 0.05, blue: 0.04).opacity(0.90) }}; var cardBg: Color { switch self { case .sakuraMist: return Color(red: 0.25, green: 0.21, blue: 0.26).opacity(0.85)
 case .threadsMinimal: return Color(red: 0.13, green: 0.13, blue: 0.15).opacity(0.88); case .leicaBrushedBrass: return Color(red: 0.18, green: 0.14, blue: 0.10).opacity(0.88) }}}
-struct FlashCalculator { static let apertureSteps: [Double] = [
-1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6, 8.0, 11.0, 16.0, 22.0 ]
-static let shutterSteps: [Int] = [
--15, -8, -4, -2, 1, 2, 4, 8, 15, 30, 50, 60, 90, 100, 125, 200, 250, 500, 1000, 2000, 4000 ]
+struct FlashCalculator { static let apertureSteps: [Double] = [1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 3.5, 4.0, 5.6, 8.0, 11.0, 16.0, 22.0]
+static let shutterSteps: [Int] = [-15, -8, -4, -2, 1, 2, 4, 8, 15, 30, 50, 60, 90, 100, 125, 200, 250, 500, 1000, 2000, 4000]
 static func formatShutter(_ s: Int) -> String { s < 0 ? "\(-s)\"" : (s == 1 ? "1\"" : "1/\(s)s") }
-static let distanceSteps: [Double] = [
-0.5, 0.7, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0 ]
-static let isoSteps: [Double] = [
-50, 64, 100, 125, 160, 200, 250, 320, 400, 500, 800, 1600, 3200 ]
-static let evCompSteps: [Double] = [
--2.0, -1.7, -1.3, -1.0, -0.7, -0.3, 0.0, 0.3, 0.7, 1.0, 1.3, 1.7, 2.0 ]
+static let distanceSteps: [Double] = [0.5, 0.7, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0]
+static let isoSteps: [Double] = [50, 64, 100, 125, 160, 200, 250, 320, 400, 500, 800, 1600, 3200]
+static let evCompSteps: [Double] = [-2.0, -1.7, -1.3, -1.0, -0.7, -0.3, 0.0, 0.3, 0.7, 1.0, 1.3, 1.7, 2.0]
 static func closeUpBellowsLoss(distance: Double, formatRaw: Int) -> Double { switch formatRaw { case 1: return distance < 1.2 ? (0.50 * (1.2 - distance)) : 0.0
 case 2: return distance < 1.2 ? (0.60 * (1.2 - distance)) : 0.0; case 3, 4: return distance < 1.3 ? (0.75 * (1.3 - distance)) : 0.0
 default: return distance < 1.0 ? (0.35 * (1.0 - distance)) : 0.0 }}
@@ -41,8 +33,7 @@ if let bid = Bundle.main.bundleIdentifier { var base = bid
 if base.hasSuffix(".widget") { base = String(base.dropLast(7)) }
 if base.hasSuffix(".LumiFilmWidget") { base = String(base.dropLast(15)) }
 let g = "group.\(base)"; if !groups.contains(g) { groups.insert(g, at: 0) }}
-let urls = [
-Bundle.main.bundleURL.appendingPathComponent("embedded.mobileprovision"), Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("embedded.mobileprovision") ]
+let urls = [Bundle.main.bundleURL.appendingPathComponent("embedded.mobileprovision"), Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("embedded.mobileprovision")]
 for u in urls { if let data = try? Data(contentsOf: u) { let text = String(decoding: data, as: UTF8.self)
 if let regex = try? NSRegularExpression(pattern: "group\\.[A-Za-z0-9._-]+") { let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
 for m in matches { if let r = Range(m.range, in: text) { let g = String(text[r])
@@ -54,11 +45,7 @@ guard fd >= 0 else { return nil }
 defer { close(fd) }
 var tv = timeval(tv_sec: 0, tv_usec: 75_000)
 setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
-var addr = sockaddr_in()
-addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
-addr.sin_family = sa_family_t(AF_INET)
-addr.sin_port = udpPort.bigEndian
-addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+var addr = sockaddr_in(); addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size); addr.sin_family = sa_family_t(AF_INET); addr.sin_port = udpPort.bigEndian; addr.sin_addr.s_addr = inet_addr("127.0.0.1")
 let bytes = Array(message.utf8); let sent = withUnsafePointer(to: &addr) { ptr -> Int in ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in sendto(fd, bytes, bytes.count, 0, sa, socklen_t(MemoryLayout<sockaddr_in>.size)) }}
 guard sent > 0 else { return nil }
 var buf = [UInt8](repeating: 0, count: 2048); let n = recv(fd, &buf, buf.count, 0)
@@ -84,8 +71,7 @@ if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentif
 _ = sendLoopbackUDP("SET:" + jsonStr) }
 static func double(forKey key: String, default defVal: Double) -> Double { let dict = loadSharedDict(); return dict[key] ?? defVal }
 static func setDouble(_ val: Double, forKey key: String) { var dict = loadSharedDict()
-if dict.isEmpty { dict = [
-"lf_iso": 400.0, "lf_gn": 36.0, "lf_distance": 2.0, "lf_aperture": 4.0, "lf_shutter": 125.0, "lf_sync_speed": 125.0, "lf_theme": 2.0, "lf_max_aperture": 1.4, "lf_exp_comp_ev": 0.0, "lf_aux_loss": 0.0 ] }
+if dict.isEmpty { dict = ["lf_iso": 400.0, "lf_gn": 36.0, "lf_distance": 2.0, "lf_aperture": 4.0, "lf_shutter": 125.0, "lf_sync_speed": 125.0, "lf_theme": 2.0, "lf_max_aperture": 1.4, "lf_exp_comp_ev": 0.0, "lf_aux_loss": 0.0] }
 dict[key] = val
 saveSharedDict(dict) }}
 @available(iOS 17.0, *)
