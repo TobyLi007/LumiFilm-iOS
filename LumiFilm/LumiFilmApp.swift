@@ -3,10 +3,7 @@ extension View { func fMono(_ s: CGFloat, _ w: Font.Weight = .bold) -> some View
 func fSys(_ s: CGFloat, _ w: Font.Weight = .bold) -> some View { self.font(.system(size: s, weight: w)) }}
 import AVFoundation; import CoreMedia; import AudioToolbox; import UIKit; import WidgetKit; import Speech; import AppIntents; import CoreLocation; import Darwin
 final class LocalLoopbackSyncBridge { static let shared = LocalLoopbackSyncBridge()
-private let lock = NSLock()
-private var currentPayload: Data = Data()
-private var isRunning = false
-private var bgTask: UIBackgroundTaskIdentifier = .invalid
+private let lock = NSLock(); private var currentPayload: Data = Data(); private var isRunning = false; private var bgTask: UIBackgroundTaskIdentifier = .invalid
 let discoveredGroups: [String] = { var groups: [String] = ["group.com.lumifilm.flashmeter"]; if let bid = Bundle.main.bundleIdentifier { let g = "group.\(bid)"; if !groups.contains(g) { groups.insert(g, at: 0) }}
 let u = Bundle.main.bundleURL.appendingPathComponent("embedded.mobileprovision"); if let data = try? Data(contentsOf: u) { let text = String(decoding: data, as: UTF8.self); if let regex = try? NSRegularExpression(pattern: "group\\.[A-Za-z0-9._-]+") { for m in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)) { if let r = Range(m.range, in: text) { let g = String(text[r]); if !groups.contains(g) { groups.insert(g, at: 0) }}}}}
 return groups
@@ -57,13 +54,8 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 25.0) { [weak self] in guard le
 app.endBackgroundTask(self.bgTask)
 self.bgTask = .invalid }}}
 final class LocationAddressResolver: NSObject, ObservableObject, CLLocationManagerDelegate { static let shared = LocationAddressResolver()
-private let manager = CLLocationManager()
-private let geocoder = CLGeocoder()
-@Published var isLocating: Bool = false
-private var onResolved: ((String) -> Void)?
-override init() { super.init()
-manager.delegate = self
-manager.desiredAccuracy = kCLLocationAccuracyHundredMeters }
+private let manager = CLLocationManager(); private let geocoder = CLGeocoder(); @Published var isLocating: Bool = false; private var onResolved: ((String) -> Void)?
+override init() { super.init(); manager.delegate = self; manager.desiredAccuracy = kCLLocationAccuracyHundredMeters }
 func fetchCurrentPlace(completion: @escaping (String) -> Void) { onResolved = completion
 isLocating = true
 let status = manager.authorizationStatus; if status == .notDetermined { manager.requestWhenInUseAuthorization() } else if status == .authorizedWhenInUse || status == .authorizedAlways { manager.requestLocation() } else { isLocating = false }}
@@ -195,43 +187,23 @@ return "\(base) (GN\(Int(gnAtISO100)) · 1/\(minPowerDenominator))" }
 static let catalog: [FlashUnitModel] = [
 FlashUnitModel(id: "godox_lux_cadet", brand: .godox, nameZh: "神牛 Lux Cadet 复古小闪", nameEn: "Godox Lux Cadet", shortBadge: "Lux Cadet", gnAtISO100: 10, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_lux_jr", brand: .godox, nameZh: "神牛 Lux Junior 复古街拍灯", nameEn: "Godox Lux Junior", shortBadge: "Lux Jr", gnAtISO100: 12, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_lux_sr", brand: .godox, nameZh: "神牛 Lux Senior 复古折叠扇", nameEn: "Godox Lux Senior", shortBadge: "Lux Sr", gnAtISO100: 14, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_im30", brand: .godox, nameZh: "神牛 iM30 / iM20 迷你机顶灯", nameEn: "Godox iM30 Mini", shortBadge: "Godox iM30", gnAtISO100: 15, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "godox_lux_master", brand: .godox, nameZh: "神牛 Lux Master 复古手柄灯", nameEn: "Godox Lux Master", shortBadge: "Lux Master", gnAtISO100: 25, ratedZoomMM: 28, minPowerDenominator: 256), FlashUnitModel(id: "godox_v350", brand: .godox, nameZh: "神牛 V350 / TT350 便携主力灯", nameEn: "Godox V350 / TT350", shortBadge: "Godox V350", gnAtISO100: 36, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "godox_v1", brand: .godox, nameZh: "神牛 V1 / V1Pro 圆头旗舰灯", nameEn: "Godox V1 / V1Pro", shortBadge: "Godox V1", gnAtISO100: 42, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "godox_ad100", brand: .godox, nameZh: "神牛 AD100Pro 口袋外拍灯", nameEn: "Godox AD100Pro", shortBadge: "AD100Pro", gnAtISO100: 44, ratedZoomMM: 85, minPowerDenominator: 256), FlashUnitModel(id: "godox_ad200", brand: .godox, nameZh: "神牛 AD200Pro II 外拍灯", nameEn: "Godox AD200Pro II", shortBadge: "AD200Pro", gnAtISO100: 52, ratedZoomMM: 35, minPowerDenominator: 256), FlashUnitModel(id: "godox_v860iii", brand: .godox, nameZh: "神牛 V860III / TT685II / TT600", nameEn: "Godox V860III / TT685II", shortBadge: "Godox V860", gnAtISO100: 60, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "contax_tla140", brand: .contax, nameZh: "Contax TLA 140 (G1/G2 便携灯)", nameEn: "Contax TLA 140", shortBadge: "TLA 140", gnAtISO100: 14, ratedZoomMM: 28, minPowerDenominator: 16), FlashUnitModel(id: "contax_tla200", brand: .contax, nameZh: "Contax TLA 200 (G2 经典饼干灯)", nameEn: "Contax TLA 200", shortBadge: "TLA 200", gnAtISO100: 20, ratedZoomMM: 28, minPowerDenominator: 16), FlashUnitModel(id: "contax_tla280", brand: .contax, nameZh: "Contax TLA 280 胶片闪光灯", nameEn: "Contax TLA 280", shortBadge: "TLA 280", gnAtISO100: 28, ratedZoomMM: 50, minPowerDenominator: 64), FlashUnitModel(id: "contax_tla360", brand: .contax, nameZh: "Contax TLA 360 专业胶片灯", nameEn: "Contax TLA 360", shortBadge: "TLA 360", gnAtISO100: 36, ratedZoomMM: 85, minPowerDenominator: 64), FlashUnitModel(id: "canon_270ex2", brand: .canon, nameZh: "佳能 Speedlite 270EX II / EL-100", nameEn: "Canon 270EX II / EL-100", shortBadge: "Canon 270EX", gnAtISO100: 27, ratedZoomMM: 50, minPowerDenominator: 64), FlashUnitModel(id: "canon_380ex", brand: .canon, nameZh: "佳能 Speedlite 380EX / 420EX", nameEn: "Canon 380EX / 420EX", shortBadge: "Canon 380EX", gnAtISO100: 38, ratedZoomMM: 105, minPowerDenominator: 64), FlashUnitModel(id: "canon_430ex3", brand: .canon, nameZh: "佳能 Speedlite 430EX III-RT", nameEn: "Canon 430EX III-RT", shortBadge: "Canon 430EX", gnAtISO100: 43, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "canon_580ex2", brand: .canon, nameZh: "佳能 Speedlite 580EX II", nameEn: "Canon 580EX II", shortBadge: "Canon 580EX", gnAtISO100: 58, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "canon_600ex2", brand: .canon, nameZh: "佳能 Speedlite 600EX II / EL-5 / EL-1", nameEn: "Canon 600EX II / EL-5", shortBadge: "Canon 600EX", gnAtISO100: 60, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "nikon_sb30", brand: .nikon, nameZh: "尼康 SB-30 / SB-400 超薄机顶灯", nameEn: "Nikon SB-30 / SB-400", shortBadge: "Nikon SB-30", gnAtISO100: 18, ratedZoomMM: 28, minPowerDenominator: 32), FlashUnitModel(id: "nikon_sb20", brand: .nikon, nameZh: "尼康 SB-20 / SB-22s / SB-700", nameEn: "Nikon SB-20 / SB-700", shortBadge: "Nikon SB-700", gnAtISO100: 28, ratedZoomMM: 85, minPowerDenominator: 128), FlashUnitModel(id: "nikon_sb28", brand: .nikon, nameZh: "尼康 SB-24 / SB-26 / SB-28 经典胶片灯", nameEn: "Nikon SB-24 / SB-26 / SB-28", shortBadge: "Nikon SB-28", gnAtISO100: 36, ratedZoomMM: 85, minPowerDenominator: 64), FlashUnitModel(id: "nikon_sb800", brand: .nikon, nameZh: "尼康 SB-800 / SB-900 / SB-910", nameEn: "Nikon SB-800 / SB-910", shortBadge: "Nikon SB-800", gnAtISO100: 38, ratedZoomMM: 105, minPowerDenominator: 128), FlashUnitModel(id: "nikon_sb5000", brand: .nikon, nameZh: "尼康 SB-5000 旗舰闪光灯", nameEn: "Nikon SB-5000", shortBadge: "Nikon SB5000", gnAtISO100: 55, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "fuji_efx20", brand: .leicaFuji, nameZh: "富士 EF-X20 / 徕卡 SF 20 金属饼干灯", nameEn: "Fuji EF-X20 / Leica SF 20", shortBadge: "EF-X20/SF20", gnAtISO100: 20, ratedZoomMM: 28, minPowerDenominator: 64), FlashUnitModel(id: "leica_sf24d", brand: .leicaFuji, nameZh: "徕卡 Leica SF 24D / SF 26", nameEn: "Leica SF 24D / SF 26", shortBadge: "Leica SF24D", gnAtISO100: 24, ratedZoomMM: 35, minPowerDenominator: 64), FlashUnitModel(id: "metz_32ct3", brand: .leicaFuji, nameZh: "美兹 Metz 32 CT-3 / 32 MZ-3", nameEn: "Metz 32 CT-3", shortBadge: "Metz 32", gnAtISO100: 32, ratedZoomMM: 50, minPowerDenominator: 64), FlashUnitModel(id: "leica_sf40", brand: .leicaFuji, nameZh: "徕卡 Leica SF 40 / Profoto A10", nameEn: "Leica SF 40 / Profoto A10", shortBadge: "SF40 / A10", gnAtISO100: 40, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "metz_45cl4", brand: .leicaFuji, nameZh: "美兹 Metz 45 CL-4 手柄灯", nameEn: "Metz 45 CL-4 Hammerhead", shortBadge: "Metz 45", gnAtISO100: 45, ratedZoomMM: 35, minPowerDenominator: 64), FlashUnitModel(id: "leica_sf60", brand: .leicaFuji, nameZh: "徕卡 Leica SF 60 / 富士 EF-60", nameEn: "Leica SF 60 / Fuji EF-60", shortBadge: "Leica SF60", gnAtISO100: 60, ratedZoomMM: 105, minPowerDenominator: 256), FlashUnitModel(id: "custom", brand: .custom, nameZh: "用户自定义闪光灯 GN", nameEn: "User Custom Flash GN", shortBadge: "Custom", gnAtISO100: 36, ratedZoomMM: 50, minPowerDenominator: 128) ] }
 final class CameraAmbientEVReader: NSObject, ObservableObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureDepthDataOutputDelegate { static let shared = CameraAmbientEVReader()
-@Published var liveEV100: Double = 9.0
-@Published var liveDistanceMeters: Double = 2.0
-@Published var hasLiDARDepth: Bool = false
-@Published var distanceSensorLabel: String = "AF Focus"
-@Published var cameraISO: Float = 200
-@Published var cameraShutterDenom: Int = 125
-@Published var cameraAperture: Float = 1.8
-@Published var cameraTargetOffset: Float = 0.0
-@Published var calibrationTrimEV: Double = 0.0
-@Published var isRunning: Bool = false
-@Published var isHoldLocked: Bool = false
-@Published var spotNormalizedPoint: CGPoint = CGPoint(x: 0.5, y: 0.5)
-@Published var continuousSyncToMeter: Bool = true
-@Published var useUltraWideLens: Bool = false
-@Published var statusText: String = ""
+@Published var liveEV100: Double = 9.0; @Published var liveDistanceMeters: Double = 2.0; @Published var hasLiDARDepth: Bool = false; @Published var distanceSensorLabel: String = "1x LiDAR"
+@Published var cameraISO: Float = 200; @Published var cameraShutterDenom: Int = 125; @Published var cameraAperture: Float = 1.8; @Published var cameraTargetOffset: Float = 0.0; @Published var calibrationTrimEV: Double = 0.0
+@Published var isRunning: Bool = false; @Published var isHoldLocked: Bool = false; @Published var spotNormalizedPoint: CGPoint = CGPoint(x: 0.5, y: 0.5); @Published var continuousSyncToMeter: Bool = true; @Published var statusText: String = ""
 let session = AVCaptureSession()
-private var device: AVCaptureDevice?
-private let videoOutput = AVCaptureVideoDataOutput()
-private let depthOutput = AVCaptureDepthDataOutput()
+private var device: AVCaptureDevice?; private let videoOutput = AVCaptureVideoDataOutput(); private let depthOutput = AVCaptureDepthDataOutput()
 private let videoQueue = DispatchQueue(label: "com.lumifilm.camera.ev.queue", qos: .userInteractive)
-private var isConfigured: Bool = false
-private var smoothedEV: Double = 9.0
-private var smoothedDist: Double = 2.0
-private var forceInstantSample: Bool = true
-private var lastTapTime: TimeInterval = 0
-private var lastUIUpdateTime: TimeInterval = 0
-private var lastDepthTime: TimeInterval = 0
+private var isConfigured: Bool = false; private var latestDepthData: AVDepthData? = nil
+private var smoothedEV: Double = 9.0; private var smoothedDist: Double = 2.0; private var forceInstantSample: Bool = true
+private var lastTapTime: TimeInterval = 0; private var lastUIUpdateTime: TimeInterval = 0; private var lastDepthTime: TimeInterval = 0
 var onLiveEVUpdated: ((Double) -> Void)?
 func startReading(lang: AppLanguage, onEVUpdate: ((Double) -> Void)? = nil) { if let cb = onEVUpdate { self.onLiveEVUpdated = cb }
 AVCaptureDevice.requestAccess(for: .video) { granted in DispatchQueue.main.async { if granted { self.setupAndStartSession(lang: lang) } else { self.statusText = lang == .en ? "Please allow Camera access in iOS Settings." : "请在 iOS 设置中允许相机权限以实时测光与测距" }}}}
-func toggleLensFieldOfView(lang: AppLanguage) { useUltraWideLens.toggle()
-configureCameraInput(useUltraWide: useUltraWideLens, lang: lang) }
-private func selectBestCameraDevice(useUltraWide: Bool) -> (AVCaptureDevice?, Bool, String) { if !useUltraWide { if let lidarCam = AVCaptureDevice.default(.builtInLiDARDepthCamera, for: .video, position: .back) { return (lidarCam, true, "LiDAR 激光雷达") }
-if let dualWide = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: .back) { return (dualWide, true, "Dual 景深双摄") }
-if let dualCam = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back) { return (dualCam, true, "Dual 景深双摄") }}
-let fallbackType: AVCaptureDevice.DeviceType = useUltraWide ? .builtInUltraWideCamera : .builtInWideAngleCamera; let cam = AVCaptureDevice.default(fallbackType, for: .video, position: .back) ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back); return (cam, false, "AF 对焦传感器") }
-private func configureCameraInput(useUltraWide: Bool, lang: AppLanguage) { let (camOpt, supportsDepth, sensorTag) = selectBestCameraDevice(useUltraWide: useUltraWide)
+private func selectBestCameraDevice() -> (AVCaptureDevice?, Bool, String) { if let lidarCam = AVCaptureDevice.default(.builtInLiDARDepthCamera, for: .video, position: .back) { return (lidarCam, true, "1x LiDAR 激光雷达") }
+if let dualWide = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: .back) { return (dualWide, true, "1x Dual 景深双摄") }
+if let dualCam = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back) { return (dualCam, true, "1x Dual 景深双摄") }
+return (AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back), false, "1x AF 对焦传感器") }
+private func configureCameraInput(lang: AppLanguage) { let (camOpt, supportsDepth, sensorTag) = selectBestCameraDevice()
 guard let cam = camOpt else { statusText = lang == .en ? "Rear camera unavailable" : "未检测到后置摄像头"
 return }
 self.device = cam
@@ -251,7 +223,7 @@ isConfigured = true }
 if let depthConn = depthOutput.connection(with: .depthData) { depthConn.isEnabled = supportsDepth; if depthConn.isVideoOrientationSupported { depthConn.videoOrientation = .portrait } }
 session.commitConfiguration()
 recenterExposurePoint() }
-private func setupAndStartSession(lang: AppLanguage) { if !isConfigured { configureCameraInput(useUltraWide: useUltraWideLens, lang: lang) }
+private func setupAndStartSession(lang: AppLanguage) { if !isConfigured { configureCameraInput(lang: lang) }
 recenterExposurePoint()
 statusText = lang == .en ? "Center reticle measures EV100 & subject distance" : "中心准星实时测量环境光 EV 与主体物理距离"
 if !session.isRunning { videoQueue.async { self.session.startRunning()
@@ -260,9 +232,10 @@ DispatchQueue.main.async { self.isRunning = true }}
 func stopReading() { if session.isRunning { videoQueue.async { self.session.stopRunning()
 DispatchQueue.main.async { self.isRunning = false }}} else { isRunning = false }}
 func recenterExposurePoint() { setSpotPoint(CGPoint(x: 0.5, y: 0.5)) }
-func setSpotPoint(_ normPt: CGPoint) { let cx = max(0.08, min(0.92, normPt.x)); let cy = max(0.08, min(0.92, normPt.y))
+func setSpotPoint(_ normPt: CGPoint) { let cx = max(0.08, min(0.92, normPt.x)); let cy = max(0.08, min(0.92, normPt.y)); let targetPt = CGPoint(x: cx, y: cy)
 self.forceInstantSample = true; self.lastTapTime = Date().timeIntervalSinceReferenceDate
-DispatchQueue.main.async { self.spotNormalizedPoint = CGPoint(x: cx, y: cy) }
+DispatchQueue.main.async { self.spotNormalizedPoint = targetPt }
+if let cached = self.latestDepthData { videoQueue.async { [weak self] in self?.processDepthFrame(cached, at: targetPt, instant: true) } }
 guard let cam = device else { return }
 let devPt = CGPoint(x: cy, y: 1.0 - cx)
 do { try cam.lockForConfiguration()
@@ -277,12 +250,11 @@ do { try c.lockForConfiguration()
 if c.isExposureModeSupported(.continuousAutoExposure) { c.exposureMode = .continuousAutoExposure }
 if c.isFocusModeSupported(.continuousAutoFocus) { c.focusMode = .continuousAutoFocus }
 c.unlockForConfiguration() } catch {} } }
-func depthDataOutput(_ output: AVCaptureDepthDataOutput, didOutput depthData: AVDepthData, timestamp: CMTime, connection: AVCaptureConnection) { guard !isHoldLocked else { return }; let converted = depthData.converting(toDepthDataType: kCVPixelFormatType_DepthFloat32); let buf = converted.depthDataMap
+private func processDepthFrame(_ depthData: AVDepthData, at sp: CGPoint, instant: Bool) { let converted = depthData.converting(toDepthDataType: kCVPixelFormatType_DepthFloat32); let buf = converted.depthDataMap
 CVPixelBufferLockBaseAddress(buf, .readOnly)
 defer { CVPixelBufferUnlockBaseAddress(buf, .readOnly) }
 let w = CVPixelBufferGetWidth(buf); let h = CVPixelBufferGetHeight(buf); let rowBytes = CVPixelBufferGetBytesPerRow(buf)
 guard let base = CVPixelBufferGetBaseAddress(buf), w > 4, h > 4 else { return }
-let sp = spotNormalizedPoint
 let normX: Double = (w > h) ? Double(sp.y) : Double(sp.x)
 let normY: Double = (w > h) ? Double(1.0 - sp.x) : Double(sp.y)
 let centerX = Int(Double(w) * normX); let centerY = Int(Double(h) * normY)
@@ -296,12 +268,13 @@ if d.isFinite && d >= 0.25 && d <= 15.0 { validSamples.append(d) }}}
 guard !validSamples.isEmpty else { return }
 validSamples.sort()
 let p25 = Double(validSamples[max(0, validSamples.count * 35 / 100)])
-if forceInstantSample || (Date().timeIntervalSinceReferenceDate - lastTapTime < 0.45) { smoothedDist = p25; forceInstantSample = false }
+if instant || forceInstantSample || (Date().timeIntervalSinceReferenceDate - lastTapTime < 0.45) { smoothedDist = p25; forceInstantSample = false }
 else { smoothedDist = smoothedDist * 0.50 + p25 * 0.50 }
 let roundedDist = max(0.4, min(15.0, (smoothedDist * 10.0).rounded() / 10.0))
 lastDepthTime = Date().timeIntervalSinceReferenceDate
 DispatchQueue.main.async { self.hasLiDARDepth = true
 self.liveDistanceMeters = roundedDist }}
+func depthDataOutput(_ output: AVCaptureDepthDataOutput, didOutput depthData: AVDepthData, timestamp: CMTime, connection: AVCaptureConnection) { self.latestDepthData = depthData; guard !isHoldLocked else { return }; processDepthFrame(depthData, at: spotNormalizedPoint, instant: false) }
 func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) { guard !isHoldLocked, let cam = device else { return }
 let now = Date().timeIntervalSinceReferenceDate
 guard now - lastUIUpdateTime >= 0.08 else { return }
@@ -351,25 +324,9 @@ case .gentleFemale: return 0.49 }}}
 struct FilmFrameRecord: Codable, Identifiable, Equatable { var id: UUID = UUID()
 var frameNumber: Int; var filmStockName: String; var aperture: Double; var shutterDenom: Int; var distance: Double; var powerLabel: String; var iso: Double; var evComp: Double; var filterName: String; var locationText: String; var sceneNote: String; var timestamp: String }
 final class FeedbackEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate { static let shared = FeedbackEngine()
-private let synthesizer = AVSpeechSynthesizer()
-private let impactLight = UIImpactFeedbackGenerator(style: .light)
-private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
-private let impactRigid = UIImpactFeedbackGenerator(style: .rigid)
-private let impactHeavy = UIImpactFeedbackGenerator(style: .heavy)
-private let selectionGen = UISelectionFeedbackGenerator()
-private let notifyGen = UINotificationFeedbackGenerator()
-@Published var isSpeaking: Bool = false
-@Published var isListening: Bool = false
-@Published var recognizedTranscript: String = ""
-@Published var voiceStatusHint: String = ""
-@Published var activeVoiceQualityLabel: String = "Enhanced Voice"
-private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
-private var recognitionTask: SFSpeechRecognitionTask?
-private let audioEngine = AVAudioEngine()
-private var onCommandRecognized: ((String) -> Void)?
-private var onAutoStopAfterActionTrigger: (() -> Void)?
-private var silenceTimerWorkItem: DispatchWorkItem?
-private var currentLanguage: AppLanguage = .zh
+private let synthesizer = AVSpeechSynthesizer(); private let impactLight = UIImpactFeedbackGenerator(style: .light); private let impactMedium = UIImpactFeedbackGenerator(style: .medium); private let impactRigid = UIImpactFeedbackGenerator(style: .rigid); private let impactHeavy = UIImpactFeedbackGenerator(style: .heavy); private let selectionGen = UISelectionFeedbackGenerator(); private let notifyGen = UINotificationFeedbackGenerator()
+@Published var isSpeaking: Bool = false; @Published var isListening: Bool = false; @Published var recognizedTranscript: String = ""; @Published var voiceStatusHint: String = ""; @Published var activeVoiceQualityLabel: String = "Enhanced Voice"
+private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?; private var recognitionTask: SFSpeechRecognitionTask?; private let audioEngine = AVAudioEngine(); private var onCommandRecognized: ((String) -> Void)?; private var onAutoStopAfterActionTrigger: (() -> Void)?; private var silenceTimerWorkItem: DispatchWorkItem?; private var currentLanguage: AppLanguage = .zh
 override init() { super.init()
 synthesizer.delegate = self
 impactLight.prepare()
@@ -1246,32 +1203,35 @@ Text(title).font(.system(size: 10.5, weight: isSelected ? .black : .semibold, de
 }.buttonStyle(.plain) }}
 struct iOSClockDrumWheelView: View { let items: [String]; let selectedIndex: Int; let parameterIcon: String; let subtitleText: String; let theme: AppTheme; let onStepChange: (Int) -> Void
 @State private var dragAccumY: CGFloat = 0; @State private var liveDragY: CGFloat = 0
-@ViewBuilder private func drumRowView(offset: Int) -> some View { let targetIdx = selectedIndex + offset
-let isCenter = (offset == 0); let absOff = abs(offset); let rowH: CGFloat = isCenter ? 34.0 : (absOff == 1 ? 22.0 : 19.0); if targetIdx >= 0 && targetIdx < items.count { let fontSz: CGFloat = isCenter ? 23.5 : (absOff == 1 ? 15.5 : 13.0); let rowAlpha: Double = isCenter ? 1.0 : (absOff == 1 ? 0.72 : 0.45); let rowScale: CGFloat = isCenter ? 1.04 : (absOff == 1 ? 0.92 : 0.82); let deg: Double = Double(offset) * -15.5 + Double(liveDragY * 0.38); let tickW: CGFloat = isCenter ? 10.0 : (absOff == 1 ? 6.0 : 3.5)
-HStack(spacing: 5) { RoundedRectangle(cornerRadius: 1).fill(isCenter ? theme.accent : Color.white.opacity(absOff == 1 ? 0.32 : 0.18)).frame(width: tickW, height: isCenter ? 2.2 : 1.2)
-Text(items[targetIdx]).font(.system(size: fontSz, weight: isCenter ? .black : .bold, design: .monospaced)).foregroundStyle(isCenter ? Color.white : Color.white.opacity(0.90)).shadow(color: isCenter ? theme.accent.opacity(0.75) : Color.clear, radius: isCenter ? 8 : 0).contentTransition(.numericText()).lineLimit(1).minimumScaleFactor(0.75).frame(maxWidth: .infinity)
-RoundedRectangle(cornerRadius: 1).fill(isCenter ? theme.accent : Color.white.opacity(absOff == 1 ? 0.32 : 0.18)).frame(width: tickW, height: isCenter ? 2.2 : 1.2)
-}.padding(.horizontal, 6).frame(height: rowH).scaleEffect(rowScale).opacity(rowAlpha).rotation3DEffect(.degrees(deg), axis: (x: 1, y: 0, z: 0), perspective: 0.45).offset(y: liveDragY * (isCenter ? 0.25 : 0.16)).contentShape(Rectangle()).onTapGesture { if offset != 0 { onStepChange(offset) } }
-} else { Color.clear.frame(height: rowH) } }
-var body: some View { VStack(spacing: 3) { ZStack { RadialGradient(colors: [theme.accent.opacity(0.28), theme.secondaryAccent.opacity(0.08), Color.clear], center: .center, startRadius: 6, endRadius: 80)
-ZStack { RoundedRectangle(cornerRadius: 12).fill(LinearGradient(colors: [theme.accent.opacity(0.26), Color.white.opacity(0.16), theme.accent.opacity(0.20)], startPoint: .leading, endPoint: .trailing))
-RoundedRectangle(cornerRadius: 12).strokeBorder(LinearGradient(colors: [Color.white.opacity(0.55), theme.accent.opacity(0.85), Color.white.opacity(0.35)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.2)
-}.frame(height: 35).padding(.horizontal, 4).shadow(color: theme.accent.opacity(0.35), radius: 9, x: 0, y: 0)
-VStack(spacing: 1) { drumRowView(offset: -2)
-drumRowView(offset: -1)
-drumRowView(offset: 0)
-drumRowView(offset: 1)
-drumRowView(offset: 2)
-}.mask(LinearGradient(stops: [.init(color: .white.opacity(0.18), location: 0.0), .init(color: .white.opacity(0.88), location: 0.10), .init(color: .white, location: 0.26), .init(color: .white, location: 0.74), .init(color: .white.opacity(0.88), location: 0.90), .init(color: .white.opacity(0.18), location: 1.0)], startPoint: .top, endPoint: .bottom))
-}.frame(maxHeight: .infinity).contentShape(Rectangle()).gesture(
+@ViewBuilder private func drumCylinderSlot(offset: Int, radius: CGFloat, totalW: CGFloat) -> some View { let targetIdx = selectedIndex + offset
+if targetIdx >= 0 && targetIdx < items.count { let cOff = CGFloat(offset) - (liveDragY / 22.0); let norm = max(-1.0, min(1.0, cOff / 3.15)); let deg = Double(norm) * 76.0; let rad = deg * .pi / 180.0; let yArc = CGFloat(sin(rad)) * radius; let cosVal = max(0.32, CGFloat(cos(rad))); let isCenter = abs(cOff) < 0.45; let absOff = abs(offset); let fontSz: CGFloat = isCenter ? 24.5 : (absOff == 1 ? 17.5 : (absOff == 2 ? 14.5 : 12.5)); let tickW: CGFloat = isCenter ? 12.0 : (absOff == 1 ? 8.0 : (absOff == 2 ? 5.5 : 3.5))
+HStack(spacing: 6) { RoundedRectangle(cornerRadius: 1).fill(isCenter ? theme.accent : Color.white.opacity(Double(cosVal) * 0.42)).frame(width: tickW, height: isCenter ? 2.4 : 1.4)
+Text(items[targetIdx]).font(.system(size: fontSz, weight: isCenter ? .black : .bold, design: .monospaced)).foregroundStyle(isCenter ? Color.white : Color.white.opacity(0.92)).shadow(color: isCenter ? theme.accent.opacity(0.80) : Color.clear, radius: isCenter ? 8 : 0).contentTransition(.numericText()).lineLimit(1).minimumScaleFactor(0.72).frame(maxWidth: .infinity)
+RoundedRectangle(cornerRadius: 1).fill(isCenter ? theme.accent : Color.white.opacity(Double(cosVal) * 0.42)).frame(width: tickW, height: isCenter ? 2.4 : 1.4)
+}.padding(.horizontal, 8).frame(width: totalW, height: 34).scaleEffect(x: 0.88 + 0.12 * cosVal, y: cosVal).rotation3DEffect(.degrees(-deg * 0.68), axis: (x: 1, y: 0, z: 0), perspective: 0.48).opacity(Double(pow(cosVal, 1.75))).offset(y: yArc).contentShape(Rectangle()).onTapGesture { if offset != 0 { onStepChange(offset) } } } }
+var body: some View { GeometryReader { geo in let w = geo.size.width; let h = geo.size.height; let footerH: CGFloat = 16.0; let drumH = max(96.0, h - footerH); let radius = drumH * 0.49
+VStack(spacing: 2) { ZStack { RoundedRectangle(cornerRadius: 15, style: .continuous).fill(LinearGradient(colors: [Color.black.opacity(0.72), Color.white.opacity(0.05), Color.white.opacity(0.05), Color.black.opacity(0.72)], startPoint: .top, endPoint: .bottom))
+RadialGradient(colors: [theme.accent.opacity(0.30), theme.secondaryAccent.opacity(0.08), Color.clear], center: .center, startRadius: 6, endRadius: drumH * 0.55)
+VStack(spacing: 5.5) { ForEach(0..<18, id: \.self) { _ in Rectangle().fill(Color.white.opacity(0.028)).frame(height: 1) } }.padding(.horizontal, 10)
+ZStack { RoundedRectangle(cornerRadius: 12, style: .continuous).fill(LinearGradient(colors: [theme.accent.opacity(0.28), Color.white.opacity(0.16), theme.accent.opacity(0.22)], startPoint: .leading, endPoint: .trailing))
+RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(LinearGradient(colors: [Color.white.opacity(0.60), theme.accent.opacity(0.90), Color.white.opacity(0.35)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.3)
+}.frame(height: 36).padding(.horizontal, 4).shadow(color: theme.accent.opacity(0.38), radius: 9, x: 0, y: 0)
+ZStack { ForEach(-3...3, id: \.self) { off in drumCylinderSlot(offset: off, radius: radius, totalW: w) }
+}.frame(width: w, height: drumH).clipped().mask(LinearGradient(stops: [.init(color: .clear, location: 0.00), .init(color: .white.opacity(0.18), location: 0.12), .init(color: .white.opacity(0.82), location: 0.30), .init(color: .white, location: 0.50), .init(color: .white.opacity(0.82), location: 0.70), .init(color: .white.opacity(0.18), location: 0.88), .init(color: .clear, location: 1.00)], startPoint: .top, endPoint: .bottom))
+VStack(spacing: 0) { LinearGradient(colors: [Color.black.opacity(0.68), Color.black.opacity(0.18), Color.clear], startPoint: .top, endPoint: .bottom)
+.frame(height: drumH * 0.25)
+Spacer(minLength: 0)
+LinearGradient(colors: [Color.clear, Color.black.opacity(0.18), Color.black.opacity(0.68)], startPoint: .top, endPoint: .bottom)
+.frame(height: drumH * 0.25) }.allowsHitTesting(false)
+}.frame(width: w, height: drumH).clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous)).overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 0.9)).contentShape(Rectangle()).gesture(
 DragGesture(minimumDistance: 3).onChanged { val in let dy = val.translation.height - dragAccumY
-withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.75)) { liveDragY = max(-12, min(12, dy)) }
+withAnimation(.interactiveSpring(response: 0.18, dampingFraction: 0.75)) { liveDragY = max(-14, min(14, dy)) }
 let stepH: CGFloat = 20.0; if abs(dy) >= stepH { let steps = Int(dy / stepH); dragAccumY += CGFloat(steps) * stepH; liveDragY = 0
 onStepChange(steps < 0 ? 1 : -1) }
 }.onEnded { _ in dragAccumY = 0
 withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) { liveDragY = 0 } })
 HStack(spacing: 4) { Image(systemName: parameterIcon).fSys(9.5, .bold).foregroundStyle(theme.accent)
-Text(subtitleText).fSys(9.5, .medium).foregroundStyle(Color.white.opacity(0.72)).lineLimit(1) } } } }
+Text(subtitleText).fSys(9.5, .medium).foregroundStyle(Color.white.opacity(0.72)).lineLimit(1) }.frame(height: footerH - 2) } } } }
 struct CameraAmbientMeterSheet: View {
 @Binding var ambientEV100: Double
 @Binding var subjectDistance: Double
@@ -1293,7 +1253,7 @@ Text(String(format: "🎯 %.1f m · EV %.1f", reader.liveDistanceMeters, reader.
 VStack { HStack(spacing: 6) { HStack(spacing: 5) { Circle().fill(reader.isHoldLocked ? Color.cyan : (reader.isRunning ? Color.green : Color.orange)).frame(width: 8, height: 8)
 Text(reader.isHoldLocked ? (lang == .en ? "HOLD LOCKED" : "❄️ 读数已锁定") : (lang == .en ? "TAP SPOT METER" : "点按画面任意位置测光")).fSys(12, .black).foregroundStyle(Color.white)
 }.padding(.horizontal, 11).padding(.vertical, 7).background(.ultraThinMaterial, in: Capsule())
-Button { reader.toggleLensFieldOfView(lang: lang) } label: { Text(reader.useUltraWideLens ? "0.5x" : "1x").fMono(11.5, .black).foregroundStyle(Color.black).padding(.horizontal, 9).padding(.vertical, 7).background(theme.accent, in: Capsule()) }
+Button { FeedbackEngine.shared.buttonTap(soundEnabled: true, hapticEnabled: true); withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) { reader.recenterExposurePoint() } } label: { HStack(spacing: 3) { Image(systemName: "scope").fSys(10.5, .black); Text(lang == .en ? "1x Center" : "1x 回中心").fMono(11, .black) }.foregroundStyle(Color.black).padding(.horizontal, 9).padding(.vertical, 7).background(theme.accent, in: Capsule()) }
 Button { FeedbackEngine.shared.lockToggleFeedback(soundEnabled: true, hapticEnabled: true); withAnimation(.snappy) { reader.isHoldLocked.toggle() }} label: { HStack(spacing: 3) { Image(systemName: reader.isHoldLocked ? "lock.fill" : "snowflake").fSys(10.5, .black); Text(reader.isHoldLocked ? "HOLD" : (lang == .en ? "Hold" : "锁定")).fSys(11, .black) }.foregroundStyle(reader.isHoldLocked ? Color.black : Color.white).padding(.horizontal, 9).padding(.vertical, 7).background(reader.isHoldLocked ? Color.cyan : Color.white.opacity(0.18), in: Capsule()) }
 Spacer()
 Button { if !keepRunningInBackground { reader.stopReading() }
